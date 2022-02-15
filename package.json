@@ -1,0 +1,47 @@
+{
+  "name": "skulledbot",
+  "version": "0.5.0",
+  "description": "",
+  "sourceType": "module",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "author": "SkullGaming31",
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "dependencies": {
+    "@twurple/api": "^5.0.17",
+    "@twurple/auth": "^5.0.17",
+    "@twurple/chat": "^5.0.17",
+    "@twurple/eventsub": "^5.0.17",
+    "@twurple/eventsub-ngrok": "^5.0.17",
+    "@twurple/pubsub": "^5.0.17",
+    "axios": "^0.25.0",
+    "cors": "^2.8.5",
+    "countdown": "^2.6.0",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.2",
+    "fs": "^0.0.1-security",
+    "helmet": "^5.0.2",
+    "mongoose": "^6.2.1",
+    "ms": "^2.1.3",
+    "oauth": "^0.9.15",
+    "twitter-api-v2": "^1.10.0",
+    "volleyball": "^1.5.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.5.0",
+    "nodemon": "^2.0.15"
+  },
+  "repository": {
+    "directory": "",
+    "type": "public",
+    "url": "https://github.com/SkullGaming31/SkulledBot"
+  },
+  "bugs": {
+    "url": "https://github.com/SkullGaming31/SkulledBot/issues"
+  }
+}
