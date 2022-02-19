@@ -8,10 +8,9 @@ const { ChatClient } = require('@twurple/chat');
 const { PubSubClient } = require('@twurple/pubsub');
 const { EventSubListener } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
+const { WebhookClient, MessageEmbed } = require('discord.js');
 
 const { rwClient } = require('./tweet');
-
-// const userModel = require('./database/user');
 const config = require('../config');
 
 
@@ -34,13 +33,6 @@ async function main() {
 		clientSecret,
 		onRefresh: async (newTokenData) => await fs.writeFile('./users.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, userTokenData);
-
-	// const modVlogTokenData = JSON.parse(await fs.readFile('./modvlog.json', 'utf-8'));
-	// const modvlogAuthProvider = new RefreshingAuthProvider({
-	// 	clientId,
-	// 	clientSecret,
-	// 	onRefresh: async (newTokenData) => await fs.writeFile('./modvlog.json', JSON.stringify(newTokenData, null, 4), 'utf-8')
-	// }, modVlogTokenData);
 
 	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31'], logger: { minLevel: 'critical' } });
 	await chatClient.connect().then(() => console.log('connected to Twitch Chat') );
@@ -65,6 +57,10 @@ async function main() {
 			logger: { minLevel: 'error' } 
 		});
 		await eventSubListener.listen().then(() => console.log('Event Listener Started'));
+		const twitchActivity = new WebhookClient({
+			id: config.DISCORD_WEBHOOK_ID,
+			token: config.DISCORD_WEBHOOK_TOKEN,
+		});
 
 		const predictionBegin = await eventSubListener.subscribeToChannelPredictionBeginEvents(userId, async pb => {
 			console.log(broadcasterID.name, `${pb.title} prediction has started get your predictions in now ${pb.outcomes}`);
@@ -79,11 +75,23 @@ async function main() {
 			console.log(`${poll.title} has begun get your vote in. ${poll.startDate}`);
 			chatClient.say(broadcasterID.name, `${poll.title} has begun get your vote in. ${poll.startDate}, BitsVotedEnabled:${poll.isBitsVotingEnabled} ChannelPointsAdditionalVotesEnabled:${poll.isChannelPointsVotingEnabled}`);
 		});
-		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => {
+		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => { // TODO: Remove hard coded link for going live tweet to twitter
 			const stream = await o.getStream();
 			const userInfo = await o.getBroadcaster();
 			chatClient.say(broadcasterID.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID.gameName} with ${stream.viewers} viewers.`);
 			await rwClient.v2.tweet(`${userInfo.displayName} has gone live playing ${stream.gameName} here: https://twitch.tv/skullgaming31`);
+
+			const LIVE = new WebhookClient({
+				url: config.DISCORD_WEBHOOK_PROMOTE_URL
+			});
+			const liveEmbed = new MessageEmbed()
+				.setTitle('LIVE NOTIFICATION')
+				.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setDescription(`LIVE now playing ${stream.gameName} with ${stream.viewers} viewers, come check it out`)
+				.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
+				.setURL(`https://twitch.tv/${userInfo.name}`)
+				.setTimestamp();
+			LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
 		});
 		const offline = await eventSubListener.subscribeToStreamOfflineEvents(userId, async stream => {
 			console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
@@ -95,8 +103,21 @@ async function main() {
 			const userInfo = await cp.getUser();
 			switch (cp.rewardTitle) {
 			case 'Twitter':// twitter
+				const user = await cp.getUser();
+				const streamer = await cp.getBroadcaster();
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
+
+				const twitterEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
+					.setColor('GREEN')
+					.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setURL(`https://twitch.tv/${user.name}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [twitterEmbed] });
 				break;
 			case 'Instagram':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -121,6 +142,16 @@ async function main() {
 			case 'Discord':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Discord: https://discord.com/invite/6gGxrQMC9A`);
+				const discordEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
+					.setColor('GREEN')
+					.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setURL(`https://twitch.tv/${user.name}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [discordEmbed] });
 				break;
 			case 'Merch':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -206,9 +237,16 @@ async function main() {
 				chatClient.say(broadcasterID.name, `${randomString}`);
 				console.log(`Users Channel Description: ${U.description}`);
 			}
+			const followEmbed = new MessageEmbed()
+				.setTitle('FOLLOW EVENT')
+				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${U.profilePictureUrl}` })
+				.addField({ name: 'Account Created: ', value: `${e.followDate}`, inline: true })
+				.addField({ name: 'Twitch Channel: ', value: `https://twitch.tv/${e.userName}`, inline: true})
+				.setTimestamp(`${e.followDate}`);
+			twitchActivity.send({ embeds: [followEmbed] });
 		});
 		const sub = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async sub => {
-		// console.log(`${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
+			console.log(`${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
 			chatClient.say(broadcasterID.name, `${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
 		});
 		const cheer = await eventSubListener.subscribeToChannelCheerEvents(userId, async cheer => {

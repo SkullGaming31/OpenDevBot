@@ -24,7 +24,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/skullgaming31/skulledbot">
+  <a href="https://github.com/skullgaming31/skulledbotTwitch">
     <img src="./assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
@@ -33,9 +33,9 @@
   <p align="center">
     Twitch Chatbot<br>
     ·
-    <a href="https://github.com/skullgaming31/skulledbot/issues">Report Bug</a>
+    <a href="https://github.com/skullgaming31/skulledbotTwitch/issues">Report Bug</a>
     ·
-    <a href="https://github.com/skullgaming31/skulledbot/issues">Request Feature</a>
+    <a href="https://github.com/skullgaming31/skulledbotTwitch/issues">Request Feature</a>
   </p>
 </div>
 
@@ -78,7 +78,6 @@ a personal twitch chat bot for my twitch channel, will make it usable on other c
 
 * [Twurple](https://twurple.js.org/)
 * [Express.js](https://expressjs.com/)
-* [discord.js](https://discord.js.org/)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -146,7 +145,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] auto tweet when stream goes live with gameName included
 * [ ] Que/delay webhooks being sent to avoid being rate limited
 
-See the [open issues](https://github.com/skullgaming31/skulledbot/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/skullgaming31/skulledbotTwitch/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -178,7 +177,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Corey - [@skullgaming31](https://twitter.com/skullgaming31) - skullgaming8461@gmail.com
 
-Project Link: [skulledbot](https://github.com/skullgaming31/skulledbot)
+Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbottwitch)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -193,14 +192,14 @@ Project Link: [skulledbot](https://github.com/skullgaming31/skulledbot)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/SkulledBot.svg?style=for-the-badge
-[contributors-url]: https://github.com/SkullGaming31/SkulledBot/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/SkulledBot.svg?style=for-the-badge
-[forks-url]: https://github.com/SkullGaming31/SkulledBot/network/members
-[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/SkulledBot.svg?style=for-the-badge
-[stars-url]: https://github.com/SkullGaming31/SkulledBot/stargazers
-[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/SkulledBot.svg?style=for-the-badge
-[issues-url]: https://github.com/SkullGaming31/SkulledBot/issues
-[license-shield]: https://img.shields.io/github/license/SkullGaming31/SkulledBot.svg?style=for-the-badge
-[license-url]: https://github.com/SkullGaming31/SkulledBot/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[contributors-url]: https://github.com/SkullGaming31/skulledbotTwitch/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[forks-url]: https://github.com/SkullGaming31/skulledbotTwitch/network/members
+[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[stars-url]: https://github.com/SkullGaming31/skulledbotTwitch/stargazers
+[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[issues-url]: https://github.com/SkullGaming31/skulledbotTwitch/issues
+[license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/main/LICENSE
 [product-screenshot]: images/screenshot.png

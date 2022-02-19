@@ -14,6 +14,9 @@ require('dotenv').config();
  * @prop {string} TWITTER_USER_ACCESS_TOKEN Twitter Access Token
  * @prop {string} TWITTER_APPLICATION_SECRET twitter app secret
  * @prop {string} TWITTER_APPLICATION_COMSUMER_KEY something from twitter
+ * @prop {string} DISCORD_WEBHOOK_ID ID for the discord Webhook
+ * @prop {string} DISCORD_WEBHOOK_TOKEN Token for the Discord Webhook
+ * @prop {string} DISCORD_WEBHOOK_PROMOTE_URL WEBHOOK URL for the Promotion channel
  * @prop {string} PORT the port to listen on
  */
 

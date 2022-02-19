@@ -3,6 +3,14 @@ const axios = require('axios').default;
 const cors = require('cors');
 const helmet = require('helmet');
 const volleyball = require('volleyball');
+const { Client, Intents } = require('discord.js');
+
+const client = new Client({ 
+	intents: [ 
+		Intents.FLAGS.GUILD_WEBHOOKS, 
+		Intents.FLAGS.GUILD_MESSAGES
+	] 
+});
 
 const config = require('../config');
 require('./twitchChat');
@@ -11,11 +19,7 @@ require('./twitchChat');
 async function run () {
 	const Port = config.PORT;
 	const app = express();
-	
-	const baseUrl = 'https://id.twitch.tv/oauth2';
-	const authApi = axios.create({
-		baseURL: baseUrl,
-	});
+
 	
 	app.use(cors());
 	app.use(helmet());
@@ -27,13 +31,6 @@ async function run () {
 	});
 
 	app.use('/auth/twitch', require('./auth/twitch'));
-	
-
-	// app.get('/auth/discordAuth', async (req, res) => {
-	// 	res.json({
-	// 		message: 'Hello Discord Auth has not been implemented yet'
-	// 	});
-	// });
 		
 		
 
@@ -42,7 +39,7 @@ async function run () {
 }
 run();
 
-// bot scopes- chat:edit chat:read 
+// bot scopes- chat:edit chat:read moderation:read 
 
 /*
 USER SCOPES-
