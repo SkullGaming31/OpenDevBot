@@ -24,14 +24,18 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/skullgaming31/skulledbotTwitch">
+  <a href="https://github.com/skullgaming31/skulledbot">
     <img src="./assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
+<<<<<<< HEAD
 <h3 align="center">SkulledBot V2</h3>
+=======
+<h3 align="center">skulledbotTwitch V2</h3>
+>>>>>>> 5e3bf17f406391622a169fa22de6325dad860465
 
   <p align="center">
-    Twitch Chatbot<br>
+    Twitch Chatbot, becoming Public soon<br>
     ·
     <a href="https://github.com/skullgaming31/skulledbotTwitch/issues">Report Bug</a>
     ·
@@ -70,7 +74,7 @@
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
 
-a personal twitch chat bot for my twitch channel, will make it usable on other channels as i can, only a <strong>beginner</strong> coder as i learn how to do stuff i will add it to the bot!
+a personal chat bot for my twitch channel, will make it usable on other channels at some point, im only a <strong>beginner</strong> coder but as i learn how to code better i will add more features to the bot, currently working on features that can be checked out in the Roadmap Section of this readme.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -78,14 +82,15 @@ a personal twitch chat bot for my twitch channel, will make it usable on other c
 
 * [Twurple](https://twurple.js.org/)
 * [Express.js](https://expressjs.com/)
+* [discord.js](https://discord.js.org/) Basics, just for discord MessageEmbeds
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+<!-- This is an example of how you may give instructions on setting up your project locally.
+To get a local copy up and running follow these simple example steps. -->
 
 ### Prerequisites
 
@@ -103,10 +108,10 @@ This is an example of how to list things you need to use the software and how to
 
 ### Installation
 
-1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console)
+1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console), you will need access to a discord bot aswell, for webhooks
 2. Clone the repo
    ```sh
-   git clone https://github.com/skullgaming31/skulledbot.git
+   git clone https://github.com/skullgaming31/skulledbotTwitch.git
    ```
 3. Install NPM packages
    ```sh
@@ -140,7 +145,7 @@ This is an example of how to list things you need to use the software and how to
 * [ ] Virtual Currency System
   * [ ] duel
   * [ ] dig
-  * [ ] dice
+  * [x] dice
 * [x] auto tweet when stream goes live with gameName included
 * [ ] Que/delay webhooks being sent to avoid being rate limited
 
@@ -176,14 +181,14 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Corey - [@skullgaming31](https://twitter.com/skullgaming31) - skullgaming8461@gmail.com
 
-Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbottwitch)
+Project Link: [skulledbotTwitchV2](https://github.com/skullgaming31/skulledbotTwitch)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* []()
+* [Twurple](https://twurple.js.org/) <p>For putting up with my Constant questions about things i should already know how to do.</p>
 * []()
 * []()
 
@@ -192,7 +197,7 @@ Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbottwitch)
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[contributors-url]: https://github.com/SkullGaming31/skulledbotTwitch/graphs/contributors
+[contributors-url]: https://github.com/SkullGaming31/skullbotTwitch/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
 [forks-url]: https://github.com/SkullGaming31/skulledbotTwitch/network/members
 [stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
@@ -202,3 +207,16 @@ Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbottwitch)
 [license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
 [license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/master/LICENSE
 [product-screenshot]: images/screenshot.png
+
+<!--
+Here are some ideas to get you started:
+
+- 🔭 I’m currently working on ...
+- 🌱 I’m currently learning ...
+- 👯 I’m looking to collaborate on ...
+- 🤔 I’m looking for help with ...
+- 💬 Ask me about ...
+- 📫 How to reach me: ...
+- 😄 Pronouns: ...
+- ⚡ Fun fact: ...
+-->
