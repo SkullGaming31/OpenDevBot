@@ -1,4 +1,4 @@
-const express = require('express');
+/* const express = require('express');
 const countdown = require('countdown');
 const fs = require('fs/promises');
 const axios = require('axios').default;
@@ -6,7 +6,7 @@ const { RefreshingAuthProvider, ClientCredentialsAuthProvider } = require('@twur
 const { ApiClient } = require('@twurple/api');
 const { ChatClient } = require('@twurple/chat');
 const { PubSubClient } = require('@twurple/pubsub');
-const { EventSubListener } = require('@twurple/eventsub');
+const { EventSubListener, ReverseProxyAdapter } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
 const { WebhookClient, MessageEmbed } = require('discord.js');
 
@@ -18,6 +18,7 @@ async function main() {
 	const clientId = config.TWITCH_CLIENT_ID;
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
+	const port = config.PORT;
 	const BLOCKED_WORDS = ['testing', 'testty'];
 
 	const tokenData = JSON.parse(await fs.readFile('./tokens.json', 'UTF-8'));
@@ -38,7 +39,7 @@ async function main() {
 	await chatClient.connect().then(() => console.log('connected to Twitch Chat') );
 	const appAuthProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 	const apiClient = new ApiClient({ authProvider: appAuthProvider, logger: { minLevel: 'critical' } });
-	const APIClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel: 'critical' } });
+	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel: 'critical' } });
 	await apiClient.eventSub.deleteAllSubscriptions();
 	
 	
@@ -49,45 +50,48 @@ async function main() {
 	// eventSub Stuff
 	// const userID = '31124455';
 	const broadcasterID = await apiClient.channels.getChannelInfo(userId);
+	if (process.env.NODE_ENV === 'production') {
+		const eventSubListener = new EventSubListener({
+			apiClient,
+			adapter: new ReverseProxyAdapter({
+				hostName: '10.0.0.106',
+				port: 443,
+				pathPrefix: '/twitch'
+			}),
+			secret: eventSubSecret,
+			logger: { minLevel: 'debug' }
+		});
+		await eventSubListener.listen().then('Event Listener Started').catch((err) => { console.error(err); });
+	}
 	if (process.env.NODE_ENV === 'development') {
 		const eventSubListener = new EventSubListener({
 			apiClient,
 			adapter: new NgrokAdapter(),
 			secret: eventSubSecret,
-			logger: { minLevel: 'error' } 
+			logger: { minLevel: 'error' }
 		});
-		await eventSubListener.listen().then(() => console.log('Event Listener Started'));
+		await eventSubListener.listen().then('Event Listener Started').catch((err) => { console.error(err); });
 		const twitchActivity = new WebhookClient({
 			id: config.DISCORD_WEBHOOK_ID,
 			token: config.DISCORD_WEBHOOK_TOKEN,
 		});
-
-		const predictionBegin = await eventSubListener.subscribeToChannelPredictionBeginEvents(userId, async pb => {
-			console.log(broadcasterID.name, `${pb.title} prediction has started get your predictions in now ${pb.outcomes}`);
-		});
-		const predictionProgress = await eventSubListener.subscribeToChannelPredictionProgressEvents(userId, async pp => {
-			console.log(broadcasterID.name, `prediction will be locked at ${pp.lockDate}`);
-		});
-		const predictionEnd = await eventSubListener.subscribeToChannelPredictionEndEvents(userId, async pe => {
-			console.log(broadcasterID.name, `${pe.status}, ${pe.winningOutcome}`);
-		});
-		const polls = await eventSubListener.subscribeToChannelPollBeginEvents(userId, async poll => {
-			console.log(`${poll.title} has begun get your vote in. ${poll.startDate}`);
-			chatClient.say(broadcasterID.name, `${poll.title} has begun get your vote in. ${poll.startDate}, BitsVotedEnabled:${poll.isBitsVotingEnabled} ChannelPointsAdditionalVotesEnabled:${poll.isChannelPointsVotingEnabled}`);
-		});
+		
 		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => { // TODO: Remove hard coded link for going live tweet to twitter
 			const stream = await o.getStream();
 			const userInfo = await o.getBroadcaster();
 			chatClient.say(broadcasterID.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID.gameName} with ${stream.viewers} viewers.`);
-			await rwClient.v2.tweet(`${userInfo.displayName} has gone live playing ${stream.gameName} here: https://twitch.tv/skullgaming31`);
+			await rwClient.v2.tweet(`${userInfo.displayName} has gone live playing ${stream.gameName} here: https://twitch.tv/${userInfo.name}`);
 
 			const LIVE = new WebhookClient({
 				url: config.DISCORD_WEBHOOK_PROMOTE_URL
 			});
 			const liveEmbed = new MessageEmbed()
-				.setTitle('LIVE NOTIFICATION')
+				.setTitle('GONE LIVE')
 				.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}` })
-				.setDescription(`LIVE now playing ${stream.gameName} with ${stream.viewers} viewers, come check it out`)
+				// .setDescription(`LIVE now playing ${stream.gameName} with ${stream.viewers} viewers, come check it out`)
+				.addField('Stream Title: ', `${stream.title}`, true)
+				.addField('Game: ', `${stream.gameName}`, true)
+				.addField('Viewers: ', `${stream.viewers}`, true)
 				.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
 				.setURL(`https://twitch.tv/${userInfo.name}`)
 				.setTimestamp();
@@ -101,43 +105,52 @@ async function main() {
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {// not displaying text if text is required
 			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
 			const userInfo = await cp.getUser();
-			switch (cp.rewardTitle) {
-			case 'Twitter':// twitter
+			const reward = await cp.getReward();
+			switch (reward.title || reward.id) {
+			case 'Twitter':
 				const user = await cp.getUser();
 				const streamer = await cp.getBroadcaster();
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
+				console.log('REDEEMING TWITTER');
+				if (reward.isEnabled && reward.isInStock) {
+					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
+					chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
 
-				const twitterEmbed = new MessageEmbed()
-					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
-					.setColor('GREEN')
-					.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
-					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setURL(`https://twitch.tv/${user.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
-					.setTimestamp();
-				twitchActivity.send({ embeds: [twitterEmbed] });
+					const twitterEmbed = new MessageEmbed()
+						.setTitle('REDEEM EVENT')
+						.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
+						.setColor('GREEN')
+						.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+						.setThumbnail(`${streamer.profilePictureUrl}`)
+						.setURL(`https://twitch.tv/${user.name}`)
+						.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
+						.setTimestamp();
+					twitchActivity.send({ embeds: [twitterEmbed] });}
+				reward.autoApproved = true;
 				break;
 			case 'Instagram':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Instagram: https://instagram.com/skullgaming31`);
+				reward.autoApproved = true;
 				break;
 			case 'YouTube':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA`);
+				reward.autoApproved = true;
 				break;
 			case 'TikTok':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tok-Tok: https://tiktok.com/@skullgaming31`);
+				reward.autoApproved = true;
 				break;
 			case 'Snapchat':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/skullgaming31`);
+				reward.autoApproved = true;
 				break;
 			case 'Facebook':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`);
+				reward.autoApproved = true;
 				break;
 			case 'Discord':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -152,10 +165,12 @@ async function main() {
 					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [discordEmbed] });
+				reward.autoApproved = true;
 				break;
 			case 'Merch':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Merch: https://skullgaming31-merch.creator-spring.com`);
+				reward.autoApproved = true;
 				break;
 			case 'Hydrate!':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -180,6 +195,7 @@ async function main() {
 			case 'IRLWordBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`);
+				reward.userInputRequired = true;
 				break;
 			case 'IRLVoiceBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -187,6 +203,7 @@ async function main() {
 				break;
 			case 'Ban in-game action':
 				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action`);
+				reward.userInputRequired = true;
 				break;
 			default:
 				console.log(`${cp.userName} has attempted to redeem ${cp.rewardTitle} thats not hardcoded in yet`);
@@ -215,6 +232,30 @@ async function main() {
 		const resub = await eventSubListener.subscribeToChannelSubscriptionMessageEvents(userId, async s => {
 		// console.log(broadcasterID.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 			chatClient.say(broadcasterID.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
+			const userInfo = await s.getUser();
+			const resubEmbed = new MessageEmbed()
+				.setTitle('RESUB EVENT')
+				.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.addFields([
+					{
+						name: 'Twitch User: ',
+						value: `${userInfo.displayName} just re-subscribed`,
+						inline: true
+					},
+					{
+						name: 'Resub: ',
+						value: `${s.cumulativeMonths} in a row`,
+						inline: true
+					},
+					{
+						name: 'Message: ',
+						value: `${s.messageText}`,
+						inline: true
+					},
+				])
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setTimestamp();
+			twitchActivity.send({ embeds: [resubEmbed] });
 		});
 		const follow = await eventSubListener.subscribeToChannelFollowEvents(userId, async e => {
 			const randomFollowMessage = [
@@ -246,16 +287,43 @@ async function main() {
 			twitchActivity.send({ embeds: [followEmbed] });
 		});
 		const sub = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async sub => {
-			console.log(`${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
+			// console.log(`${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
 			chatClient.say(broadcasterID.name, `${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
+			const userInfo = await sub.getUser();
+			const subEmbed = new MessageEmbed()
+				.setTitle('SUBSCRIBER EVENT')
+				.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setDescription(`${userInfo.displayName} has just subscribed with a tier ${sub.tier * 1} Subscription`)
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setTimestamp();
+			twitchActivity.send({ embeds: [subEmbed] });
 		});
 		const cheer = await eventSubListener.subscribeToChannelCheerEvents(userId, async cheer => {
 		// console.log(`${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
 			chatClient.say(broadcasterID.name, `${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
+			const userInfo = await cheer.getUser();
+			if (cheer.bits >= 100) {
+				const cheerEmbed = new MessageEmbed()
+					.setTitle('CHEER EVENT')
+					.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setDescription('')
+					.setThumbnail(`${userInfo.profilePictureUrl}`)
+					.setTimestamp();
+				twitchActivity.send({ embeds: [cheerEmbed] });
+			}
 		});
 		const raid = await eventSubListener.subscribeToChannelRaidEventsFrom(userId, async raid => {
 		// console.log(`${raid.raidingBroadcasterDisplayName} has raided the channel with ${raid.viewers} viewers!`);
 			chatClient.say(broadcasterID.name, `${raid.raidingBroadcasterDisplayName} has raided the channel with ${raid.viewers} viewers!`);
+			const userInfo = await raid.getRaidingBroadcaster();
+			const raidEmbed = new MessageEmbed()
+				.setTitle('CHANNEL RAID EVENT')
+				.setAuthor({ name: `${raid.raidingBroadcasterDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.addField('Raider: ', `${raid.raidedBroadcasterName}`, true)
+				.addField('Viewers: ', `${raid.viewers} Viewers`, true)
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setTimestamp();
+			twitchActivity.send({ embeds: [raidEmbed] });
 		});
 	}
 
@@ -270,9 +338,19 @@ async function main() {
 		if (message.includes('overlay designer')) {
 			chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
 		}
+		if (message.includes('quote')) {
+			const quotes = [
+				'Behind every cloud is a ray of sunshine waiting to be revealed. Shine your light on those that need guidance in there time of darkness',
+				'I wont get upset at you about a mistake, i\'ll get upset at you for the next mistake that comes from still thinking about the last mistake',
+				'The only way to lose is to quit',
+				'Part of being a winner is acting like a winner, you have to learn how to win and not run away when you lose.'
+			];
+			let randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+			chatClient.say(channel, `${randomQuote}`);
+		}
 
 
-		const prefix = '-';
+		const prefix = config.TWITCH_COMMAND_PREFIX;
 		if (!message.startsWith(prefix)) return;
 		
 		const args = message.slice(1).split(' ');
@@ -280,7 +358,7 @@ async function main() {
 
 		// setInterval(() => {
 		// 	chatClient.say(channel, 'Overlays and alerts for your stream without OBS or a streaming PC, check it out here: https://overlay.expert its 100% free to use');
-		// }, 10000);
+		// }, 10 * 1000); // every 10 seconds
 
 		// word detection
 		// if (message.includes(BLOCKED_WORDS.values)) {// not working
@@ -288,15 +366,6 @@ async function main() {
 		// 	chatClient.say(channel, 'this is a debug message for deleting messages(t)');
 		// }
 		
-		if (command === 'exit' && channel === '#skullgaming31') {
-			if (msg.userInfo.displayName === 'SkullGaming31') {
-				await apiClient.eventSub.deleteAllSubscriptions();
-				process.exitCode = 0;
-				process.exit();
-			} else {
-				chatClient.say(channel, 'You must be the Broadcaster to use this Command');
-			}
-		}
 		if (command === 'ping' && channel === '#skullgaming31') {
 			if (staff) {
 				// const api = await apiClient.users.getUserByName(broadcasterID.name);
@@ -306,7 +375,7 @@ async function main() {
 		if (command === 'settitle' && channel === '#skullgaming31') {
 			if (staff) {
 				const title = args.slice(1);
-				const setTitle = await APIClient.channels.updateChannelInfo(broadcasterID, { 'title': title.join(' ') }); // Channel ID:'31124455'
+				const setTitle = await userApiClient.channels.updateChannelInfo(broadcasterID, { 'title': title.join(' ') }); // Channel ID:'31124455'
 				chatClient.say(channel, `channel title has been updated to ${title.join(' ')}`);
 				// chatClient.say(channel, 'command under construction');
 			} else {
@@ -315,8 +384,8 @@ async function main() {
 		}
 		if (command === 'setgame' && channel === '#skullgaming31') {
 			if (staff) {
-				const gamename = await APIClient.games.getGameByName(args[0]);
-				const setGame = await APIClient.channels.updateChannelInfo(broadcasterID, { 'gameId':  `${gamename.id}` });
+				const gamename = await userApiClient.games.getGameByName(args[0]);
+				const setGame = await userApiClient.channels.updateChannelInfo(broadcasterID, { 'gameId':  `${gamename.id}` });
 				chatClient.say(channel, `channel game has been updated to ${gamename.name}`);
 				console.log(`${gamename.name}: ${gamename.id}`);
 				// chatClient.say(channel, 'Channel Command is under Construction');
@@ -372,7 +441,7 @@ async function main() {
 			const response = await axios.get('https://icanhazdadjoke.com/', {
 				headers: {
 					'Accept': 'application/json',
-					'User-Agent': 'Personal Twitch/Discord ChatBot (https://github.com/skullgaming31/skulledbot)'
+					'User-Agent': 'Personal Twitch/Discord ChatBot (https://github.com/skullgaming31/skulledbotTwitch)'
 				}
 			});
 			// console.log(response.data.joke);
@@ -388,6 +457,8 @@ async function main() {
 				const choice = ['Succedded', 'Failed'];
 				const results = choice[Math.floor(Math.random() * choice.length)];
 				chatClient.say(channel, `@${display} you have ${results}`);
+				break;
+			case 'duel': // duel someone else for points winner takes all
 				break;
 			default:
 				chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -games dice|dig');
@@ -556,4 +627,4 @@ async function main() {
 		}
 	});
 }
-main();
+main(); */

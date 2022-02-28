@@ -1,0 +1,413 @@
+/* Website template by freewebsitetemplates.com */
+/*------------------------- Layout styles ------------------------*/ 
+body {
+	background:url(../images/bg-body.jpg);
+	margin:0;
+	font-family: Arial, Helvetica, sans-serif;
+}
+a {
+	outline:none;
+}
+a img {
+	border:0;
+	display:block;
+}
+.background {
+	background:url(../images/bg-background.png) repeat-x left top;
+}
+.page {
+	width:960px;
+	margin:0 auto;
+	position: relative;
+	overflow: hidden;
+	padding:0 0 102px 0;
+}
+p {
+	font-size:14px;
+	line-height:30px;
+	letter-spacing:0.05em;
+}
+p a {
+	color: #BFBFBF;
+}
+p a:hover {
+	color:#d8d6bd;
+}
+/*------------------------- Sidebar ------------------------*/
+.sidebar {
+	float: left;
+	margin: 59px 0 0;
+	overflow: hidden;
+	padding: 0 0 28px 20px;
+	position: relative;
+	width: 130px;
+}
+.logo {
+	height:162px;
+	border-bottom:1px solid #e4a100;
+	border-right:1px solid #FEC848;
+	height: 210px;
+	width:959px;
+	background:url(../images/bg-logo.jpg) repeat-y;
+}
+.logo span {
+	background: url("../images/shadow1.png") no-repeat scroll 11px bottom transparent;
+	display: block;
+	height: 193px;
+	padding:48px 0 0 36px;
+}
+.logo a {
+	display:block;
+	width: 89px;
+}
+.sidebar ul {
+	list-style:none;
+	padding:0;
+	margin:0;
+}
+.sidebar ul li.selected {
+	background:url(../images/bg-nav-selected.jpg) no-repeat;
+}
+.sidebar ul li {
+	background:url(../images/bg-nav.jpg) no-repeat;
+	width:130px;
+	height:60px;
+	text-align:right;
+}
+.sidebar ul li a {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#989898;
+	font-size:16px;
+	text-decoration:none;
+	line-height: 60px;
+	letter-spacing:0.1em;
+	height:60px;
+	width:115px;
+	display:block;
+	padding:0 15px 0 0;
+}
+.sidebar ul li.selected a {
+	color:#ec9701;
+	font-family: Tahoma, Verdana, Segoe, sans-serif;
+}
+.sidebar ul li.selected a:hover {
+	color:#ec9701;
+}
+.sidebar ul li a:hover {
+	color:#fff;
+}
+.connect {
+	margin:505px 0 0;
+}
+.connect a {
+	height:73px;
+	width:73px;
+	display:block;
+	text-indent:-99999px;
+	margin:0 0 30px 36px;
+}
+.connect a#facebook {
+	background:url(../images/icons.png) no-repeat 0 0;
+}
+.connect a#facebook:hover {
+	background:url(../images/icons.png) no-repeat 0 -225px;
+}
+.connect a#twitter {
+	background:url(../images/icons.png) no-repeat 0 -75px;
+}
+.connect a#twitter:hover {
+	background:url(../images/icons.png) no-repeat 0 -300px;
+}
+.connect a#googleplus {
+	background:url(../images/icons.png) no-repeat 0 -150px;
+}
+.connect a#googleplus:hover {
+	background:url(../images/icons.png) no-repeat 0 -375px;
+}
+.sidebar p.footnote {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#84500d;
+	line-height:20px;
+	margin:35px 0 0 10px;
+	font-size: 12px;
+}
+/*------------------------- Body ------------------------*/
+.body {
+	float:left;
+	width:809px;
+	border-width:1px;
+	border-style:none solid none none;
+	border-color:#fec848;
+	background:url(../images/bg-content.jpg) repeat-y;
+	margin: -171px 0 0;
+	min-height:1289px;
+}
+.body ul {
+	list-style:none;
+	padding:0;
+	margin:0;
+}
+.body ul li p {
+}
+.body ul li {
+	background:url(../images/separator.jpg) no-repeat right top;
+}
+.body ul li.first {
+	background:url(../images/bg-first-separator.jpg) no-repeat left top;
+}
+.body ul li.first h3 {
+	margin:0 0 0 30px;
+	padding:44px 0 0;
+}
+.body ul li.first h3 a {
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:25px;
+	color:#ff8a00;
+	text-decoration:none;
+	font-weight:normal;
+	line-height:30px;
+	letter-spacing:0.05em;
+	display:block;
+	margin:0;
+}
+.body ul li.first h3 a:hover {
+	color:#fdbe36;
+}
+.body ul li.first span {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#838383;
+	font-size:12px;
+	line-height:30px;
+	margin:4px 0 11px 30px;
+	display:block;
+}
+.body ul li.first a {
+	margin:0 0 0 30px;
+	display:block;
+}
+.body ul li.first a img:hover {
+	filter:alpha(opacity=90);/* Needed for IE7 */
+	opacity:0.9;
+}
+.body ul li.first p {
+	color:#bfbfbf;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	padding:0 30px;
+	text-align:justify;
+	margin:18px 0 42px;
+}
+.body ul li.first p a {
+	display:inline;
+	margin:0;
+}
+.body ul li.second {
+	padding:50px 0 0;
+}
+.body ul li.second > a {
+	margin:0 30px 0;
+	display:block;
+	float:left;
+}
+.body ul li.second a img:hover {
+	filter:alpha(opacity=90);/* Needed for IE7 */
+	opacity:0.9;
+}
+.body ul li.second h3 {
+	margin:0;
+}
+.body ul li.second h3 a {
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:25px;
+	color:#ff8a00;
+	font-weight:normal;
+	text-decoration:none;
+	line-height:30px;
+	letter-spacing:0.05em;
+}
+.body ul li.second h3 a:hover {
+	color:#fdbe36;
+}
+.body ul li.second span {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#838383;
+	font-size:12px;
+	line-height:30px;
+	margin:5px 0 0 30px;
+	display:block;
+}
+.body ul li.second p {
+	color:#bfbfbf;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	padding:0 30px;
+	text-align:justify;
+	margin:0 0 33px;
+}
+.body ul li.second p a {
+	color:#bfbfbf;
+	display:inline;
+	margin:0;
+}
+.body ul li.second p a:hover {
+	color:#ff8a00;
+}
+.body ul li.third {
+	padding:50px 0 0;
+	position:relative;
+}
+.body ul li.third h3 {
+	margin:0 0 0 30px;
+}
+.body ul li.third h3 a {
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:25px;
+	color:#ff8a00;
+	font-weight:normal;
+	text-decoration:none;
+}
+.body ul li.third h3 a:hover {
+	color:#fdbe36;
+}
+.body ul li.third span {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#838383;
+	font-size:12px;
+	line-height:30px;
+	margin:5px 0 0 30px;
+	display:block;
+}
+.body ul li.third p {
+	margin: 0 30px;
+	color:#bfbfbf;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	text-align:justify;
+	width: 400px;
+}
+.body ul li.third p a {
+	color:#bfbfbf;
+	display:inline;
+	margin:0;
+}
+.body ul li.third p a:hover {
+	color:#ff8a00;
+}
+.body ul li.third > a {
+	position:absolute;
+	top:50px;
+	right:30px;
+}
+.body ul li.third a img:hover {
+	filter:alpha(opacity=90);/* Needed for IE7 */
+	opacity:0.9;
+}
+.body .about {
+	padding:18px 30px 0;
+	background:url(../images/separator.jpg) no-repeat right top;
+}
+.body .about h3 {
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:25px;
+	color:#ff8a00;
+	font-weight:normal;
+	margin:27px 0 0;
+}
+.body .about p {
+	color:#bfbfbf;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	text-align:justify;
+	margin:3px 0 26px;
+}
+.body .about p a {
+	display:inline;
+	margin:0;
+}
+.body .blog {
+	padding:0 30px;
+	background:url(../images/bg-first-separator.jpg) no-repeat right top;
+	overflow:hidden;
+}
+.body .blog div:first-child {
+	width:501px;
+	margin:0;
+	padding:0;
+}
+.body .blog div:first-child h3 {
+	margin:42px 0 0;
+	font-family:Georgia, "Times New Roman", Times, serif;
+	font-size:25px;
+	color:#ff8a00;
+	font-weight:normal;
+	line-height:30px;
+	letter-spacing:0.05em;
+}
+.body .blog div:first-child span {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#838383;
+	font-size:12px;
+	line-height:30px;
+	margin:6px 0 11px;
+	display:block;
+}
+.body .blog div:first-child p {
+	color:#bfbfbf;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	text-align:justify;
+	margin:20px 0 30px;
+}
+.body .blog div:first-child p a {
+	display:inline;
+	margin:0;
+}
+.body .blog div {
+	float: left;
+	margin: 0 0 0 43px;
+	padding: 66px 0 0;
+	width: 205px;
+}
+.body .blog div img {
+	display:block;
+}
+.body .blog div h4:first-child {
+	padding:41px 0 0;
+}
+.body .blog div h4 {
+	font-family:Arial, Helvetica, sans-serif;
+	color:#bfbfbf;
+	font-size:14px;
+	font-weight:normal;
+	text-transform:uppercase;
+	margin:0;
+	padding:30px 0 0;
+	line-height:30px;
+	letter-spacing:0.05em;
+}
+.body .blog div ul {
+	list-style:disc;
+	color:#bfbfbf;
+	font-size: 10px;
+}
+.body .blog div ul li {
+	background:none;
+}
+.body .blog div ul li p {
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:14px;
+	line-height:30px;
+	margin: 0;
+}
+.body .blog div ul li p a {
+	color:#bfbfbf;
+	text-decoration:none;
+}
+.body .blog div ul li p a:hover {
+	text-decoration:underline;
+}

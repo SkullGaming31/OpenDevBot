@@ -10,7 +10,6 @@
 * [x] Timer Commands
 * [ ] Counters?
 * [ ] Quotes System?
-* [ ] Ticket System? [in-Progress]
 * [ ] Viewer Watch Time?
 * [ ] Virtual Currency system
   * [ ] duel
