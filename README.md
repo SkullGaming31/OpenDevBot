@@ -28,7 +28,7 @@
     <img src="./assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
-<h3 align="center">SkulledBot</h3>
+<h3 align="center">SkulledBot V2</h3>
 
   <p align="center">
     Twitch Chatbot<br>
@@ -200,5 +200,5 @@ Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbottwitch)
 [issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
 [issues-url]: https://github.com/SkullGaming31/skulledbotTwitch/issues
 [license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/main/LICENSE
+[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/master/LICENSE
 [product-screenshot]: images/screenshot.png

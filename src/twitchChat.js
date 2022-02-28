@@ -1,4 +1,4 @@
-/* const express = require('express');
+const express = require('express');
 const countdown = require('countdown');
 const fs = require('fs/promises');
 const axios = require('axios').default;
@@ -50,19 +50,6 @@ async function main() {
 	// eventSub Stuff
 	// const userID = '31124455';
 	const broadcasterID = await apiClient.channels.getChannelInfo(userId);
-	if (process.env.NODE_ENV === 'production') {
-		const eventSubListener = new EventSubListener({
-			apiClient,
-			adapter: new ReverseProxyAdapter({
-				hostName: '10.0.0.106',
-				port: 443,
-				pathPrefix: '/twitch'
-			}),
-			secret: eventSubSecret,
-			logger: { minLevel: 'debug' }
-		});
-		await eventSubListener.listen().then('Event Listener Started').catch((err) => { console.error(err); });
-	}
 	if (process.env.NODE_ENV === 'development') {
 		const eventSubListener = new EventSubListener({
 			apiClient,
@@ -70,7 +57,7 @@ async function main() {
 			secret: eventSubSecret,
 			logger: { minLevel: 'error' }
 		});
-		await eventSubListener.listen().then('Event Listener Started').catch((err) => { console.error(err); });
+		await eventSubListener.listen().then(() => console.log('Event Listener Started')).catch((err) => console.error(err));
 		const twitchActivity = new WebhookClient({
 			id: config.DISCORD_WEBHOOK_ID,
 			token: config.DISCORD_WEBHOOK_TOKEN,
@@ -105,72 +92,60 @@ async function main() {
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {// not displaying text if text is required
 			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
 			const userInfo = await cp.getUser();
-			const reward = await cp.getReward();
-			switch (reward.title || reward.id) {
+			const streamer = await cp.getBroadcaster();
+			switch (cp.rewardTitle) {
 			case 'Twitter':
-				const user = await cp.getUser();
-				const streamer = await cp.getBroadcaster();
-				console.log('REDEEMING TWITTER');
-				if (reward.isEnabled && reward.isInStock) {
-					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-					chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
+				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}, RedemptionId: ${cp.id}`);
+				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
 
-					const twitterEmbed = new MessageEmbed()
-						.setTitle('REDEEM EVENT')
-						.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
-						.setColor('GREEN')
-						.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
-						.setThumbnail(`${streamer.profilePictureUrl}`)
-						.setURL(`https://twitch.tv/${user.name}`)
-						.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
-						.setTimestamp();
-					twitchActivity.send({ embeds: [twitterEmbed] });}
-				reward.autoApproved = true;
+				const twitterEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor('GREEN')
+					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setURL(`https://twitch.tv/${userInfo.name}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [twitterEmbed] });
 				break;
 			case 'Instagram':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Instagram: https://instagram.com/skullgaming31`);
-				reward.autoApproved = true;
 				break;
 			case 'YouTube':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA`);
-				reward.autoApproved = true;
 				break;
 			case 'TikTok':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tok-Tok: https://tiktok.com/@skullgaming31`);
-				reward.autoApproved = true;
 				break;
 			case 'Snapchat':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/skullgaming31`);
-				reward.autoApproved = true;
 				break;
 			case 'Facebook':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`);
-				reward.autoApproved = true;
 				break;
 			case 'Discord':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Discord: https://discord.com/invite/6gGxrQMC9A`);
 				const discordEmbed = new MessageEmbed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${user.profilePictureUrl}` })
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor('GREEN')
-					.setDescription(`${user.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setURL(`https://twitch.tv/${user.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${user.profilePictureUrl}` })
+					.setURL(`https://twitch.tv/${userInfo.name}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [discordEmbed] });
-				reward.autoApproved = true;
 				break;
 			case 'Merch':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Merch: https://skullgaming31-merch.creator-spring.com`);
-				reward.autoApproved = true;
 				break;
 			case 'Hydrate!':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -195,7 +170,6 @@ async function main() {
 			case 'IRLWordBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`);
-				reward.userInputRequired = true;
 				break;
 			case 'IRLVoiceBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -203,7 +177,6 @@ async function main() {
 				break;
 			case 'Ban in-game action':
 				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action`);
-				reward.userInputRequired = true;
 				break;
 			default:
 				console.log(`${cp.userName} has attempted to redeem ${cp.rewardTitle} thats not hardcoded in yet`);
@@ -627,4 +600,4 @@ async function main() {
 		}
 	});
 }
-main(); */
+main();
