@@ -136,12 +136,11 @@ This is an example of how to list things you need to use the software and how to
 * [x] Timer Commands
 * [ ] Counters?
 * [ ] Quotes System?
-* [x] Ticket System?
 * [ ] Viewer Watch Time?
 * [ ] Virtual Currency System
   * [ ] duel
   * [ ] dig
-  * [x] dice
+  * [ ] dice
 * [x] auto tweet when stream goes live with gameName included
 * [ ] Que/delay webhooks being sent to avoid being rate limited
 
