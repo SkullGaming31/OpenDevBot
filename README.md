@@ -201,7 +201,7 @@ Project Link: [skulledbotTwitchV2](https://github.com/skullgaming31/skulledbotTw
 [issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
 [issues-url]: https://github.com/SkullGaming31/skulledbotTwitch/issues
 [license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/main/LICENSE
+[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/master/LICENSE
 [product-screenshot]: images/screenshot.png
 
 <!--
