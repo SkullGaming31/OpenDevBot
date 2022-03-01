@@ -6,7 +6,7 @@ const userModel = require('../database/models/user');
 const channelModel = require('../database/models/channel');
 const twitchAPI = require('../lib/twitch-api');
 
-const redirect_uri = 'http://localhost:5000/auth/twitch/callback';
+const redirect_uri = 'http://localhost:8888/auth/twitch/callback';
 const twitchRouter = express.Router();
 
 

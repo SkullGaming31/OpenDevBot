@@ -28,16 +28,13 @@ async function run () {
 	app.get('/', (req, res) => {
 		res.sendFile('src/assets/index.html', { root: '.' });
 	});
-	app.get('/about', (req, res) => {
-		res.sendFile('src/assets/about.html', { root: '.' });
-	});
-	app.get('/about', (req, res) => {
-		res.sendFile('src/assets/blog.html', { root: '.' });
+	app.get('/home', (req, res) => {
+		res.sendFile('src/assets/home.html', { root: '.' });
 	});
 
 	app.use('/auth/twitch', require('./auth/twitch'));
 		
-	app.listen(Port || 8081, () => { console.log(`Server started on http://localhost:${Port}`); });
+	app.listen(Port || 8889, () => { console.log(`Server started on http://localhost:${Port}`); });
 }
 run();
 

@@ -1,17 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<!-- <link rel="stylesheet" href="./css/style.css"> -->
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="ie=chrome">
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>My Twitch OAuth2 App</title>
 	<style>
-		body {
-	/* background:url(../images/bg-body.jpg); */
-	background-image: linear-gradient(to right bottom, black, green);
-	margin:0;
+body {
+	background-image: linear-gradient(to bottom, limegreen, black);
+	padding: 3px;
+	margin: 8px;
 	font-family: Arial, Helvetica, sans-serif;
 }
 a {
 	outline:none;
+	color: white;
+}
+a:active {
+	color: darkgreen;
+}
+a:hover {
+	color: blue;
 }
 h1 {
 	text-align: center;
@@ -23,6 +33,6 @@ h1 {
 </head>
 <body>
 		<h1>Does not Work ATM</h1>
-		<div class="buttonTwitch"><button type="submit" onsubmit="location.href='http://localhost:8888/auth/twitch'">Authorize Twitch Channel</button></div>
+		<div class="buttonTwitch"><a href="http://10.0.0.106:8888/auth/twitch">Authorize Twitch Channel</a></div>
 </body>
 </html>

@@ -91,9 +91,10 @@ async function main() {
 		});
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {// not displaying text if text is required
 			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
+			const reward = await userApiClient.channelPoints.getCustomRewardById(broadcasterID, cp.rewardId);
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
-			switch (cp.rewardTitle) {
+			switch (cp.rewardTitle || cp.rewardId) {
 			case 'Twitter':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}, RedemptionId: ${cp.id}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
@@ -343,6 +344,7 @@ async function main() {
 			if (staff) {
 				// const api = await apiClient.users.getUserByName(broadcasterID.name);
 				chatClient.say(channel, `${user}, Im Here and working.`);
+				chatClient.enableEmoteOnly(channel);
 			}
 		}
 		if (command === 'settitle' && channel === '#skullgaming31') {

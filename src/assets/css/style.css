@@ -1,15 +1,20 @@
-/* Website template by freewebsitetemplates.com */
-/*------------------------- Layout styles ------------------------*/ 
 body {
-	background:url(../images/bg-body.jpg);
+	background-image: linear-gradient(from top, limegreen, black);
 	margin:0;
 	font-family: Arial, Helvetica, sans-serif;
 }
 a {
 	outline:none;
 }
+a:active {
+	color: green;
+}
+a:hover {
+	color: blue;
+}
+h1 {
+	text-align: center;
+}
 .buttonTwitch {
-	margin-left: 550px;
-	margin-top: 100px;
-	color: purple;
+	text-align: center;
 }
