@@ -83,15 +83,16 @@ async function main() {
 				.setURL(`https://twitch.tv/${userInfo.name}`)
 				.setTimestamp();
 			LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
+			chatClient.disableEmoteOnly(broadcasterID.name);
 		});
 		const offline = await eventSubListener.subscribeToStreamOfflineEvents(userId, async stream => {
 			console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
 			chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
-			// chatClient.enableEmoteOnly(broadcasterID.name);
+			chatClient.enableEmoteOnly(broadcasterID.name);
 		});
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {// not displaying text if text is required
 			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
-			const reward = await userApiClient.channelPoints.getCustomRewardById(broadcasterID, cp.rewardId);
+			// const reward = await userApiClient.channelPoints.getCustomRewardById(broadcasterID, cp.rewardId);
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
 			switch (cp.rewardTitle || cp.rewardId) {
@@ -190,6 +191,7 @@ async function main() {
 		});
 		const hypeEventStart = await eventSubListener.subscribeToChannelHypeTrainBeginEvents(userId, async hts => {
 			console.log(`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);
+			chatClient.say(broadcasterID.name, `Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);
 		});
 		const hypeEventEnd = await eventSubListener.subscribeToChannelHypeTrainEndEvents(userId, hte => {
 			console.log(`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`);
@@ -202,6 +204,32 @@ async function main() {
 		const giftedSubs = await eventSubListener.subscribeToChannelSubscriptionGiftEvents(userId, async gift => {
 		// console.log(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 			chatClient.say(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
+
+			const userInfo = await gift.getGifter();
+			const giftedSubs = new MessageEmbed()
+				.setTitle('GIFTED SUB EVENT')
+				.setAuthor({ name: `${gift.gifterDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.addFields([
+					{
+						name: 'Username: ',
+						value: `${gift.gifterDisplayName}`,
+						inline: true
+					},
+					{
+						name: 'Amount: ',
+						value: `Gifted ${gift.amount}`,
+						inline: true
+					},
+					{
+						name: 'Gifted Tier: ',
+						value: `${parseFloat(gift.tier)}`,
+						inline: true
+					},
+				])
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setColor('GREEN')
+				.setTimestamp();
+			twitchActivity.send({ embeds: [giftedSubs] });
 		});
 		const resub = await eventSubListener.subscribeToChannelSubscriptionMessageEvents(userId, async s => {
 		// console.log(broadcasterID.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
@@ -228,6 +256,7 @@ async function main() {
 					},
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.color('GREEN')
 				.setTimestamp();
 			twitchActivity.send({ embeds: [resubEmbed] });
 		});
@@ -244,20 +273,24 @@ async function main() {
 				`${e.userDisplayName} has followed, it's Super Effective`
 			];
 			let randomString = randomFollowMessage[Math.floor(Math.random() * randomFollowMessage.length)];
-			let U = await e.getUser();
 			// console.log(`${e.userName} has followed the channel, ${e.followDate}`);
-			if (U.description === '') { 
+			const userInfo = await e.getUser();
+			if (userInfo.description === '') { 
 				chatClient.say(broadcasterID.name, `${randomString}`);
 			} else {
 				chatClient.say(broadcasterID.name, `${randomString}`);
-				console.log(`Users Channel Description: ${U.description}`);
+				console.log(`Users Channel Description: ${userInfo.description}`);
 			}
+
 			const followEmbed = new MessageEmbed()
 				.setTitle('FOLLOW EVENT')
-				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${U.profilePictureUrl}` })
-				.addField({ name: 'Account Created: ', value: `${e.followDate}`, inline: true })
+				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.addField({ name: 'Account Created: ', value: `${userInfo.creationDate}`, inline: true })
 				.addField({ name: 'Twitch Channel: ', value: `https://twitch.tv/${e.userName}`, inline: true})
-				.setTimestamp(`${e.followDate}`);
+				.addField({ name: 'Follow Date: ', value: `${e.followDate}`, inline: true })
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.footer({ text: 'SkulledArmy' })
+				.setTimestamp();
 			twitchActivity.send({ embeds: [followEmbed] });
 		});
 		const sub = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async sub => {
@@ -268,6 +301,23 @@ async function main() {
 				.setTitle('SUBSCRIBER EVENT')
 				.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 				.setDescription(`${userInfo.displayName} has just subscribed with a tier ${sub.tier * 1} Subscription`)
+				.addFields([
+					{
+						name: 'Username: ',
+						value: `${userInfo.displayName}`,
+						inline: true
+					},
+					{
+						name: 'Sub Tier: ',
+						value: `tier ${sub.tier} Subscription`,
+						inline: true
+					},
+					{
+						name: 'Sub Gifted: ',
+						value: `${sub.isGift}`,
+						inline: true
+					},
+				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
 				.setTimestamp();
 			twitchActivity.send({ embeds: [subEmbed] });
@@ -280,7 +330,23 @@ async function main() {
 				const cheerEmbed = new MessageEmbed()
 					.setTitle('CHEER EVENT')
 					.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setDescription('')
+					.addFields([
+						{
+							name: 'Username: ',
+							value: `${userInfo.displayName}`,
+							inline: true
+						},
+						{
+							name: 'Bits Amount: ',
+							value: `${cheer.bits}`,
+							inline: true
+						},
+						{
+							name: 'Message: ',
+							value: `${cheer.message}`,
+							inline: true
+						},
+					])
 					.setThumbnail(`${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				twitchActivity.send({ embeds: [cheerEmbed] });
@@ -306,13 +372,26 @@ async function main() {
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 
-		if (message.includes('overlay expert')) {
-			chatClient.say(channel, `${display}, Overlays and alerts for your stream without OBS or a streaming PC, check it out here: https://overlay.expert its 100% free to use`);
+		// if (message.includes('overlay expert')) {
+		// 	chatClient.say(channel, `${display}, Overlays and alerts for your stream without OBS or a streaming PC, check it out here: https://overlay.expert its 100% free to use`);
+		// }
+		// if (message.includes('overlay designer')) {
+		// 	chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
+		// }
+
+		const prefix = config.TWITCH_COMMAND_PREFIX;
+		if (!message.startsWith('-')) return;
+		
+		const args = message.slice(1).split(' ');
+		const command = args.shift().toLowerCase();
+		
+		if (command === 'ping' && channel === '#skullgaming31') {
+			if (staff) {
+				chatClient.say(channel, `${user}, Im Here and working.`);
+				await chatClient.enableEmoteOnly(channel).then(response => { console.log(response); }).catch((err) => { console.error(err); });
+			}
 		}
-		if (message.includes('overlay designer')) {
-			chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
-		}
-		if (message.includes('quote')) {
+		if (command === 'quote' && channel === '#skullgaming31') {
 			const quotes = [
 				'Behind every cloud is a ray of sunshine waiting to be revealed. Shine your light on those that need guidance in there time of darkness',
 				'I wont get upset at you about a mistake, i\'ll get upset at you for the next mistake that comes from still thinking about the last mistake',
@@ -321,31 +400,6 @@ async function main() {
 			];
 			let randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 			chatClient.say(channel, `${randomQuote}`);
-		}
-
-
-		const prefix = config.TWITCH_COMMAND_PREFIX;
-		if (!message.startsWith(prefix)) return;
-		
-		const args = message.slice(1).split(' ');
-		const command = args.shift().toLowerCase();
-
-		// setInterval(() => {
-		// 	chatClient.say(channel, 'Overlays and alerts for your stream without OBS or a streaming PC, check it out here: https://overlay.expert its 100% free to use');
-		// }, 10 * 1000); // every 10 seconds
-
-		// word detection
-		// if (message.includes(BLOCKED_WORDS.values)) {// not working
-		// 	await chatClient.deleteMessage(channel, msg.id);
-		// 	chatClient.say(channel, 'this is a debug message for deleting messages(t)');
-		// }
-		
-		if (command === 'ping' && channel === '#skullgaming31') {
-			if (staff) {
-				// const api = await apiClient.users.getUserByName(broadcasterID.name);
-				chatClient.say(channel, `${user}, Im Here and working.`);
-				chatClient.enableEmoteOnly(channel);
-			}
 		}
 		if (command === 'settitle' && channel === '#skullgaming31') {
 			if (staff) {
@@ -416,10 +470,9 @@ async function main() {
 			const response = await axios.get('https://icanhazdadjoke.com/', {
 				headers: {
 					'Accept': 'application/json',
-					'User-Agent': 'Personal Twitch/Discord ChatBot (https://github.com/skullgaming31/skulledbotTwitch)'
+					'User-Agent': 'Personal Twitch ChatBot (https://github.com/skullgaming31/skulledbotTwitch)'
 				}
 			});
-			// console.log(response.data.joke);
 			chatClient.say(channel, `${response.data.joke}`);
 		}
 		if (command === 'games' && channel === '#skullgaming31') {
