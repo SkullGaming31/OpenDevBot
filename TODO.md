@@ -7,6 +7,7 @@
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
 * [x] add commands to an array to display help command easier
 * [x] add word detection to send commands without prefix
+* [ ] create channelPoints with userToken to modify the channel points with commands
 * [ ] Timer Commands
 * [ ] Counters?
 * [ ] Quotes System?
