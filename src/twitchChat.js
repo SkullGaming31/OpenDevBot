@@ -109,10 +109,42 @@ async function main() {
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
 			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
-			const reward = await userApiClient.channelPoints.getCustomRewardById(broadcasterID, cp.rewardId);
+			// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterID, `${cp.rewardId}`, `${cp.id}`);
 			switch (cp.rewardTitle || cp.rewardId) {
+			case 'Shoutout':
+				const user = await apiClient.users.getUserByName(cp.userName);
+				const gameLastPlayed = await apiClient.channels.getChannelInfo(user.id);
+				chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${cp.userName}, last seen playing: ${gameLastPlayed.gameName}`);
+
+				const shoutoutEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor(limeGreen)
+					.addFields([
+						{
+							name: 'Viewer: ',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Playing: ',
+							value: `${gameLastPlayed.gameName}`,
+							inline: true
+						},
+						{
+							name: 'Cost: ',
+							value: `${cp.rewardCost} skulls`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${userInfo.profilePictureUrl}`)
+					.setURL(`https://twitch.tv/${cp.userName}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [shoutoutEmbed] });
+				break;
 			case 'Twitter':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}, RedemptionId: ${cp.id}`);
+				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
 
 				const twitterEmbed = new MessageEmbed()
@@ -867,7 +899,7 @@ async function main() {
 			}
 		} else {
 			if (message.includes('overlay expert')) {
-				chatClient.say(channel, `${display}, Overlays and alerts for your stream without OBS or a streaming PC, check it out here: https://overlay.expert its 100% free to use`);
+				chatClient.say(channel, `${display}, Create overlays and alerts for your @Twitch streams without OBS or any streaming software. For support, see https://github.com/overlay-expert/help-desk/issues/1`);
 			}
 			if (message.includes('overlay designer')) {
 				chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
