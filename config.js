@@ -6,7 +6,6 @@ require('dotenv').config();
  * @prop {string} TWITCH_CLIENT_SECRET Twitch Client Secret
  * @prop {string} TWITCH_CLIENT_REDIRECT_HOST Client Redirect
  * @prop {string} TWITCH_EVENTSUB_SECRET eventsub secret for twitch helix
- * @prop {string} TWITCH_COMMAND_PREFIX prefix used when sending chat commands
  * @prop {string} MONGO_USER Mongo DB Username
  * @prop {string} MONGO_PASS Mongo DB Password
  * @prop {string} MONGO_DB Mongo Database Name

@@ -18,8 +18,6 @@ async function main() {
 	const clientId = config.TWITCH_CLIENT_ID;
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
-	const port = config.PORT;
-	const BLOCKED_WORDS = ['testing', 'testty'];
 
 	const tokenData = JSON.parse(await fs.readFile('./tokens.json', 'UTF-8'));
 	const authProvider = new RefreshingAuthProvider({
@@ -28,20 +26,48 @@ async function main() {
 		onRefresh: async (newTokenData) => await fs.writeFile('./tokens.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, tokenData);
 	
-	const userTokenData = JSON.parse(await fs.readFile('./users.json', 'UTF-8'));
+	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/users.json', 'UTF-8'));
 	const userAuthProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
-		onRefresh: async (newTokenData) => await fs.writeFile('./users.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
+		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/users.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, userTokenData);
 
 	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31'], logger: { minLevel: 'critical' } });
-	await chatClient.connect().then(() => console.log('connected to Twitch Chat') );
+	await chatClient.connect().then(() => console.log('connected to Twitch Chat') ).catch((err) => { console.error(err); });
 	const appAuthProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 	const apiClient = new ApiClient({ authProvider: appAuthProvider, logger: { minLevel: 'critical' } });
 	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel: 'critical' } });
 	await apiClient.eventSub.deleteAllSubscriptions();
 	
+
+	async function createChannelPointsRewards() { // creating the channel points rewards
+		console.log('registering Channel Points Rewards');
+		// const merch = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
+		// 	title: 'Merch',
+		// 	cost: 1,
+		// 	autoFulfill: true,
+		// 	backgroundColor: '#d0080a',
+		// 	globalCooldown: null,
+		// 	isEnabled: true,
+		// 	maxRedemptionsPerUserPerStream: null,
+		// 	maxRedemptionsPerStream: null,
+		// 	prompt: 'click for a link to my Merch Shop',
+		// 	userInputRequired: false
+		// });
+		// const tipping = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
+		// 	title: 'Tip',
+		// 	cost: 1,
+		// 	autoFulfill: true,
+		// 	backgroundColor: '#d0080a',
+		// 	globalCooldown: null,
+		// 	isEnabled: true,
+		// 	maxRedemptionsPerUserPerStream: null,
+		// 	maxRedemptionsPerStream: null,
+		// 	prompt: 'click for a link to my Tipping Page',
+		// 	userInputRequired: false
+		// });
+	}
 	
 	// PubSub
 	const pubSubClient = new PubSubClient();
@@ -64,6 +90,128 @@ async function main() {
 			token: config.DISCORD_WEBHOOK_TOKEN,
 		});
 		
+		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '52c6bb77-9cc1-4f67-8096-d19c9d9f8896', {
+			title: 'Shoutout',
+			cost: 2000,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: 3,
+			maxRedemptionsPerStream: null,
+			prompt: 'shout yourself out with Channel Points',
+			userInputRequired: false
+		});
+		const twitterUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'e80f9746-d183-47cb-933e-bdf9d3be5241', {
+			title: 'Twitter',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Click for a link to my twitter profile',
+			userInputRequired: false
+		});
+		const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'c8ca7ccf-9e2f-4313-8e28-35eecdcda685', {
+			title: 'Instagram',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Click for a link to my Instagram profile',
+			userInputRequired: false
+		});
+		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '144837ed-514a-436c-95cf-d9491efad240', {
+			title: 'TicTok',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Click for a link to my Tik-Tok profile',
+			userInputRequired: false
+		});
+		const discordUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '9aa5fab9-2648-4875-b9c8-ebfb9dee7019', {
+			title: 'Discord',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my discord server',
+			userInputRequired: false
+		});
+		const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'df73bcbd-a01c-4453-8ae3-987078ced3ab', {
+			title: 'Facebook',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my facebook page',
+			userInputRequired: false
+		});
+		const youtubeUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '993abcd3-613b-4e7a-ab0c-ae0705a707bd', {
+			title: 'YouTube',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my youtube channel',
+			userInputRequired: false
+		});
+		const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'ad16d5e3-b88c-43d3-9349-0203cbaf88cc', {
+			title: 'Snapchat',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Snapchat',
+			userInputRequired: false
+		});
+		const merchUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'f7ed2b68-35d5-4b57-bf54-704274d89670', {
+			title: 'Merch',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Merch Shop',
+			userInputRequired: false
+		});
+		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '64c19c30-5560-4b68-8716-be508de12d3d', {
+			title: 'Tip',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Tipping Page',
+			userInputRequired: false
+		});
+		// await createChannelPointsRewards();
+
 		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => { // TODO: Remove hard coded link for going live tweet to twitter
 			const stream = await o.getStream();
 			const userInfo = await o.getBroadcaster();
@@ -98,17 +246,17 @@ async function main() {
 				.setColor(limeGreen)
 				.setTimestamp();
 			LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
-			chatClient.disableEmoteOnly(broadcasterID.name);
+			await chatClient.disableEmoteOnly(broadcasterID.name);
 		});
 		const offline = await eventSubListener.subscribeToStreamOfflineEvents(userId, async stream => {
 			console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
 			chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
 			chatClient.enableEmoteOnly(broadcasterID.name);
 		});
-		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {// not displaying text if text is required
+		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => {
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
-			// console.log(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Channel Points`);
+			console.log(broadcasterID.name, `${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, BroadcasterId: ${cp.id}`);
 			// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterID, `${cp.rewardId}`, `${cp.id}`);
 			switch (cp.rewardTitle || cp.rewardId) {
 			case 'Shoutout':
@@ -143,15 +291,62 @@ async function main() {
 					.setTimestamp();
 				twitchActivity.send({ embeds: [shoutoutEmbed] });
 				break;
+			case 'Tip':
+				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/SkullGaming31`);
+
+				const tipEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor(limeGreen)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setURL(`https://twitch.tv/${userInfo.name}`)
+					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [tipEmbed] });
+				break;
 			case 'Twitter':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
+				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/skullgaming31`);
 
 				const twitterEmbed = new MessageEmbed()
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`**${userInfo.displayName}** has redeemed \n**${cp.rewardTitle}** \nfor **${cp.rewardCost} Skulls**`)
+					// .setDescription(`**${userInfo.displayName}** has redeemed \n**${cp.rewardTitle}** \nfor **${cp.rewardCost} Skulls**`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
 					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
@@ -166,9 +361,26 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [instagramEmbed] });
 				break;
@@ -180,7 +392,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -194,7 +422,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -208,7 +452,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -222,7 +482,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -236,7 +512,24 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
 					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
@@ -251,7 +544,24 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
 					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
@@ -266,7 +576,24 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -280,35 +607,83 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [unloadEmbed] });
 				break;
 			case 'DropController':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
+				// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName} Put down that controller for 30 seconds`);
 
 				const dropcontrollerEmbed = new MessageEmbed()
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [dropcontrollerEmbed] });
 				break;
 			case 'SwatRun':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
+				// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName} Get to running Boi, we got buildings to charge`);
 
 				const swatrunEmbed = new MessageEmbed()
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -322,7 +697,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -336,7 +727,23 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -350,22 +757,53 @@ async function main() {
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [irlvoicebanEmbed] });
 				break;
 			case 'Ban in-game action':
-				// eslint-disable-next-line
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userDisplayName}`);
+				// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userDisplayName}`);
 				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action`);
 
 				const baningameactionEmbed = new MessageEmbed()
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor(limeGreen)
-					.setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
@@ -446,7 +884,7 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
 				.setColor(limeGreen)
-				.setFooter({ text: 'SkulledArmy' })
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [giftedSubs] });
 		});
@@ -476,7 +914,7 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
 				.color(limeGreen)
-				.setFooter({ text: 'SkulledArmy' })
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [resubEmbed] });
 		});
@@ -524,7 +962,7 @@ async function main() {
 					},
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
-				.setFooter({ text: 'SkulledArmy' })
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [followEmbed] });
 		});
@@ -554,7 +992,7 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
 				.setColor(limeGreen)
-				.setFooter({ text: 'SkulledArmy' })
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [subEmbed] });
 		});
@@ -585,7 +1023,7 @@ async function main() {
 					])
 					.setThumbnail(`${userInfo.profilePictureUrl}`)
 					.setColor(limeGreen)
-					.setFooter({ text: 'SkulledArmy' })
+					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
 				twitchActivity.send({ embeds: [cheerEmbed] });
 			}
@@ -611,10 +1049,23 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
 				.setColor(limeGreen)
-				.setFooter({ text: 'SkulledArmy' })
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [raidEmbed] });
 		});
+	}
+
+	async function createSkullPoints(msg) {
+		// see if there following the channel
+		// if they are add X amount of points onto there account
+		// if not dont do anything
+		// if points are added send a message saying X amount of points have been added
+		const users = await userApiClient.users.getFollowFromUserToBroadcaster(msg.userInfo.userName, broadcasterID);
+		if (users) {
+			console.log('Giving skulls');
+		} else {
+			console.log('Im broken or they dont follow');
+		}
 	}
 
 	chatClient.onMessage(async (channel, user, message, msg) => {
@@ -633,9 +1084,9 @@ async function main() {
 					await chatClient.enableEmoteOnly(channel).then(response => { console.log(response); }).catch((err) => { console.error(err); });
 				}
 			}
-			if (command === 'oe' || command === 'overlay expert') {
-				chatClient.say(channel, 'Create overlays and alerts for your @Twitch streams without OBS or any streaming software. For support, see https://github.com/overlay-expert/help-desk/issues/1');
-			}
+			// if (command === 'oe' || command === 'overlay expert') {
+			// 	chatClient.say(channel, 'Create overlays and alerts for your Twitch streams without OBS or any streaming software. For support, see https://github.com/overlay-expert/help-desk/issues/1');
+			// }
 			if (command === 'quote' && channel === '#skullgaming31') {
 				const quotes = [
 					'Behind every cloud is a ray of sunshine waiting to be revealed. Shine your light on those that need guidance in there time of darkness',
@@ -650,7 +1101,7 @@ async function main() {
 				if (staff) {
 					const title = args.slice(1);
 					const setTitle = await userApiClient.channels.updateChannelInfo(broadcasterID, { 'title': title.join(' ') }); // Channel ID:'31124455'
-					chatClient.say(channel, `channel title has been updated to ${title.join(' ')}`);
+					chatClient.say(channel, `channel title has been updated to ${setTitle}`);
 				} else {
 					chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
 				}
@@ -684,7 +1135,6 @@ async function main() {
 			if (command === 'followage' && channel === '#skullgaming31') {
 				const follow = await apiClient.users.getFollowFromUserToBroadcaster(msg.userInfo.userId, msg.channelId);
 				if (follow) {
-					const currentTimestamp = Date.now();
 					const followStartTimestamp = follow.followDate.getTime();
 					chatClient.say(channel, `@${display} You have been following for ${countdown(new Date(followStartTimestamp))}!`);
 				}
@@ -731,6 +1181,8 @@ async function main() {
 					chatClient.say(channel, `@${display} you have ${results}`);
 					break;
 				case 'duel': // duel someone else for points winner takes all
+					if (!args[1]) return chatClient.say(channel, 'you must tag someone to duel');
+					if (!args[2]) return chatClient.say(channel, 'you must specify an amount to bet');
 					break;
 				default:
 					chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -games dice|dig');
@@ -756,14 +1208,32 @@ async function main() {
 					break;
 				}
 			}
+			if (command === 'vigor' && channel === '#skullgaming31') {
+				switch (args[0]) {
+				case 'about':
+					const vigor = 'https://vigorgame.com/about';
+					chatClient.say(channel, 'Outlive the apocalypse. Vigor is a free-to-play looter shooter set in post-war Norway. LOOT, SHOOT BUILD Shoot and loot in tense encounters Build your shelter and vital equipment Challenge others in various game modes Play on your own or fight together with 2 of your other friends, check out vigor here: ${vigor}');
+					break;
+				case 'lore':
+					chatClient.say(channel, 'not added yet');
+					break;
+				case 'bplevel':
+					const battlepassLevel = 19;
+					chatClient.say(channel, `Battle Pass Level: ${battlepassLevel}`);
+					break;
+				default:
+					chatClient.say(channel, `${display}, Usage: -vigor [about, lore, bplevel]`);
+					break;
+				}
+			}
 			if (command === 'help') {
 				if (channel === '#skullgaming31') {// add commands to an array to display all commands in the help command!
 					if (staff) {
-						const modCommands = ['ping','settitle','setgame','game','lurk','id','followage','accountage','uptime','dadjoke','games','warframe','me','mod', 'socials'];
+						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
 					}
 					else {
-						const commands = ['game','lurk','id','followage','accountage','uptime','dadjoke','games','warframe','me', 'socials'];
+						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
 					}
 				}
@@ -872,7 +1342,7 @@ async function main() {
 				case 'facebook':
 					chatClient.say(channel, `${display}, SkullGaming31's Facebook: SkullGaming31 Entertainment`);
 					break;
-				case 'tiktok':
+				case 'tictok':
 					chatClient.say(channel, `${display}, SkullGaming31's Tik-Tok: https://tiktok.com/@skullgaming31`);
 					break;
 				case 'discord':
@@ -893,7 +1363,7 @@ async function main() {
 					chatClient.say(channel, `@${display}, you can help out the stream by tipping here: ${tipping}, NOTE: tips are NOT expected BUT very much appreacated, all tips go back into the stream wither it be upgrades for the stream or new games for you to watch.`);
 					break;
 				default:
-					chatClient.say(channel, 'Which social are you looking for?, Usage: -socials twitter|instagram|snapchat|facebook|tiktok|discord|merch|tip');
+					chatClient.say(channel, 'Which social are you looking for?, Usage: -socials twitter|instagram|snapchat|facebook|tictok|discord|merch|tip');
 					break;
 				}
 			}
