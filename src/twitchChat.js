@@ -43,19 +43,8 @@ async function main() {
 
 	async function createChannelPointsRewards() { // creating the channel points rewards
 		console.log('registering Channel Points Rewards');
-		// const merch = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
-		// 	title: 'Merch',
-		// 	cost: 1,
-		// 	autoFulfill: true,
-		// 	backgroundColor: '#d0080a',
-		// 	globalCooldown: null,
-		// 	isEnabled: true,
-		// 	maxRedemptionsPerUserPerStream: null,
-		// 	maxRedemptionsPerStream: null,
-		// 	prompt: 'click for a link to my Merch Shop',
-		// 	userInputRequired: false
-		// });
-		// const tipping = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
+		try {
+			// const tipping = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
 		// 	title: 'Tip',
 		// 	cost: 1,
 		// 	autoFulfill: true,
@@ -67,6 +56,19 @@ async function main() {
 		// 	prompt: 'click for a link to my Tipping Page',
 		// 	userInputRequired: false
 		// });
+			const weaponLoadout = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
+				title: 'Weapon Loadout',
+				cost: 300,
+				autoFulfill: false,
+				backgroundColor: '#9146FF',
+				globalCooldown: null,
+				isEnabled: true,
+				maxRedemptionsPerUserPerStream: null,
+				maxRedemptionsPerStream: null,
+				prompt: 'Choose my Primary Weapon when playing Vigor',
+				userInputRequired: true
+			});	
+		} catch (error) { console.error(error); }
 	}
 	
 	// PubSub
@@ -76,6 +78,10 @@ async function main() {
 	// eventSub Stuff
 	// const userID = '31124455';
 	const broadcasterID = await apiClient.channels.getChannelInfo(userId);
+	const twitchActivity = new WebhookClient({
+		id: config.DISCORD_WEBHOOK_ID,
+		token: config.DISCORD_WEBHOOK_TOKEN,
+	});
 	if (process.env.NODE_ENV === 'development') {
 		const limeGreen = '#32CD32';
 		const eventSubListener = new EventSubListener({
@@ -85,10 +91,6 @@ async function main() {
 			logger: { minLevel: 'error' }
 		});
 		await eventSubListener.listen().then(() => console.log('Event Listener Started')).catch((err) => console.error(err));
-		const twitchActivity = new WebhookClient({
-			id: config.DISCORD_WEBHOOK_ID,
-			token: config.DISCORD_WEBHOOK_TOKEN,
-		});
 		
 		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '52c6bb77-9cc1-4f67-8096-d19c9d9f8896', {
 			title: 'Shoutout',
@@ -210,6 +212,30 @@ async function main() {
 			prompt: 'click for a link to my Tipping Page',
 			userInputRequired: false
 		});
+		const reminder = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'dc495854-7c9e-47d4-a6ac-96a736f9f32c', {
+			title: 'Crafting Reminder',
+			cost: 300,
+			autoFulfill: true,
+			backgroundColor: '#4b73f9',
+			globalCooldown: 1200,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'remind me to craft a PPSH',
+			userInputRequired: false
+		});
+		const weaponLoadoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '2e4b420f-5362-41a3-9999-abba4156771a', {
+			title: 'Weapon Loadout',
+			cost: 300,
+			autoFulfill: false,
+			backgroundColor: '#9146FF',
+			globalCooldown: 1200,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Choose my Primary Weapon when playing Vigor, No Knifes',
+			userInputRequired: true
+		});
 		// await createChannelPointsRewards();
 
 		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => { // TODO: Remove hard coded link for going live tweet to twitter
@@ -259,6 +285,36 @@ async function main() {
 			console.log(broadcasterID.name, `${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, BroadcasterId: ${cp.id}`);
 			// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterID, `${cp.rewardId}`, `${cp.id}`);
 			switch (cp.rewardTitle || cp.rewardId) {
+			case 'Weapon Loadout':
+				// console.log(`${cp.userDisplayName} has redeemed ${cp.rewardTitle} and would like you to use ${cp.input}`);
+				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} and would like you to use ${cp.input}`);
+
+				const weaponLoadoutEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor(limeGreen)
+					.addFields([
+						{
+							name: 'User: ',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed: ',
+							value: `${cp.rewardTitle}, \nWeapon: ${cp.input}`,
+							inline: true
+						},
+						{
+							name: 'Skulls: ',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${userInfo.profilePictureUrl}`)
+					.setFooter({ text: 'Channel Points Redeem Event', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [weaponLoadoutEmbed] });
+				break;
 			case 'Shoutout':
 				const user = await apiClient.users.getUserByName(cp.userName);
 				const gameLastPlayed = await apiClient.channels.getChannelInfo(user.id);
@@ -719,6 +775,35 @@ async function main() {
 					.setTimestamp();
 				twitchActivity.send({ embeds: [muteheadsetEmbed] });
 				break;
+			case 'Crafting Reminder':
+				chatClient.say(broadcasterID.name, `${cp.broadcasterDisplayName} is reminding you to craft a PPSH, PAY ATTEMTION`);
+
+				const craftingReminderEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor(limeGreen)
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [craftingReminderEmbed] });
+				break;
 			case 'IRLWordBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`);
@@ -1084,9 +1169,6 @@ async function main() {
 					await chatClient.enableEmoteOnly(channel).then(response => { console.log(response); }).catch((err) => { console.error(err); });
 				}
 			}
-			// if (command === 'oe' || command === 'overlay expert') {
-			// 	chatClient.say(channel, 'Create overlays and alerts for your Twitch streams without OBS or any streaming software. For support, see https://github.com/overlay-expert/help-desk/issues/1');
-			// }
 			if (command === 'quote' && channel === '#skullgaming31') {
 				const quotes = [
 					'Behind every cloud is a ray of sunshine waiting to be revealed. Shine your light on those that need guidance in there time of darkness',
@@ -1185,7 +1267,7 @@ async function main() {
 					if (!args[2]) return chatClient.say(channel, 'you must specify an amount to bet');
 					break;
 				default:
-					chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -games dice|dig');
+					chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -games dice|dig|duel');
 					break;
 				}
 			}
@@ -1212,13 +1294,13 @@ async function main() {
 				switch (args[0]) {
 				case 'about':
 					const vigor = 'https://vigorgame.com/about';
-					chatClient.say(channel, 'Outlive the apocalypse. Vigor is a free-to-play looter shooter set in post-war Norway. LOOT, SHOOT BUILD Shoot and loot in tense encounters Build your shelter and vital equipment Challenge others in various game modes Play on your own or fight together with 2 of your other friends, check out vigor here: ${vigor}');
+					chatClient.say(channel, `Outlive the apocalypse. Vigor is a free-to-play looter shooter set in post-war Norway. LOOT, SHOOT BUILD Shoot and loot in tense encounters Build your shelter and vital equipment Challenge others in various game modes Play on your own or fight together with 2 of your other friends, check out vigor here: ${vigor}`);
 					break;
 				case 'lore':
 					chatClient.say(channel, 'not added yet');
 					break;
 				case 'bplevel':
-					const battlepassLevel = 19;
+					const battlepassLevel = 20;
 					chatClient.say(channel, `Battle Pass Level: ${battlepassLevel}`);
 					break;
 				default:
@@ -1267,7 +1349,9 @@ async function main() {
 						// if (await chatClient.getMods(channel) === args[1]) return console.log(channel, 'that person is a higer rank then VIP and can not be assigned this role');
 							if (await chatClient.getVips(channel) === args[1] || await chatClient.getMods(channel) === args[1]) return console.log(channel, 'this user is already a vip or has the moderator role');
 							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod vip @name`);
-							await chatClient.addVip(channel, args[1].replace('@', ''));
+							try {
+								await chatClient.addVip(channel, args[1].replace('@', ''));
+							} catch (error) { console.error(error); }
 							chatClient.say(channel, `@${args[1].replace('@', '')} has been upgraded to VIP`);
 						}
 						break;
@@ -1310,11 +1394,33 @@ async function main() {
 						}
 						break;
 					case 'ban':// needs to be tested
-						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod ban @name (reason)`);
-						if (!args[2]) args[2] = 'No Reason Provided';
-						chatClient.ban(channel, args[1], args[2]).then(err => { console.error(err); }); {
-							chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
-						}
+						try {
+							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod ban @name (reason)`);
+							if (!args[2]) args[2] = 'No Reason Provided';
+							await chatClient.ban(channel, args[1], args[2]).catch((err) => { console.error(err); }); {
+								chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
+							}
+
+							const banEmbed = new MessageEmbed()
+								.setTitle('Twitch Channel Ban Event')
+								.setAuthor({ name: `${args[1].replace('@', '')}` })
+								.setColor('RED')
+								.addFields([
+									{
+										name: 'User: ',
+										value: `${args[1]}`,
+										inline: true
+									},
+									{
+										name: 'Reason',
+										value: `${args[2]}`,
+										inline: true
+									}
+								])
+								.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
+								.setTimestamp();
+							twitchActivity.send({ embeds: [banEmbed] });
+						} catch (error) { console.error(error); }
 						break;
 					case 'shoutout':
 					case 'so':
@@ -1324,7 +1430,7 @@ async function main() {
 						chatClient.say(channel, `go check out @${args[1].replace('@', '')}, there an awesome streamer Check them out here: https://twitch.tv/${args[1].replace('@', '').toLowerCase()} last seen playing ${gameLastPlayed.gameName}`);
 						break;
 					default:
-						chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -mod vip|unvip|purge|shoutout');
+						chatClient.say(channel, 'you must specify which mod action you want to do, Usage: -mod vip|unvip|purge|shoutout|ban|unban');
 						break;
 					}
 				} else {
