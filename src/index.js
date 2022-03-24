@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const volleyball = require('volleyball');
 const { Client, Intents } = require('discord.js');
 
-const config = require('../config');
 require('./twitchChat');
 
 const client = new Client({ 
@@ -15,6 +14,7 @@ const client = new Client({
 });
 
 const { PORT } = require('../config');
+const { rwClient } = require('./tweet');
 
 async function run () {
 	const Port = PORT;

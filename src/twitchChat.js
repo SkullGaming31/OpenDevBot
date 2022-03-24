@@ -8,7 +8,7 @@ const { ChatClient } = require('@twurple/chat');
 const { PubSubClient } = require('@twurple/pubsub');
 const { EventSubListener, ReverseProxyAdapter } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
-const { WebhookClient, MessageEmbed } = require('discord.js');
+const { WebhookClient, MessageEmbed, MessageManager } = require('discord.js');
 
 const { rwClient } = require('./tweet');
 const config = require('../config');
@@ -205,7 +205,7 @@ async function main() {
 			cost: 1,
 			autoFulfill: true,
 			backgroundColor: '#d0080a',
-			globalCooldown: 30,
+			globalCooldown: 5,
 			isEnabled: true,
 			maxRedemptionsPerUserPerStream: null,
 			maxRedemptionsPerStream: null,
@@ -221,7 +221,7 @@ async function main() {
 			isEnabled: true,
 			maxRedemptionsPerUserPerStream: null,
 			maxRedemptionsPerStream: null,
-			prompt: 'remind me to craft a PPSH',
+			prompt: 'remind me to craft a VZ-Rifle',
 			userInputRequired: false
 		});
 		const weaponLoadoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '2e4b420f-5362-41a3-9999-abba4156771a', {
@@ -1158,6 +1158,8 @@ async function main() {
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 
+		if (message.startsWith('!')) return chatClient.say(channel, `${display}, - should be used for this channels commands`);
+
 		if (message.startsWith('-')) {
 		
 			const args = message.slice(1).split(' ');
@@ -1323,15 +1325,13 @@ async function main() {
 					chatClient.say(channel, 'There are no registered Commands for this channel');
 				}
 			}
-			if (command === 'me' && channel === '#skullgaming31') {
-				chatClient.action().then(function (data) {
-					let target = args[0];
-					let action = ['slaps', 'kisses', 'hugs', 'punches', 'suckerpunches', 'kicks', 'pinches', 'uppercuts'];
-					let randomNumber = action[Math.floor(Math.random() * action.length)];
+			if (command === 'me' && channel === '#skullgaming31') { // not working, WHY: unsure
+				let target = args[0];
+				let action = ['slaps', 'kisses', 'hugs', 'punches', 'suckerPunches', 'kicks', 'pinches', 'uppercuts'];
+				let randomNumber = action[Math.floor(Math.random() * action.length)];
 
-					if (!args[0]) return chatClient.say(channel, `${display}, you must tag someone to use this command`);
-					chatClient.say(channel, `${display}, ${randomNumber} ${target}`);
-				});
+				if (!args[0]) return chatClient.say(channel, `${display}, you must tag someone to use this command`);
+				chatClient.say(channel, `${display}, ${randomNumber} ${target}`);
 			}
 			if (command === 'so' && channel === '#skullgaming31') {
 				if (staff) {
