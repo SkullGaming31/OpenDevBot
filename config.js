@@ -17,6 +17,7 @@ require('dotenv').config();
  * @prop {string} DISCORD_WEBHOOK_ID ID for the discord Webhook
  * @prop {string} DISCORD_WEBHOOK_TOKEN Token for the Discord Webhook
  * @prop {string} DISCORD_WEBHOOK_PROMOTE_URL WEBHOOK URL for the Promotion channel
+ * @prop {string} MOD_DISCORD_WEBHOOK_PROMOTE_URL Webhook URL for the promotion channel of Modvlog
  * @prop {string} PORT the port to listen on
  */
 
