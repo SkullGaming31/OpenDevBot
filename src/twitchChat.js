@@ -52,31 +52,18 @@ async function main() {
 	async function createChannelPointsRewards() { // creating the channel points rewards
 		console.log('registering Channel Points Rewards');
 		try {
-			console.log('nothing running yet');
 			// const tipping = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
-		// 	title: 'Tip',
-		// 	cost: 1,
-		// 	autoFulfill: true,
-		// 	backgroundColor: '#d0080a',
-		// 	globalCooldown: null,
-		// 	isEnabled: true,
-		// 	maxRedemptionsPerUserPerStream: null,
-		// 	maxRedemptionsPerStream: null,
-		// 	prompt: 'click for a link to my Tipping Page',
-		// 	userInputRequired: false
-		// });
-		// 	const weaponLoadout = await userApiClient.channelPoints.createCustomReward(broadcasterID, {
-		// 		title: 'Weapon Loadout',
-		// 		cost: 300,
-		// 		autoFulfill: false,
-		// 		backgroundColor: '#9146FF',
-		// 		globalCooldown: null,
-		// 		isEnabled: true,
-		// 		maxRedemptionsPerUserPerStream: null,
-		// 		maxRedemptionsPerStream: null,
-		// 		prompt: 'Choose my Primary Weapon when playing Vigor',
-		// 		userInputRequired: true
-		// 	});	
+			// 	title: 'Tip',
+			// 	cost: 1,
+			// 	autoFulfill: true,
+			// 	backgroundColor: '#d0080a',
+			// 	globalCooldown: null,
+			// 	isEnabled: true,
+			// 	maxRedemptionsPerUserPerStream: null,
+			// 	maxRedemptionsPerStream: null,
+			// 	prompt: 'click for a link to my Tipping Page',
+			// 	userInputRequired: false
+			// });
 		} catch (error) { console.error(error); }
 	}
 	
@@ -89,6 +76,8 @@ async function main() {
 		id: config.DISCORD_WEBHOOK_ID,
 		token: config.DISCORD_WEBHOOK_TOKEN,
 	});
+	
+	await createChannelPointsRewards();
 	if (process.env.NODE_ENV === 'development') {
 		const limeGreen = '#32CD32';
 		const eventSubListener = new EventSubListener({
@@ -207,6 +196,30 @@ async function main() {
 			prompt: 'click for a link to my Merch Shop',
 			userInputRequired: false
 		});
+		const abandonShipUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '8539757d-d2ed-44e6-ad9f-700e79bd1523', {
+			title: 'Abandon Ship',
+			cost: 750,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 5,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Jump off the ship',
+			userInputRequired: false
+		});
+		const noMermaidUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'e4186dae-a9a2-4415-9f44-430aead7b1f9', {
+			title: 'No Mermaid',
+			cost: 500,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 5,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'i cant use a mermaid for 1 minute',
+			userInputRequired: false
+		});
 		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '64c19c30-5560-4b68-8716-be508de12d3d', {
 			title: 'Tip',
 			cost: 1,
@@ -225,7 +238,7 @@ async function main() {
 			autoFulfill: true,
 			backgroundColor: '#4b73f9',
 			globalCooldown: 1200,
-			isEnabled: true,
+			isEnabled: false,
 			maxRedemptionsPerUserPerStream: null,
 			maxRedemptionsPerStream: null,
 			prompt: 'remind me to craft a VZ-Rifle',
@@ -237,13 +250,24 @@ async function main() {
 			autoFulfill: false,
 			backgroundColor: '#9146FF',
 			globalCooldown: 1200,
-			isEnabled: true,
+			isEnabled: false,
 			maxRedemptionsPerUserPerStream: null,
 			maxRedemptionsPerStream: null,
 			prompt: 'Choose my Primary Weapon when playing Vigor, No Knifes',
 			userInputRequired: true
 		});
-		// await createChannelPointsRewards();
+		const swatRunUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, 'd336dafa-afe2-4c1d-a78e-ce0dba038150', {
+			title: 'SwatRun',
+			cost: 1000,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: null,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'i must continue to run for the full encounter and charge into buildings, this redemption is for Vigor',
+			userInputRequired: false
+		});
 
 		
 		const follower = await eventSubListener.subscribeToChannelFollowEvents(userID, async e => {
@@ -287,9 +311,18 @@ async function main() {
 			await chatClient.disableEmoteOnly(broadcaster.name).catch((err) => { console.error(err); });
 		});
 		const modvlogOffline = await eventSubListener.subscribeToStreamOfflineEvents(userID, async stream => {
-
-			console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
+			const userInfo = await stream.getBroadcaster();
 			chatClient.say(broadcaster.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
+			const LIVE = new WebhookClient({
+				url: config.MOD_DISCORD_WEBHOOK_PROMOTE_URL
+			});
+
+			const offlineEmbed = new MessageEmbed()
+				.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you to those that stopped by and lurked!!`)
+				.setFooter({ text: 'Ended Stream at ' })
+				.setTimestamp();
+			await LIVE.send({ embeds: [offlineEmbed] });
 			await chatClient.enableEmoteOnly(broadcaster.name).catch((err) => { console.error(err); });
 		});
 		const modvlogSub = await eventSubListener.subscribeToChannelSubscriptionEvents(userID, async sub => {
@@ -297,7 +330,7 @@ async function main() {
 			// chatClient.say(broadcaster.name, `${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
 		});
 		const modvlogResub = await eventSubListener.subscribeToChannelSubscriptionMessageEvents(userID, async s => {
-			console.log(`${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
+			console.log(`${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 			// chatClient.say(broadcaster.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 		});
 		const modvlogGiftedSubs = await eventSubListener.subscribeToChannelSubscriptionGiftEvents(userID, async gift => {
@@ -313,7 +346,7 @@ async function main() {
 			// chatClient.say(broadcaster.name, `${raid.raidingBroadcasterDisplayName} has raided the channel with ${raid.viewers} viewers!`);
 		});
 		const modvlogTitle = await eventSubListener.subscribeToChannelUpdateEvents(userID, async update => {
-			console.log(`updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
+			console.log(`${broadcaster.name} updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
 		});
 
 
@@ -355,17 +388,85 @@ async function main() {
 			await chatClient.disableEmoteOnly(broadcasterID.name).catch((err) => { console.error(err); });
 		});
 		const offline = await eventSubListener.subscribeToStreamOfflineEvents(userId, async stream => {
-			if (userId !== '31124455') return;
-			console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
+			// console.log(`${stream.broadcasterDisplayName} has gone offline, thanks for stopping by i appreacate it!`);
+			const userInfo = await stream.getBroadcaster();
 			chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
+			const LIVE = new WebhookClient({
+				url: config.DISCORD_WEBHOOK_PROMOTE_URL
+			});
+
+			const offlineEmbed = new MessageEmbed()
+				.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
+				.setFooter({ text: 'Ended Stream at ' })
+				.setTimestamp();
+			await LIVE.send({ embeds: [offlineEmbed] });
 			await chatClient.enableEmoteOnly(broadcasterID.name).catch((err) => { console.error(err); });
 		});
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => { 
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
-			console.log(broadcasterID.name, `${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, BroadcasterId: ${cp.id}`);
+			console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, BroadcasterId: ${cp.id}`);
 			// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterID, `${cp.rewardId}`, `${cp.id}`);
 			switch (cp.rewardTitle || cp.rewardId) {
+			case 'No Mermaid':
+				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has blocked you from using a mermaid for 1 minute`);
+
+				const noMermaidEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor('RANDOM')
+					.addFields([
+						{
+							name: 'User: ',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed: ',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls: ',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${userInfo.profilePictureUrl}`)
+					.setFooter({ text: 'Channel Points Redeem Event', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [noMermaidEmbed] });
+				break;
+			case 'Abandon Ship':
+				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} and would kindly like you to GET OFF THE SHIP`);
+
+				const abandonShipEmbed = new MessageEmbed()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor(limeGreen)
+					.addFields([
+						{
+							name: 'User: ',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed: ',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls: ',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${userInfo.profilePictureUrl}`)
+					.setFooter({ text: 'Channel Points Redeem Event', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp();
+				twitchActivity.send({ embeds: [abandonShipEmbed] });
+				break;
 			case 'Weapon Loadout':
 				// console.log(`${cp.userDisplayName} has redeemed ${cp.rewardTitle} and would like you to use ${cp.input}`);
 				chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed ${cp.rewardTitle} and would like you to use ${cp.input}`);
@@ -985,12 +1086,10 @@ async function main() {
 			console.log(broadcasterID.name, `updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
 		});
 		const hypeEventStart = await eventSubListener.subscribeToChannelHypeTrainBeginEvents(userId, async hts => {
-			if (userId !== '31124455') return;
 			console.log(`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);
 			chatClient.say(broadcasterID.name, `${hts.goal} to reach the next level of the Hype Train, Last Contributer: ${hts.lastContribution}`);
 		});
 		const hypeEventEnd = await eventSubListener.subscribeToChannelHypeTrainEndEvents(userId, async hte => { // needs to be tested, progress and start to be done after end has been tested and it works!
-			if (userId !== '31124455') return;
 			const streamer = await hte.getBroadcaster();
 			console.log(`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`);
 			chatClient.say(broadcasterID.name, `${hte.topContributors} have contributed to the HypeTrain`);
@@ -1027,42 +1126,38 @@ async function main() {
 		});
 		const giftedSubs = await eventSubListener.subscribeToChannelSubscriptionGiftEvents(userId, async gift => {
 			console.log(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
-			if (userId === '31124455') {
-				chatClient.say(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
+			chatClient.say(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 
-				const userInfo = await gift.getGifter();
-				const giftedSubs = new MessageEmbed()
-					.setTitle('GIFTED SUB EVENT')
-					.setDescription(`gifted to ${gift.broadcasterDisplayName}`)
-					.setAuthor({ name: `${gift.gifterDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.addFields([
-						{
-							name: 'Username: ',
-							value: `${gift.gifterDisplayName}`,
-							inline: true
-						},
-						{
-							name: 'Amount: ',
-							value: `Gifted ${gift.amount}`,
-							inline: true
-						},
-						{
-							name: 'Gifted Tier: ',
-							value: `${parseFloat(gift.tier)}`,
-							inline: true
-						},
-					])
-					.setThumbnail(`${userInfo.profilePictureUrl}`)
-					.setColor(limeGreen)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
-					.setTimestamp();
-				twitchActivity.send({ embeds: [giftedSubs] });
-			} else if (userId === '204831754') {
-				console.log(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
-			}
+			const userInfo = await gift.getGifter();
+			const giftedSubs = new MessageEmbed()
+				.setTitle('GIFTED SUB EVENT')
+				.setDescription(`gifted to ${gift.broadcasterDisplayName}`)
+				.setAuthor({ name: `${gift.gifterDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.addFields([
+					{
+						name: 'Username: ',
+						value: `${gift.gifterDisplayName}`,
+						inline: true
+					},
+					{
+						name: 'Amount: ',
+						value: `Gifted ${gift.amount}`,
+						inline: true
+					},
+					{
+						name: 'Gifted Tier: ',
+						value: `${parseFloat(gift.tier)}`,
+						inline: true
+					},
+				])
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setColor(limeGreen)
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+				.setTimestamp();
+			twitchActivity.send({ embeds: [giftedSubs] });
 		});
 		const resub = await eventSubListener.subscribeToChannelSubscriptionMessageEvents(userId, async s => {
-			chatClient.say(broadcasterID.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths}, currently on a ${s.streakMonths} streak, ${s.messageText}`);
+			chatClient.say(broadcasterID.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 			const userInfo = await s.getUser();
 			const resubEmbed = new MessageEmbed()
 				.setTitle('RESUB EVENT')
@@ -1091,56 +1186,52 @@ async function main() {
 			twitchActivity.send({ embeds: [resubEmbed] });
 		});
 		const follow = await eventSubListener.subscribeToChannelFollowEvents(userId, async e => {
-			if (broadcasterID === '204831754') {// modvlog
-				console.log(broadcasterID.name `${e.userName} has followed the channel, ${e.followDate}`);
-			} else if (userId === '31124455') {
-				const randomFollowMessage = [
-					`@${e.userDisplayName} has followed the channel`,
-					`@${e.userDisplayName} has joined the army and entered there barracks`,
-					`Brace yourself, @${e.userDisplayName} has followed`,
-					`HEY! LISTEN! @${e.userDisplayName} has followed`,
-					`We've been expecting you @${e.userDisplayName}`,
-					`@${e.userDisplayName} just followed, Quick everyone look busy`,
-					`Challenger Approaching - @${e.userDisplayName} has followed`,
-					`Welcome @${e.userDisplayName}, stay awhile and listen`,
-					`@${e.userDisplayName} has followed, it's Super Effective`
-				];
-				let randomString = randomFollowMessage[Math.floor(Math.random() * randomFollowMessage.length)];
-				// console.log(`${e.userName} has followed the channel, ${e.followDate}`);
-				const userInfo = await e.getUser();
-				if (userInfo.description === '') { 
-					chatClient.say(broadcasterID.name, `${randomString}`);
-				} else {
-					chatClient.say(broadcasterID.name, `${randomString}`);
-					console.log(`Users Channel Description: ${userInfo.description}`);
-				}
-
-				const followEmbed = new MessageEmbed()
-					.setTitle('FOLLOW EVENT')
-					.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor(limeGreen)
-					.addFields([
-						{
-							name: 'Account Acreated: ',
-							value: `${userInfo.creationDate}`,
-							inline: true
-						},
-						{
-							name: 'Twitch Channel Link: ',
-							value: `https://twitch.tv/${e.userName}`,
-							inline: true
-						},
-						{
-							name: 'Follow Date: ',
-							value: `${e.followDate}`,
-							inline: true
-						},
-					])
-					.setThumbnail(`${userInfo.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
-					.setTimestamp();
-				twitchActivity.send({ embeds: [followEmbed] });
+			const randomFollowMessage = [
+				`@${e.userDisplayName} has followed the channel`,
+				`@${e.userDisplayName} has joined the army and entered there barracks`,
+				`Brace yourself, @${e.userDisplayName} has followed`,
+				`HEY! LISTEN! @${e.userDisplayName} has followed`,
+				`We've been expecting you @${e.userDisplayName}`,
+				`@${e.userDisplayName} just followed, Quick everyone look busy`,
+				`Challenger Approaching - @${e.userDisplayName} has followed`,
+				`Welcome @${e.userDisplayName}, stay awhile and listen`,
+				`@${e.userDisplayName} has followed, it's Super Effective`
+			];
+			let randomString = randomFollowMessage[Math.floor(Math.random() * randomFollowMessage.length)];
+			// console.log(`${e.userName} has followed the channel, ${e.followDate}`);
+			const userInfo = await e.getUser();
+			if (userInfo.description === '') { 
+				chatClient.say(broadcasterID.name, `${randomString}`);
+			} else {
+				chatClient.say(broadcasterID.name, `${randomString}`);
+				console.log(`Users Channel Description: ${userInfo.description}`);
 			}
+
+			const followEmbed = new MessageEmbed()
+				.setTitle('FOLLOW EVENT')
+				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setColor(limeGreen)
+				.addFields([
+					{
+						name: 'Account Acreated: ',
+						value: `${userInfo.creationDate}`,
+						inline: true
+					},
+					{
+						name: 'Twitch Channel Link: ',
+						value: `https://twitch.tv/${e.userName}`,
+						inline: true
+					},
+					{
+						name: 'Follow Date: ',
+						value: `${e.followDate}`,
+						inline: true
+					},
+				])
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+				.setTimestamp();
+			twitchActivity.send({ embeds: [followEmbed] });
 		});
 		const sub = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async sub => {
 			chatClient.say(broadcasterID.name, `${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
@@ -1247,6 +1338,7 @@ async function main() {
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 
+		if (message.includes('!poke') && channel === '#skullgaming31') return;
 		if (message.startsWith('!') && channel === '#skullgaming31') return chatClient.say(channel, `${display}, - should be used for this channels commands`);
 
 		if (message.startsWith('-')) {
@@ -1276,7 +1368,6 @@ async function main() {
 			}
 			if (command === 'settitle' && channel === '#skullgaming31') {
 				if (staff) {
-					const title = args.join(' ');
 					const setTitle = await userApiClient.channels.updateChannelInfo(broadcasterID, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
 					chatClient.say(channel, `channel title has been updated to ${setTitle}`);
 				} else {
@@ -1293,11 +1384,14 @@ async function main() {
 					chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
 				}
 			}
-			if (command === 'game' && channel === '#skullgaming31' || channel === '#modvlog') {
-				if (broadcasterID === '') {
+			if (command === 'game') {
+				if (channel === '#skullgaming31') {
 					const currentGame = await apiClient.channels.getChannelInfo(broadcasterID);
 					chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
-				}
+				} else if (channel === '#modvlog') {
+					const modcurrentGame = await apiClient.channels.getChannelInfo(broadcaster);
+					chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
+				} else { return; }
 			}
 			if (command === 'lurk' && channel === '#skullgaming31') {
 				const lurk = args.slice(0).join(' ');
@@ -1343,6 +1437,9 @@ async function main() {
 					if (modvlogStream) {
 						const modvlogUptime = countdown(new Date(modvlogStream.startDate));
 						chatClient.say(channel, `${display}, the stream has been live for ${modvlogUptime}`);
+					}
+					else {
+						return chatClient.say(channel, `${display}, the stream is currently offline`);
 					}
 				}
 			}
@@ -1421,7 +1518,7 @@ async function main() {
 					}
 				}
 				else {
-					// chatClient.say(channel, 'There are no registered Commands for this channel');
+					chatClient.say(channel, 'There are no registered Commands for this channel');
 					return;
 				}
 			}
