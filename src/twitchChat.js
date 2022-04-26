@@ -19,11 +19,11 @@ async function main() {
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
 
-	const tokenData = JSON.parse(await fs.readFile('./tokens.json', 'UTF-8'));
+	const tokenData = JSON.parse(await fs.readFile('./src/auth/tokens/tokens.json', 'UTF-8'));
 	const authProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
-		onRefresh: async (newTokenData) => await fs.writeFile('./tokens.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
+		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/tokens.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, tokenData);
 	
 	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/users.json', 'UTF-8'));
@@ -70,14 +70,15 @@ async function main() {
 	// eventSub Stuff
 	const userId = '31124455';// my id
 	const userID = '204831754';// mods id
-	const broadcasterID = await apiClient.channels.getChannelInfo(userId);
-	const broadcaster = await apiClient.channels.getChannelInfo(userID);
+	const broadcasterID = await apiClient.channels.getChannelInfoById(userId);
+	const broadcaster = await apiClient.channels.getChannelInfoById(userID);
 	const twitchActivity = new WebhookClient({
 		id: config.DISCORD_WEBHOOK_ID,
 		token: config.DISCORD_WEBHOOK_TOKEN,
 	});
 	
-	await createChannelPointsRewards();
+	// await createChannelPointsRewards();
+
 	if (process.env.NODE_ENV === 'development') {
 		const limeGreen = '#32CD32';
 		const eventSubListener = new EventSubListener({
@@ -283,6 +284,9 @@ async function main() {
 			const LIVE = new WebhookClient({
 				url: config.MOD_DISCORD_WEBHOOK_PROMOTE_URL
 			});
+			const modvlogLIVE = new WebhookClient({
+				url: config.DISCORD_WEBHOOK_PROMOTE_URL
+			});
 			const liveEmbed = new MessageEmbed()
 				.setTitle('GONE LIVE')
 				.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}` })
@@ -305,9 +309,10 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
 				.setURL(`https://twitch.tv/${userInfo.name}`)
-				.setColor('RANDOM')
+				.setColor('GREEN')
 				.setTimestamp();
-			LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
+			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });// modvlog going live in his discord
+			modvlogLIVE.send({ content: '<@&967016374486573096>', embeds: [liveEmbed] }); // modvlog going live in my discord
 			await chatClient.disableEmoteOnly(broadcaster.name).catch((err) => { console.error(err); });
 		});
 		const modvlogOffline = await eventSubListener.subscribeToStreamOfflineEvents(userID, async stream => {
@@ -319,7 +324,8 @@ async function main() {
 
 			const offlineEmbed = new MessageEmbed()
 				.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you to those that stopped by and lurked!!`)
+				.setColor('RED')
+				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you to those that stopped by and lurked or chatted!!`)
 				.setFooter({ text: 'Ended Stream at ' })
 				.setTimestamp();
 			await LIVE.send({ embeds: [offlineEmbed] });
@@ -348,6 +354,18 @@ async function main() {
 		const modvlogTitle = await eventSubListener.subscribeToChannelUpdateEvents(userID, async update => {
 			console.log(`${broadcaster.name} updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
 		});
+		const modvlogGoalBeginning = await eventSubListener.subscribeToChannelGoalBeginEvents(userID, async gb => {
+			const userInfo = await gb.getBroadcaster();
+			console.log(`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`);
+		});
+		const modvlogGoalProgress = await eventSubListener.subscribeToChannelGoalProgressEvents(userID, async gp => {
+			const userInfo = await gp.getBroadcaster();
+			console.log(`${userInfo.displayName}, ${gp.currentAmount} - ${gp.targetAmount}`);
+		});
+		const modvlogGoalEnded = await eventSubListener.subscribeToChannelGoalEndEvents(userID, async ge => {
+			const userInfo = await ge.getBroadcaster();
+			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
+		});
 
 
 
@@ -359,6 +377,9 @@ async function main() {
 
 			const LIVE = new WebhookClient({
 				url: config.DISCORD_WEBHOOK_PROMOTE_URL
+			});
+			const modvlogLIVEDiscord = new WebhookClient({ // me going live posting in modvlogs discord
+				url: config.MOD_DISCORD_WEBHOOK_PROMOTE_URL
 			});
 			const liveEmbed = new MessageEmbed()
 				.setTitle('GONE LIVE')
@@ -382,9 +403,10 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
 				.setURL(`https://twitch.tv/${userInfo.name}`)
-				.setColor(limeGreen)
+				.setColor('GREEN')
 				.setTimestamp();
-			LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
+			await LIVE.send({ content: '<@&967016374486573096>', embeds: [liveEmbed] });//FIXME: needs to be tested again!
+			modvlogLIVEDiscord.send({ embeds: [liveEmbed] });
 			await chatClient.disableEmoteOnly(broadcasterID.name).catch((err) => { console.error(err); });
 		});
 		const offline = await eventSubListener.subscribeToStreamOfflineEvents(userId, async stream => {
@@ -394,13 +416,18 @@ async function main() {
 			const LIVE = new WebhookClient({
 				url: config.DISCORD_WEBHOOK_PROMOTE_URL
 			});
+			const modvlogLIVE = new WebhookClient({
+				url: config.MOD_DISCORD_WEBHOOK_PROMOTE_URL
+			});
 
 			const offlineEmbed = new MessageEmbed()
 				.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
+				.setColor('RED')
 				.setFooter({ text: 'Ended Stream at ' })
 				.setTimestamp();
 			await LIVE.send({ embeds: [offlineEmbed] });
+			await modvlogLIVE.send({ embeds: [offlineEmbed] });
 			await chatClient.enableEmoteOnly(broadcasterID.name).catch((err) => { console.error(err); });
 		});
 		const redeem = await eventSubListener.subscribeToChannelRedemptionAddEvents(userId, async cp => { 
@@ -1161,7 +1188,7 @@ async function main() {
 			const userInfo = await s.getUser();
 			const resubEmbed = new MessageEmbed()
 				.setTitle('RESUB EVENT')
-				.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setAuthor({ name: `${s.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 				.addFields([
 					{
 						name: 'Twitch User: ',
@@ -1233,12 +1260,12 @@ async function main() {
 				.setTimestamp();
 			twitchActivity.send({ embeds: [followEmbed] });
 		});
-		const sub = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async sub => {
-			chatClient.say(broadcasterID.name, `${sub.userName} has Subscribed to the channel with a tier ${sub.tier} Subscription`);
-			const userInfo = await sub.getUser();
+		const subs = await eventSubListener.subscribeToChannelSubscriptionEvents(userId, async s => {
+			chatClient.say(broadcasterID.name, `${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`);
+			const userInfo = await s.getUser();
 			const subEmbed = new MessageEmbed()
 				.setTitle('SUBSCRIBER EVENT')
-				.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setAuthor({ name: `${s.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 				.addFields([
 					{
 						name: 'Username: ',
@@ -1247,12 +1274,12 @@ async function main() {
 					},
 					{
 						name: 'Sub Tier: ',
-						value: `tier ${sub.tier} Subscription`,
+						value: `tier ${s.tier} Subscription`,
 						inline: true
 					},
 					{
 						name: 'Sub Gifted: ',
-						value: `${sub.isGift}`,
+						value: `${s.isGift}`,
 						inline: true
 					},
 				])
@@ -1268,7 +1295,7 @@ async function main() {
 			if (cheer.bits >= 100) {
 				const cheerEmbed = new MessageEmbed()
 					.setTitle('CHEER EVENT')
-					.setAuthor({ name: `${sub.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.addFields([
 						{
 							name: 'Username: ',
@@ -1303,7 +1330,7 @@ async function main() {
 				.addFields([
 					{
 						name: 'Raider: ',
-						value: `${raid.raidedBroadcasterName}`,
+						value: `${raid.raidingBroadcasterName}`,
 						inline: true
 					},
 					{
@@ -1317,6 +1344,18 @@ async function main() {
 				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			twitchActivity.send({ embeds: [raidEmbed] });
+		});
+		const goalBeginning = await eventSubListener.subscribeToChannelGoalBeginEvents(userId, async gb => {
+			const userInfo = await gb.getBroadcaster();
+			console.log(`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`);
+		});
+		const goalProgress = await eventSubListener.subscribeToChannelGoalProgressEvents(userId, async gp => {
+			const userInfo = await gp.getBroadcaster();
+			console.log(`${userInfo.displayName}, ${gp.currentAmount} - ${gp.targetAmount}`);
+		});
+		const goalEnded = await eventSubListener.subscribeToChannelGoalEndEvents(userId, async ge => {
+			const userInfo = await ge.getBroadcaster();
+			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		});
 	}
 
@@ -1334,11 +1373,12 @@ async function main() {
 	}
 
 	chatClient.onMessage(async (channel, user, message, msg) => {
-		console.log(`${msg.userInfo.displayName} Said: ${message} in ${channel}`);
+		// console.log(`${msg.userInfo.displayName} Said: ${message} in ${channel}`);
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 
-		if (message.includes('!poke') && channel === '#skullgaming31') return;
+		// if (message.includes('!poke') && channel === '#skullgaming31') return;
+		if (channel === '#modvlog' && message.startsWith('!')) return;
 		if (message.startsWith('!') && channel === '#skullgaming31') return chatClient.say(channel, `${display}, - should be used for this channels commands`);
 
 		if (message.startsWith('-')) {
