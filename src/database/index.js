@@ -2,8 +2,8 @@ const config = require('../../config');
 const mongoose = require('mongoose');
 require('./models/bot');
 require('./models/user');
-require('./models/channel');
-require('./models/ticket');
+// require('./models/channel');
+// require('./models/ticket');
 
 
 // mongodb+srv://<username>:<password>@twitch.7ipbc.mongodb.net/Twitch?retryWrites=true&w=majority

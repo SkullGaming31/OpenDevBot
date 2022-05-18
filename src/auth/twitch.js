@@ -3,7 +3,7 @@ const axios = require('axios').default;
 
 const config = require('../../config');
 const userModel = require('../database/models/user');
-const channelModel = require('../database/models/channel');
+// const channelModel = require('../database/models/channel');
 const twitchAPI = require('../lib/twitch-api');
 
 const redirect_uri = 'http://localhost:8888/auth/twitch/callback';
@@ -54,7 +54,7 @@ twitchRouter.get('/callback', async (req, res) => {
 		};
 		const [ user, channel ] = await Promise.all([
 			await userModel.findOneAndUpdate(query, { twitchId, refresh_token }, options),
-			await channelModel.findOneAndUpdate(query, query, options)
+			// await channelModel.findOneAndUpdate(query, query, options)
 		]);
 		res.json({
 			user, channel

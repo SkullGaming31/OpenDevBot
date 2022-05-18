@@ -25,7 +25,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/skullgaming31/skulledbot">
-    <img src="./assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
+    <img src="./src/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
 <h3 align="center">skulledbotTwitch V2</h3>
@@ -134,7 +134,7 @@ This is an example of how to list things you need to use the software and how to
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
 * [x] add commands to an array to display help command easier
 * [x] add word detection to send commands without prefix
-* [ ] create channelPoints with userToken to modify the channel points with commands
+* [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [ ] Timer Commands
 * [ ] Counters?
 * [ ] Quotes System?
@@ -185,7 +185,7 @@ Project Link: [skulledbotTwitchV2](https://github.com/skullgaming31/skulledbotTw
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* [Twurple](https://twurple.js.org/) <p>For putting up with my Constant questions about things i should already know how to do.</p>
+* [Twurple](https://twurple.js.org/) <p>Twurple Community For putting up with my Constant questions about things i should already know how to do.</p>
 * []()
 * []()
 

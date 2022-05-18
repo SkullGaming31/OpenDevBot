@@ -6,21 +6,27 @@ const { Client, Intents } = require('discord.js');
 
 require('./twitchChat');
 
-const client = new Client({ 
-	intents: [ 
-		Intents.FLAGS.GUILD_WEBHOOKS, 
+const client = new Client({
+	intents: [
+		Intents.FLAGS.GUILD_WEBHOOKS,
 		Intents.FLAGS.GUILD_MESSAGES
-	] 
+	]
 });
 
 const { PORT } = require('../config');
-const { rwClient } = require('./tweet');
 
-async function run () {
+client.on('error', err => { console.log(err); });
+process.on('unhandledRejection', (reason, p) => { console.log(reason, p); });
+process.on('uncaughtException', (err, origin) => { console.log(err, origin); });
+process.on('uncaughtExceptionMonitor', (err, origin) => { console.log(err, origin); });
+process.on('multipleResolves', (type, promise, reason) => { console.log(type, promise, reason); });
+process.on('warning', (warn) => { console.log(warn); });
+
+async function run() {
 	const Port = PORT;
 	const app = express();
 
-	
+
 	app.use(cors());
 	app.use(helmet());
 	app.use(volleyball);
@@ -30,7 +36,7 @@ async function run () {
 	});
 
 	app.use('/auth/twitch', require('./auth/twitch'));
-		
+
 	app.listen(Port || 8889, () => { console.log(`Server started on http://localhost:${Port}`); });
 }
 run();
