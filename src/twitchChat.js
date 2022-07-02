@@ -79,7 +79,6 @@ async function main() {
 	// await createChannelPointsRewards();
 
 	if (process.env.NODE_ENV === 'development') {
-		// const limeGreen = '#32CD32';
 		const eventSubListener = new EventSubListener({
 			apiClient,
 			adapter: new NgrokAdapter(),
@@ -404,7 +403,7 @@ async function main() {
 				.setURL(`https://twitch.tv/${userInfo.name}`)
 				.setColor('GREEN')
 				.setTimestamp();
-			await LIVE.send({ content: '<@&967016374486573096>', embeds: [liveEmbed] });//FIXME: needs to be tested again!
+			await LIVE.send({ content: '<@&967016374486573096>', embeds: [liveEmbed] });
 			modvlogLIVEDiscord.send({ embeds: [liveEmbed] });
 			await chatClient.disableEmoteOnly(broadcasterID.name).catch((err) => { console.error(err); });
 		});
@@ -1351,8 +1350,10 @@ async function main() {
 		});
 		const goalProgress = await eventSubListener.subscribeToChannelGoalProgressEvents(userId, async gp => {
 			const userInfo = await gp.getBroadcaster();
-			console.log(`${userInfo.displayName}, ${gp.currentAmount} - ${gp.targetAmount}`);
-			chatClient.say(broadcasterID.name, `${userInfo.displayName}, ${gp.currentAmount} - ${gp.targetAmount}`);
+			setTimeout(() => {
+				console.log(`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
+			}, 60000);
+			chatClient.say(broadcasterID.name, `${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
 		});
 		const goalEnded = await eventSubListener.subscribeToChannelGoalEndEvents(userId, async ge => {
 			const userInfo = await ge.getBroadcaster();
@@ -1386,7 +1387,6 @@ async function main() {
 
 			const args = message.slice(1).split(' ');
 			const command = args.shift().toLowerCase();
-			const leadMod = msg.userInfo.userName === 'modvlog';
 
 			if (command === 'ping' && channel === '#skullgaming31') {
 				if (msg.userInfo.userName === 'skullgaming31') {
@@ -1396,6 +1396,9 @@ async function main() {
 						console.error(error);
 					}
 				}
+			}
+			if (command === 'dayd' && channel === '#skullgaming31') {
+				chatClient.say(channel, 'Search for DAYD in the community section, make sure you have Mouse&Keyboard filters set to show, it is the Chernuris Map with 2x Loot');
 			}
 			if (command === 'quote' && channel === '#skullgaming31') {
 				const quotes = [
@@ -1427,25 +1430,31 @@ async function main() {
 			}
 			if (command === 'game') {
 				if (channel === '#skullgaming31') {
-					const currentGame = await apiClient.channels.getChannelInfo(broadcasterID);
+					const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
 					chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
 				} else if (channel === '#modvlog') {
-					const modcurrentGame = await apiClient.channels.getChannelInfo(broadcaster);
+					const modcurrentGame = await apiClient.channels.getChannelInfoById(broadcaster);
 					chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
 				} else { return; }
 			}
 			if (command === 'lurk' && channel === '#skullgaming31') {
-				const lurk = args.slice(0).join(' ');
-				if (lurk) {
-					chatClient.say(channel, `${lurk}`);
-				} else {
-					chatClient.say(channel, 'have some stuff to do but have a tab open for you, have a great stream!');
+				switch (args[0]) {
+					case 'lurk':
+						const lurk = args.slice(0).join(' ');
+						if (lurk) {
+							chatClient.say(channel, `${lurk}`);
+						} else {
+							chatClient.say(channel, 'have some stuff to do but have a tab open for you, have a great stream!');
+						}
+						break;
+					default:
+						break;
 				}
 			}
 			if (command === 'id' && channel === '#skullgaming31') { // Mod Twitch ID- 204831754
 				chatClient.say(channel, `${display} your TwitchId is ${msg.userInfo.userId}`);
 			}
-			if (command === 'followage' && channel === '#skullgaming31') {// FIXME: cant tag someone to found out when they created there account.
+			if (command === 'followage' && channel === '#skullgaming31') {// cant tag someone to found out when they created there account.
 				const follow = await apiClient.users.getFollowFromUserToBroadcaster(msg.userInfo.userId, msg.channelId);
 				if (follow) {
 					const followStartTimestamp = follow.followDate.getTime();
@@ -1455,7 +1464,7 @@ async function main() {
 					chatClient.say(channel, `@${display} You are not following!`);
 				}
 			}
-			if (command === 'accountage' && channel === '#skullgaming31') {// FIXME: cant tag someone to found out when they created there account.
+			if (command === 'accountage' && channel === '#skullgaming31') {// cant tag someone to found out when they created there account.
 				const account = await apiClient.users.getUserByName(args[0] || msg.userInfo.userName);
 				if (account) {
 					chatClient.say(channel, `${account.creationDate}`);
@@ -1547,14 +1556,27 @@ async function main() {
 						break;
 				}
 			}
+			if (command === 'sot' || command === 'seaofthieves' && channel === '#skullgaming31') {
+				switch (args[0]) {
+					case 'about':
+						chatClient.say(channel, 'this part of the command has not been added yet');
+						break;
+					case 'lore':
+						chatClient.say(channel, 'this part of the command has not been added yet');
+						break;
+					default:
+						chatClient.say(channel, `${display}, Usage: -sot [about, lore]`);
+						break;
+				}
+			}
 			if (command === 'commands') {
 				if (channel === '#skullgaming31') {// add commands to an array to display all commands in the help command!
 					if (staff) {
-						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
 					}
 					else {
-						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'sot | seaofthieves', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
 					}
 				}
@@ -1563,7 +1585,7 @@ async function main() {
 					return;
 				}
 			}
-			if (command === 'me' && channel === '#skullgaming31') { // not working, WHY: unsure
+			if (command === 'me' && channel === '#skullgaming31') {
 				let target = args[0];
 				let action = ['slaps', 'kisses', 'hugs', 'punches', 'suckerPunches', 'kicks', 'pinches', 'uppercuts'];
 				let randomNumber = action[Math.floor(Math.random() * action.length)];
@@ -1793,7 +1815,7 @@ async function main() {
 			if (message.includes('Want to become famous?') && channel === '#skullgaming31') {
 				await chatClient.ban(channel, msg.userInfo.userName, 'Selling Followers');
 				await chatClient.deleteMessage(channel, msg.id);
-				chatClient.say(channel, `${display} bugger off with your scams and frauds, you have been removed from this channel.`);
+				chatClient.say(channel, `${display} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
 			}
 		}
 	});

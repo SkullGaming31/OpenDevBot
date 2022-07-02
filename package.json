@@ -13,16 +13,16 @@
   },
   "keywords": [],
   "dependencies": {
-    "@twurple/api": "^5.1.4",
-    "@twurple/auth": "^5.1.4",
-    "@twurple/chat": "^5.1.4",
-    "@twurple/eventsub": "^5.1.4",
-    "@twurple/eventsub-ngrok": "^5.1.4",
-    "@twurple/pubsub": "^5.1.4",
+    "@twurple/api": "^5.1.6",
+    "@twurple/auth": "^5.1.6",
+    "@twurple/chat": "^5.1.6",
+    "@twurple/eventsub": "^5.1.6",
+    "@twurple/eventsub-ngrok": "^5.1.6",
+    "@twurple/pubsub": "^5.1.6",
     "axios": "^0.25.0",
     "cors": "^2.8.5",
     "countdown": "^2.6.0",
-    "discord.js": "^13.6.0",
+    "discord.js": "^13.8.1",
     "dotenv": "^10.0.0",
     "express": "^4.17.2",
     "fs": "^0.0.1-security",
@@ -40,9 +40,9 @@
   "repository": {
     "directory": "",
     "type": "public",
-    "url": "https://github.com/SkullGaming31/SkulledBot"
+    "url": "https://github.com/SkullGaming31/skulledbotTwitch"
   },
   "bugs": {
-    "url": "https://github.com/SkullGaming31/SkulledBot/issues"
+    "url": "https://github.com/SkullGaming31/skulledbotTwitch/issues"
   }
 }
