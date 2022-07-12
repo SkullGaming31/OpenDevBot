@@ -14,6 +14,10 @@ const userScema = new mongoose.Schema({
 		type: String,
 		require: true
 	},
+	scopes: {
+		type: [String],
+		required: true
+	},
 	expiresIn: {
 		type: String,
 		required: true

@@ -13,6 +13,10 @@ const botScema = new Schema({
 		type: String,
 		require: true
 	},
+	scopes: {
+		type: [String],
+		required: true
+	},
 	expiresIn: {
 		type: String,
 		required: true

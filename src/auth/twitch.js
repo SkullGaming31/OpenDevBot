@@ -11,8 +11,8 @@ const twitchRouter = express.Router();
 
 
 const authBaseUrl = 'https://id.twitch.tv/oauth2';
-const twitchAuthApi = axios.create({ 
-	baseURL: authBaseUrl 
+const twitchAuthApi = axios.create({
+	baseURL: authBaseUrl
 });
 
 
@@ -52,17 +52,18 @@ twitchRouter.get('/callback', async (req, res) => {
 			new: true,
 			upsert: true
 		};
-		const [ user, channel ] = await Promise.all([
+		const [user, channel] = await Promise.all([
 			await userModel.findOneAndUpdate(query, { twitchId, refresh_token }, options),
 			// await channelModel.findOneAndUpdate(query, query, options)
 		]);
 		res.json({
 			user, channel
 		});
-	} catch (error) { res.json({ 
-		message: error.message,
-		body: error.response ? error.response.data : error 
-	});
+	} catch (error) {
+		res.json({
+			message: error.message,
+			body: error.response ? error.response.data : error
+		});
 	}
 });
 

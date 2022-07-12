@@ -1,16 +1,21 @@
-const express = require('express');
+// const express = require('express');
 const countdown = require('countdown');
 const fs = require('fs/promises');
 const axios = require('axios').default;
 const { RefreshingAuthProvider, ClientCredentialsAuthProvider } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
+// const { api } = require('./util/api');
 const { ChatClient } = require('@twurple/chat');
 const { EventSubListener } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
 const { WebhookClient, MessageEmbed } = require('discord.js');
 
+const botModel = require('../src/database/models/bot');
+
 const { rwClient } = require('./tweet');
 const config = require('../config');
+// const { apiClient, modvlogApiClient, userApiClient } = require('./lib/twitch-api');
+// const { authProvider, modvlogAuthProvider, userAuthProvider } = require('./auth/authProvider');
 
 
 async function main() {
@@ -18,12 +23,14 @@ async function main() {
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
 
-	const tokenData = JSON.parse(await fs.readFile('./src/auth/tokens/tokens.json', 'UTF-8'));
+	const botTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/bot.json', 'UTF-8'));
 	const authProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
-		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/tokens.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
-	}, tokenData);
+		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/bot.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
+	}, botTokenData);
+
+
 
 	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/users.json', 'UTF-8'));
 	const userAuthProvider = new RefreshingAuthProvider({
@@ -83,7 +90,8 @@ async function main() {
 			apiClient,
 			adapter: new NgrokAdapter(),
 			secret: eventSubSecret,
-			logger: { minLevel: 'error' }
+			logger: { minLevel: 'error' },
+			strictHostCheck: true
 		});
 		await eventSubListener.listen().then(() => console.log('Event Listener Started')).catch((err) => console.error(err));
 
@@ -1347,6 +1355,16 @@ async function main() {
 		const goalBeginning = await eventSubListener.subscribeToChannelGoalBeginEvents(userId, async gb => {
 			const userInfo = await gb.getBroadcaster();
 			console.log(`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`);
+			switch (gb.type) {
+				case 'follower':
+					console.log(`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+					chatClient.say(broadcasterID.name, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+					break;
+				case 'subscriber':
+					console.log(`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+					chatClient.say(broadcasterID.name, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+					break;
+			}
 		});
 		const goalProgress = await eventSubListener.subscribeToChannelGoalProgressEvents(userId, async gp => {
 			const userInfo = await gp.getBroadcaster();
@@ -1358,6 +1376,7 @@ async function main() {
 		const goalEnded = await eventSubListener.subscribeToChannelGoalEndEvents(userId, async ge => {
 			const userInfo = await ge.getBroadcaster();
 			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
+			chatClient.say(broadcasterID.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		});
 	}
 
@@ -1508,7 +1527,11 @@ async function main() {
 						const result = Math.floor(Math.random() * 12) + 1;
 						chatClient.say(channel, `@${display}, you rolled a ${result}.`);
 						break;
-					case 'dig':// have a % chance to dig up the correct Hole and win curreny prize Failed means you lose currency. -dig [amount] isFollower * 1.5 isSubscriber * 2
+					case 'dig':// have a % chance to dig up the correct Hole and win currency prize Failed means you lose currency. -dig [amount] isFollower * 1.5 isSubscriber * 2
+						/**
+						 * Total: 5 holes
+						 *  random number between 1-4 desides how many bombs are in play out of 5 holes
+						 */
 						const choice = ['Succedded', 'Failed'];
 						const results = choice[Math.floor(Math.random() * choice.length)];
 						chatClient.say(channel, `@${display} you have ${results}`);
@@ -1556,27 +1579,14 @@ async function main() {
 						break;
 				}
 			}
-			if (command === 'sot' || command === 'seaofthieves' && channel === '#skullgaming31') {
-				switch (args[0]) {
-					case 'about':
-						chatClient.say(channel, 'this part of the command has not been added yet');
-						break;
-					case 'lore':
-						chatClient.say(channel, 'this part of the command has not been added yet');
-						break;
-					default:
-						chatClient.say(channel, `${display}, Usage: -sot [about, lore]`);
-						break;
-				}
-			}
 			if (command === 'commands') {
-				if (channel === '#skullgaming31') {// add commands to an array to display all commands in the help command!
+				if (channel === '#skullgaming31') {
 					if (staff) {
 						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
 					}
 					else {
-						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'sot | seaofthieves', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
+						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
 					}
 				}
@@ -1811,6 +1821,12 @@ async function main() {
 			}
 			if (message.includes('overlay designer') && channel === '#skullgaming31') {
 				chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
+			}
+			if (message.includes('wl') && channel === '#skullgaming31') {
+				const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
+				setTimeout(() => {
+					chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`);
+				}, 1800000);
 			}
 			if (message.includes('Want to become famous?') && channel === '#skullgaming31') {
 				await chatClient.ban(channel, msg.userInfo.userName, 'Selling Followers');

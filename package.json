@@ -39,10 +39,11 @@
   },
   "repository": {
     "directory": "",
-    "type": "public",
+    "type": "git",
     "url": "https://github.com/SkullGaming31/skulledbotTwitch"
   },
   "bugs": {
-    "url": "https://github.com/SkullGaming31/skulledbotTwitch/issues"
+    "url": "https://github.com/SkullGaming31/skulledbotTwitch/issues",
+    "email": "skullgamingg31@gmail.com"
   }
 }
