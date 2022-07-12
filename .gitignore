@@ -2,5 +2,5 @@
 .env
 twitch-cli-information
 src/auth/tokens/bot.json
-src/auth/tokens/users.json
+src/auth/tokens/user.json
 src/auth/tokens/modvlog.json

@@ -32,11 +32,11 @@ async function main() {
 
 
 
-	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/users.json', 'UTF-8'));
+	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/user.json', 'UTF-8'));
 	const userAuthProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
-		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/users.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
+		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/user.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, userTokenData);
 
 	const modvlogTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/modvlog.json', 'UTF-8'));
