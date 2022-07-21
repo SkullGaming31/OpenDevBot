@@ -7,11 +7,20 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>SkulledBot V2</title>
 	<style>
+		* {
+			padding: 0px;
+			margin: 0px;
+		}
 body {
 	background-image: linear-gradient(to bottom, limegreen, black);
 	padding: 3px;
 	margin: 8px;
 	font-family: Arial, Helvetica, sans-serif;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: auto;
+	border-radius: 50%;
 }
 a {
 	outline:none;
@@ -25,14 +34,18 @@ a:hover {
 }
 h1 {
 	text-align: center;
+	color: black;
 }
 .buttonTwitch {
 	text-align: center;
+	margin-top: 15%;
 }
 	</style>
 </head>
 <body>
 		<h1><b>Authorize and send me the Refresh_Token and twitchId<b></h1>
 		<div class="buttonTwitch"><a href="/auth/twitch">Authorize Twitch Channel</a></div>
+		<p>This Chatbot is still a <b>Heavy</b> work in progress, im learning javascript as i create the chatbot, 
+			want to know more about me check out <a href="https://skullgaming31.live">SkullGaming31</a></p>
 </body>
 </html>
