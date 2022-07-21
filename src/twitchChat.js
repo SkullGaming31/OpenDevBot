@@ -45,9 +45,9 @@ async function main() {
 		clientSecret,
 		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/modvlog.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, modvlogTokenData);
-	//End Auth Provider Section
 
-	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31', 'modvlog'], logger: { minLevel: 'error' } });
+	//End Auth Provider Section
+	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31', 'modvlog', 'lonnybluebird'], logger: { minLevel: 'error' } });
 	await chatClient.connect().then(() => console.log('connected to Twitch Chat')).catch((err) => { console.error(err); });
 	const appAuthProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 	const apiClient = new ApiClient({ authProvider: appAuthProvider, logger: { minLevel: 'critical' } });
@@ -1674,6 +1674,11 @@ async function main() {
 									.setColor('RED')
 									.addFields([
 										{
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										},
+										{
 											name: 'User: ',
 											value: `${args[1].replace('@', '')}`,
 											inline: true
@@ -1697,6 +1702,11 @@ async function main() {
 									.setColor('RED')
 									.addFields([
 										{
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										},
+										{
 											name: 'User: ',
 											value: `${args[1].replace('@', '')}`,
 											inline: true
@@ -1719,6 +1729,11 @@ async function main() {
 									.setAuthor({ name: `${args[1].replace('@', '')}` })
 									.setColor('RED')
 									.addFields([
+										{
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										},
 										{
 											name: 'User: ',
 											value: `${args[1].replace('@', '')}`,
@@ -1748,6 +1763,11 @@ async function main() {
 									.setColor('RED')
 									.addFields([
 										{
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										},
+										{
 											name: 'User: ',
 											value: `${args[1].replace('@', '')}`,
 											inline: true
@@ -1774,6 +1794,20 @@ async function main() {
 								chatClient.timeout(channel, args[1], args[2], args[3]).catch((err) => { console.log(err); }); {
 									chatClient.say(channel, `@${args[1].replace('@', '')} has been purged for ${args[2]} Reason: ${args[3]}`);
 								}
+								const purgeEmbed = new MessageEmbed()
+									.setTitle('Twitch Channel Purge Event')
+									.setAuthor({ name: `${msg.userInfo.userName}` })
+									.setColor('RED')
+									.addFields([
+										{
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										}
+									])
+									.setFooter({ text: `Someone just purged in ${channel}'s channel` })
+									.setTimestamp();
+								twitchActivity.send({ embeds: [purgeEmbed] });
 							} catch (error) {
 								console.error(error);
 							}

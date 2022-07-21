@@ -34,6 +34,9 @@ async function run() {
 	app.get('/', (req, res) => {
 		res.sendFile('src/assets/index.html', { root: '.' });
 	});
+	app.get('/about', (req, res) => {
+		res.sendFile('src/assets/about.html', { root: '.' });
+	});
 
 	app.use('/auth/twitch', require('./auth/twitch'));
 
