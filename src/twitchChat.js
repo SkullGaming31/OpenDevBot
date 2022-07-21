@@ -4,7 +4,7 @@ const axios = require('axios').default;
 const { RefreshingAuthProvider, ClientCredentialsAuthProvider } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
 const { ChatClient } = require('@twurple/chat');
-const { EventSubListener } = require('@twurple/eventsub');
+const { EventSubListener, ReverseProxyAdapter, EnvPortAdapter } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
 const { WebhookClient, MessageEmbed } = require('discord.js');
 
@@ -88,6 +88,17 @@ async function main() {
 	});
 
 	// await createChannelPointsRewards();
+
+	if (process.env.NODE_ENV === 'production') {
+		// const eventSubListener = new ReverseProxyAdapter({
+		// 	port: process.env.PORT,
+		// 	hostName: 'skulledbottwitch.up.railway.app/',
+		// });
+		const eventSubListener = new EnvPortAdapter({
+			hostName: 'skulledbottwitch.up.railway.app/',
+			variableName: 'PORT'
+		});
+	}
 
 	if (process.env.NODE_ENV === 'development') {
 		const eventSubListener = new EventSubListener({
