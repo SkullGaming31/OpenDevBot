@@ -7,7 +7,7 @@ require('dotenv').config();
  * @prop {string} TWITCH_CLIENT_REDIRECT_HOST Client Redirect
  * @prop {string} TWITCH_EVENTSUB_SECRET eventsub secret for twitch helix
  * @prop {string} MONGO_USER Mongo DB Username
- * @prop {string} MONGO_PASS Mongo DB Password
+ * @prop {string} MONGO_PASS Mongo DB PasswordskulledbotTwitch/config.js
  * @prop {string} MONGO_DB Mongo Database Name
  * @prop {string} MONGO_HOST Mongo Database Host
  * @prop {string} TWITTER_USER_SECRET twitter user secret
@@ -19,6 +19,11 @@ require('dotenv').config();
  * @prop {string} DISCORD_WEBHOOK_PROMOTE_URL WEBHOOK URL for the Promotion channel
  * @prop {string} MOD_DISCORD_WEBHOOK_PROMOTE_URL Webhook URL for the promotion channel of Modvlog
  * @prop {string} PORT the port to listen on
+ * @prop {string} POSTGRES_PASSWORD Password used for supabase
+ * @prop {string} POSTGRES_API_KEY Api key to access postgres database
+ * @prop {string} POSTGRES_SERVICE_ROLE Postgres service role
+ * @prop {string} PROJECT_URL URL for the project for http requests
+ * @prop {string} PROJECT_JWT_SECRET secret for supabase through JWT
  */
 
 /**

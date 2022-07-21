@@ -3,10 +3,10 @@ const axios = require('axios').default;
 
 const config = require('../../config');
 const userModel = require('../database/models/user');
-// const channelModel = require('../database/models/channel');
+const channelModel = require('../database/models/channel');
 const twitchAPI = require('../lib/twitch-api');
 
-const redirect_uri = 'http://localhost:8888/auth/twitch/callback';
+const redirect_uri = 'https://skulledbottwitch.up.railway.app/auth/twitch/callback';
 const twitchRouter = express.Router();
 
 
@@ -46,19 +46,17 @@ twitchRouter.get('/callback', async (req, res) => {
 	});
 	try {
 		const { data: { access_token: token, refresh_token } } = await twitchAuthApi.post(`/token?${qs}`);
-		const { id: twitchId } = await twitchAPI.getUser({ token });
-		const query = { twitchId };
+		const { id: twitchId, login: name } = await twitchAPI.getUser({ token });
+		// console.log('UserToken: ' + token);
 		const options = {
 			new: true,
 			upsert: true
 		};
 		const [user, channel] = await Promise.all([
-			await userModel.findOneAndUpdate(query, { twitchId, refresh_token }, options),
-			// await channelModel.findOneAndUpdate(query, query, options)
+			await userModel.findOneAndUpdate({ twitchId }, { twitchId, token, refresh_token }, options),
+			await channelModel.findOneAndUpdate({ twitchId }, { twitchId, name }, options)
 		]);
-		res.json({
-			user, channel
-		});
+		res.json({ user, channel });
 	} catch (error) {
 		res.json({
 			message: error.message,

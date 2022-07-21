@@ -1,19 +1,20 @@
-// const express = require('express');
 const countdown = require('countdown');
 const fs = require('fs/promises');
 const axios = require('axios').default;
 const { RefreshingAuthProvider, ClientCredentialsAuthProvider } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
-// const { api } = require('./util/api');
 const { ChatClient } = require('@twurple/chat');
 const { EventSubListener } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
 const { WebhookClient, MessageEmbed } = require('discord.js');
 
-const botModel = require('../src/database/models/bot');
+// const botModel = require('../src/database/models/bot');
+const userModel = require('./database/models/user');
 
 const { rwClient } = require('./tweet');
 const config = require('../config');
+
+// const eventSubListener = require('./eventSub');
 // const { apiClient, modvlogApiClient, userApiClient } = require('./lib/twitch-api');
 // const { authProvider, modvlogAuthProvider, userAuthProvider } = require('./auth/authProvider');
 
@@ -23,14 +24,13 @@ async function main() {
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
 
+	// START AuthProviders
 	const botTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/bot.json', 'UTF-8'));
 	const authProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
 		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/bot.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, botTokenData);
-
-
 
 	const userTokenData = JSON.parse(await fs.readFile('./src/auth/tokens/user.json', 'UTF-8'));
 	const userAuthProvider = new RefreshingAuthProvider({
@@ -45,6 +45,7 @@ async function main() {
 		clientSecret,
 		onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/modvlog.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
 	}, modvlogTokenData);
+	//End Auth Provider Section
 
 	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31', 'modvlog'], logger: { minLevel: 'error' } });
 	await chatClient.connect().then(() => console.log('connected to Twitch Chat')).catch((err) => { console.error(err); });
@@ -52,8 +53,11 @@ async function main() {
 	const apiClient = new ApiClient({ authProvider: appAuthProvider, logger: { minLevel: 'critical' } });
 	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel: 'error' } });
 	const modvlogApiClient = new ApiClient({ authProvider: modvlogAuthProvider, logger: { minLevel: 'error' } });
-	await apiClient.eventSub.deleteAllSubscriptions();
 
+
+	if (process.env.NODE_ENV === 'development') {
+		await apiClient.eventSub.deleteAllSubscriptions();
+	}
 
 	async function createChannelPointsRewards() { // creating the channel points rewards
 		console.log('registering Channel Points Rewards');
@@ -93,6 +97,7 @@ async function main() {
 			logger: { minLevel: 'error' },
 			strictHostCheck: true
 		});
+
 		await eventSubListener.listen().then(() => console.log('Event Listener Started')).catch((err) => console.error(err));
 
 		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '52c6bb77-9cc1-4f67-8096-d19c9d9f8896', {
@@ -277,7 +282,7 @@ async function main() {
 		});
 
 
-		const follower = await eventSubListener.subscribeToChannelFollowEvents(userID, async e => {
+		const modvlogFollower = await eventSubListener.subscribeToChannelFollowEvents(userID, async e => {
 			console.log(`${e.userName} has followed the channel, ${e.followDate}`);
 			// chatClient.say(broadcaster.name, `${e.userName} has followed the channel, ${e.followDate}`);
 		});
@@ -349,8 +354,10 @@ async function main() {
 			console.log(`${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 		});
 		const modvlogCheers = await eventSubListener.subscribeToChannelCheerEvents(userID, async cheer => {
-			if (cheer.bits >= 50) {
-				console.log(`${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
+			if (cheer.bits >= 50 && !cheer.isAnonymous) {
+				console.log(`${cheer.userDisplayName} has cheered ${cheer.bits} bits ${cheer.message}`);
+			} else {
+				console.log(`${broadcaster.name}, Anonymous has cheered ${cheer.bits} bits with a message of ${cheer.message}`);
 			}
 		});
 		const modvlogRaided = await eventSubListener.subscribeToChannelRaidEventsFrom(userID, async raid => {
@@ -373,13 +380,15 @@ async function main() {
 			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		});
 
-
-
 		const online = await eventSubListener.subscribeToStreamOnlineEvents(userId, async o => {
 			const stream = await o.getStream();
 			const userInfo = await o.getBroadcaster();
 			chatClient.say(broadcasterID.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID.gameName} with ${stream.viewers} viewers.`);
-			await rwClient.v2.tweet(`${userInfo.displayName} has gone live playing ${stream.gameName} here: https://twitch.tv/${userInfo.name}`);
+			if (process.env.BOT === 'LIVE') {
+				await rwClient.v2.tweet(`${userInfo.displayName} has gone live playing ${stream.gameName} here: https://twitch.tv/${userInfo.name}`);
+			} else {
+				return;
+			}
 
 			const LIVE = new WebhookClient({
 				url: config.DISCORD_WEBHOOK_PROMOTE_URL
@@ -409,6 +418,7 @@ async function main() {
 				])
 				.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
 				.setURL(`https://twitch.tv/${userInfo.name}`)
+				.setImage(`${stream.thumbnailUrl}`)
 				.setColor('GREEN')
 				.setTimestamp();
 			await LIVE.send({ content: '<@&967016374486573096>', embeds: [liveEmbed] });
@@ -1407,17 +1417,14 @@ async function main() {
 			const args = message.slice(1).split(' ');
 			const command = args.shift().toLowerCase();
 
-			if (command === 'ping' && channel === '#skullgaming31') {
-				if (msg.userInfo.userName === 'skullgaming31') {
+			if (command === 'ping' && channel === '#skullgaming31' || channel === '#modvlog') {
+				if (msg.userInfo.userName === 'skullgaming31' || msg.userInfo.userName === 'modvlog') {
 					try {
 						chatClient.say(channel, `${user}, Im Here and working.`);
 					} catch (error) {
 						console.error(error);
 					}
 				}
-			}
-			if (command === 'dayd' && channel === '#skullgaming31') {
-				chatClient.say(channel, 'Search for DAYD in the community section, make sure you have Mouse&Keyboard filters set to show, it is the Chernuris Map with 2x Loot');
 			}
 			if (command === 'quote' && channel === '#skullgaming31') {
 				const quotes = [
@@ -1448,13 +1455,23 @@ async function main() {
 				}
 			}
 			if (command === 'game') {
-				if (channel === '#skullgaming31') {
-					const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
-					chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
-				} else if (channel === '#modvlog') {
-					const modcurrentGame = await apiClient.channels.getChannelInfoById(broadcaster);
-					chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
-				} else { return; }
+				switch (channel) {
+					case 'modvlog':
+						const modcurrentGame = await apiClient.channels.getChannelInfoById(broadcaster);
+						chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
+						break;
+					default:
+						const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
+						chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
+						break;
+				}
+				// if (channel === '#skullgaming31') {
+				// 	const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
+				// 	chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
+				// } else if (channel === '#modvlog') {
+				// 	const modcurrentGame = await apiClient.channels.getChannelInfoById(broadcaster);
+				// 	chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
+				// } else { return; }
 			}
 			if (command === 'lurk' && channel === '#skullgaming31') {
 				switch (args[0]) {
@@ -1494,23 +1511,43 @@ async function main() {
 			if (command === 'uptime') {
 				const stream = await apiClient.streams.getStreamByUserId(broadcasterID);
 				const modvlogStream = await modvlogApiClient.streams.getStreamByUserId(broadcaster);
-				if (channel === '#skullgaming31') {
-					if (stream) {
-						const uptime = countdown(new Date(stream.startDate));
-						chatClient.say(channel, `${display}, the stream has been live for ${uptime}`);
-					}
-					else {
-						return chatClient.say(channel, 'the Stream is currently Offline');
-					}
-				} else if (channel === '#modvlog') {
-					if (modvlogStream) {
-						const modvlogUptime = countdown(new Date(modvlogStream.startDate));
-						chatClient.say(channel, `${display}, the stream has been live for ${modvlogUptime}`);
-					}
-					else {
-						return chatClient.say(channel, `${display}, the stream is currently offline`);
-					}
+				switch (channel) {
+					case 'modvlog':
+						if (modvlogStream) {
+							const modvlogUptime = countdown(new Date(modvlogStream.startDate));
+							chatClient.say(channel, `${display}, the stream has been live for ${modvlogUptime}`);
+						}
+						else {
+							return chatClient.say(channel, `${display}, the stream is currently offline`);
+						}
+						break;
+					default:
+						if (stream) {
+							const uptime = countdown(new Date(stream.startDate));
+							chatClient.say(channel, `${display}, the stream has been live for ${uptime}`);
+						}
+						else {
+							return chatClient.say(channel, 'the Stream is currently Offline');
+						}
+						break;
 				}
+				// if (channel === '#skullgaming31') {
+				// 	if (stream) {
+				// 		const uptime = countdown(new Date(stream.startDate));
+				// 		chatClient.say(channel, `${display}, the stream has been live for ${uptime}`);
+				// 	}
+				// 	else {
+				// 		return chatClient.say(channel, 'the Stream is currently Offline');
+				// 	}
+				// } else if (channel === '#modvlog') {
+				// 	if (modvlogStream) {
+				// 		const modvlogUptime = countdown(new Date(modvlogStream.startDate));
+				// 		chatClient.say(channel, `${display}, the stream has been live for ${modvlogUptime}`);
+				// 	}
+				// 	else {
+				// 		return chatClient.say(channel, `${display}, the stream is currently offline`);
+				// 	}
+				// }
 			}
 			if (command === 'dadjoke' && channel === '#skullgaming31') {
 				const response = await axios.get('https://icanhazdadjoke.com/', {
@@ -1582,11 +1619,11 @@ async function main() {
 			if (command === 'commands') {
 				if (channel === '#skullgaming31') {
 					if (staff) {
-						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
+						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
 					}
 					else {
-						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials', 'dayd'];
+						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
 						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
 					}
 				}

@@ -13,6 +13,7 @@
   },
   "keywords": [],
   "dependencies": {
+    "@supabase/supabase-js": "^1.35.4",
     "@twurple/api": "^5.1.6",
     "@twurple/auth": "^5.1.6",
     "@twurple/chat": "^5.1.6",

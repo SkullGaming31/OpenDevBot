@@ -33,6 +33,7 @@ const userScema = new mongoose.Schema({
  * @prop {string} twitchId
  * @prop {string} access_token
  * @prop {string} refresh_token
+ * @prop {[String]} scopes
  * @prop {string} expiresIn
  * @prop {string} obtainmentTimestamp
  */
