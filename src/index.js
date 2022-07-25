@@ -23,7 +23,7 @@ process.on('multipleResolves', (type, promise, reason) => { console.log(type, pr
 process.on('warning', (warn) => { console.log(warn); });
 
 async function run() {
-	const Port = PORT;
+	const PORT = process.env.PORT;
 	const app = express();
 
 
@@ -40,7 +40,7 @@ async function run() {
 
 	app.use('/auth/twitch', require('./auth/twitch'));
 
-	app.listen(Port || 8889, () => { console.log(`Server started on http://localhost:${Port}`); });
+	app.listen(PORT || 8889, () => { console.log(`Server started on http://localhost:${PORT}`); });
 }
 run();
 
