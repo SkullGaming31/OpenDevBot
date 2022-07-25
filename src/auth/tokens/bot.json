@@ -1,0 +1,19 @@
+{
+    "accessToken": "523if93leo0g0x234u811oelvqny1b",
+    "refreshToken": "k1n32is9fep414l9ie0wnfko48kx71blevru4qpgtdjlnw990q",
+    "scope": [
+        "channel:moderate",
+        "chat:edit",
+        "chat:read",
+        "moderator:manage:automod",
+        "moderator:manage:automod_settings",
+        "moderator:manage:banned_users",
+        "moderator:manage:blocked_terms",
+        "moderator:manage:chat_settings",
+        "moderator:read:automod_settings",
+        "moderator:read:blocked_terms",
+        "moderator:read:chat_settings"
+    ],
+    "expiresIn": 15264,
+    "obtainmentTimestamp": 1658672649412
+}

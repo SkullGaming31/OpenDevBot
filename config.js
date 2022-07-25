@@ -17,7 +17,9 @@ require('dotenv').config();
  * @prop {string} DISCORD_WEBHOOK_ID ID for the discord Webhook
  * @prop {string} DISCORD_WEBHOOK_TOKEN Token for the Discord Webhook
  * @prop {string} DISCORD_WEBHOOK_PROMOTE_URL WEBHOOK URL for the Promotion channel
+ * @prop {string} DISCORD_COMMAND_USAGE_URL Webhook URL for Twitch Logs Channel
  * @prop {string} MOD_DISCORD_WEBHOOK_PROMOTE_URL Webhook URL for the promotion channel of Modvlog
+ * @prop {string} MOD_DISCORD_COMMAND_USAGE_URL Webhook URL for modvlogs modlogs channel in discord
  * @prop {string} PORT the port to listen on
  * @prop {string} POSTGRES_PASSWORD Password used for supabase
  * @prop {string} POSTGRES_API_KEY Api key to access postgres database

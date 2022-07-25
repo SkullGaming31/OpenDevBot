@@ -13,7 +13,8 @@ const eventSubListener = new EventSubListener({
   strictHostCheck: true
 });
 
-eventSubListener.listen().then(() => console.log('EventSub Listener Started')).catch((err) => console.error(err));
-// await eventSubListener.listen().then(() => console.log('Event Listener Started')).catch((err) => console.error(err));
+(async () => {
+  await eventSubListener.listen().then(() => console.log('EventSub Listener Started')).catch((err) => console.error(err));
+})();
 
 module.exports = eventSubListener;

@@ -4,7 +4,7 @@ const fs = require('fs/promises');
 
 const config = require('../config');
 
-async function api() {
+(async () => {
   const clientId = config.TWITCH_CLIENT_ID;
   const clientSecret = config.TWITCH_CLIENT_SECRET;
   const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
@@ -35,8 +35,4 @@ async function api() {
     clientSecret,
     onRefresh: async (newTokenData) => await fs.writeFile('./src/auth/tokens/modvlog.json', JSON.stringify(newTokenData, null, 4), 'UTF-8')
   }, modvlogTokenData);
-}
-
-module.exports = {
-  api
-};
+})();

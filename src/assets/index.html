@@ -124,7 +124,7 @@
       });
 
       embed.addEventListener(Twitch.Embed.VIDEO_READY, () => {
-        var player = embed.getPlayer();
+        let player = embed.getPlayer();
         player.play();
       });
     </script>

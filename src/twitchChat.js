@@ -4,22 +4,28 @@ const axios = require('axios').default;
 const { RefreshingAuthProvider, ClientCredentialsAuthProvider } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
 const { ChatClient } = require('@twurple/chat');
-const { EventSubListener, ReverseProxyAdapter, EnvPortAdapter } = require('@twurple/eventsub');
+const { EventSubListener, EnvPortAdapter } = require('@twurple/eventsub');
 const { NgrokAdapter } = require('@twurple/eventsub-ngrok');
 const { WebhookClient, MessageEmbed } = require('discord.js');
 
-// const botModel = require('../src/database/models/bot');
 const userModel = require('./database/models/user');
 
 const { rwClient } = require('./tweet');
 const config = require('../config');
 
+// WIP Stuff Starts
+
+// const botModel = require('../src/database/models/bot');
+const client = require('./discord/index');
 // const eventSubListener = require('./eventSub');
 // const { apiClient, modvlogApiClient, userApiClient } = require('./lib/twitch-api');
 // const { authProvider, modvlogAuthProvider, userAuthProvider } = require('./auth/authProvider');
 
+// WIP Stuff Ends
+
 
 async function main() {
+
 	const clientId = config.TWITCH_CLIENT_ID;
 	const clientSecret = config.TWITCH_CLIENT_SECRET;
 	const eventSubSecret = config.TWITCH_EVENTSUB_SECRET;
@@ -47,7 +53,7 @@ async function main() {
 	}, modvlogTokenData);
 
 	//End Auth Provider Section
-	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31', 'modvlog', 'lonnybluebird'], logger: { minLevel: 'error' } });
+	const chatClient = new ChatClient({ authProvider, channels: ['skullgaming31', 'modvlog'], logger: { minLevel: 'error' } });
 	await chatClient.connect().then(() => console.log('connected to Twitch Chat')).catch((err) => { console.error(err); });
 	const appAuthProvider = new ClientCredentialsAuthProvider(clientId, clientSecret);
 	const apiClient = new ApiClient({ authProvider: appAuthProvider, logger: { minLevel: 'critical' } });
@@ -80,12 +86,14 @@ async function main() {
 	// eventSub Stuff
 	const userId = '31124455';// my id
 	const userID = '204831754';// mods id
-	const broadcasterID = await apiClient.channels.getChannelInfoById(userId);
-	const broadcaster = await apiClient.channels.getChannelInfoById(userID);
+	const broadcasterID = await apiClient.channels.getChannelInfoById(userId);// apiClient.channels.getChannelInfoById(userID);
+	const broadcaster = await modvlogApiClient.channels.getChannelInfoById(userID);
 	const twitchActivity = new WebhookClient({
 		id: config.DISCORD_WEBHOOK_ID,
 		token: config.DISCORD_WEBHOOK_TOKEN,
 	});
+	const modVlogCommandUsage = new WebhookClient({ url: config.MOD_DISCORD_COMMAND_USAGE_URL });
+	const twitchModlogs = new WebhookClient({ url: config.DISCORD_COMMAND_USAGE_URL });
 
 	// await createChannelPointsRewards();
 
@@ -94,10 +102,13 @@ async function main() {
 		// 	port: process.env.PORT,
 		// 	hostName: 'skulledbottwitch.up.railway.app/',
 		// });
-		const eventSubListener = new EnvPortAdapter({
-			hostName: 'skulledbottwitch.up.railway.app/',
-			variableName: 'PORT'
+		const eventSubListener = new EventSubListener({
+			apiClient,
+			adapter: new EnvPortAdapter({ hostName: 'skulledbottwitch.up.railway.app/', variableName: '$PORT' }),
+			secret: config.TWITCH_EVENTSUB_SECRET
 		});
+
+		eventSubListener.listen(process.env.$PORT || config.PORT).then(() => { console.log('Connected to Twitch EventSub'); }).catch((err) => console.error(err));
 	}
 
 	if (process.env.NODE_ENV === 'development') {
@@ -147,7 +158,7 @@ async function main() {
 			prompt: 'Click for a link to my Instagram profile',
 			userInputRequired: false
 		});
-		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '144837ed-514a-436c-95cf-d9491efad240', {
+		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID, '144837ed-514a-436c-95cf-d9491efad240', { // 144837ed-514a-436c-95cf-d9491efad240
 			title: 'TicTok',
 			cost: 1,
 			autoFulfill: true,
@@ -706,9 +717,9 @@ async function main() {
 						.setTimestamp();
 					twitchActivity.send({ embeds: [youtubeEmbed] });
 					break;
-				case 'TikTok':
+				case 'TicTok':
 					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-					chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tok-Tok: https://tiktok.com/@skullgaming31`);
+					chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tic-Tok: https://tiktok.com/@skullgaming31`);
 
 					const tiktokEmbed = new MessageEmbed()
 						.setTitle('REDEEM EVENT')
@@ -1416,8 +1427,12 @@ async function main() {
 
 	chatClient.onMessage(async (channel, user, message, msg) => {
 		// console.log(`${msg.userInfo.displayName} Said: ${message} in ${channel}`);
+
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
+		const skullgaming31 = await userApiClient.channels.getChannelInfoById(userId);
+		const modvlog = await userApiClient.channels.getChannelInfoById(userID);
+
 
 		if (message.includes('!poke')) return;
 		if (message.startsWith('!') && channel === '#modvlog') return;
@@ -1428,13 +1443,22 @@ async function main() {
 			const args = message.slice(1).split(' ');
 			const command = args.shift().toLowerCase();
 
-			if (command === 'ping' && channel === '#skullgaming31' || channel === '#modvlog') {
-				if (msg.userInfo.userName === 'skullgaming31' || msg.userInfo.userName === 'modvlog') {
-					try {
-						chatClient.say(channel, `${user}, Im Here and working.`);
-					} catch (error) {
-						console.error(error);
-					}
+			if (command === 'ping') {
+				switch (channel) {
+					case '#skullgaming31':
+						if (staff) {
+							chatClient.say(channel, `${user}, Im online and working correctly`);
+							const tbd = await userApiClient.streams.getStreamByUserName(broadcasterID);
+						}
+						break;
+					case '#modvlog':
+						if (staff) {
+							chatClient.say(channel, `${user}, im online and working correctly`);
+						}
+						break;
+					default:
+						chatClient.say(channel, `${user}, Only a mod or the broadcaster can use this command`);
+						break;
 				}
 			}
 			if (command === 'quote' && channel === '#skullgaming31') {
@@ -1447,33 +1471,144 @@ async function main() {
 				let randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 				chatClient.say(channel, `${randomQuote}`);
 			}
-			if (command === 'settitle' && channel === '#skullgaming31') {
-				if (staff) {
-					const setTitle = await userApiClient.channels.updateChannelInfo(broadcasterID, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
-					chatClient.say(channel, `channel title has been updated to ${setTitle}`);
-				} else {
-					chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
+			if (command === 'settitle') {
+				switch (channel) {
+					case '#skullgaming31':
+						try {
+							if (staff) {
+								const setTitle = await userApiClient.channels.updateChannelInfo(skullgaming31.name, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
+								chatClient.say(channel, `${display}, has updated the channel title to ${skullgaming31.title}`);
+								const commandEmbed = new MessageEmbed()
+									.setTitle('Command Used')
+									.setColor('RED')
+									.addFields([
+										{
+											name: 'Command Executer: ',
+											value: `\`${msg.userInfo.displayName}\``,
+											inline: true
+										},
+										{
+											name: 'New Title: ',
+											value: `\`${skullgaming31.title}\``,
+											inline: true
+										}
+									])
+									.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
+									.setTimestamp();
+								twitchModlogs.send({ embeds: [commandEmbed] });
+							} else {
+								chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
+							}
+						} catch (error) {
+							console.error(error);
+							return;
+						}
+						break;
+					case '#modvlog':
+						try {
+							if (staff) {
+								const setTitle = await modvlogApiClient.channels.updateChannelInfo(broadcaster, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
+								chatClient.say(channel, `${display}, has updated the channel title to ${modvlog.title}`);
+								const commandEmbed = new MessageEmbed()
+									.setTitle('Command Used')
+									.setColor('RED')
+									.addFields([
+										{
+											name: 'Command Executer: ',
+											value: `\`${msg.userInfo.displayName}\``,
+											inline: true
+										},
+										{
+											name: 'New Title: ',
+											value: `\`${modvlog.title}\``,
+											inline: true
+										}
+									])
+									.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
+									.setTimestamp();
+								modVlogCommandUsage.send({ embeds: [commandEmbed] });
+							} else {
+								chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
+							}
+						} catch (error) {
+							console.error(error);
+							return;
+						}
+						break;
 				}
 			}
-			if (command === 'setgame' && channel === '#skullgaming31') {
-				if (staff) {
-					const gamename = await userApiClient.games.getGameByName(args.join(' '));
-					const setGame = await userApiClient.channels.updateChannelInfo(broadcasterID, { gameId: `${gamename.id}` });
-					chatClient.say(channel, `channel game has been updated to ${gamename.name}`);
-					console.log(`${gamename.name}: ${gamename.id}`);
-				} else {
-					chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
+			if (command === 'setgame') {
+				switch (channel) {
+					case '#skullgaming31':
+						if (staff) {
+							const gamename = await userApiClient.games.getGameByName(args.join(' '));
+							const setGame = await userApiClient.channels.updateChannelInfo(broadcasterID, { gameId: `${gamename.id}` });
+							chatClient.say(channel, `channel game has been updated to ${gamename.name}`);
+							const commandEmbed = new MessageEmbed()
+								.setTitle('Command Used')
+								.setColor('RED')
+								.addFields([
+									{
+										name: 'Command Executer: ',
+										value: `\`${msg.userInfo.displayName}\``,
+										inline: true
+									},
+									{
+										name: 'New Category:',
+										value: `\`Gamename: ${gamename.name}\`, \n||\`GameID: ${gamename.id}\`||`,
+										inline: true
+									}
+								])
+								.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
+								.setTimestamp();
+							twitchModlogs.send({ embeds: [commandEmbed] });
+							console.log(`${gamename.name}: ${gamename.id}`);
+						} else {
+							chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /commands to find out what commands you can use.`);
+						}
+						break;
+					case '#modvlog':
+						try {
+							if (staff) {
+								const gamename = await modvlogApiClient.games.getGameByName(args.join(' '));
+								const setGame = await modvlogApiClient.channels.updateChannelInfo(broadcaster, { gameId: `${gamename.id}` });
+								chatClient.say(channel, `channel game has been updated to ${gamename.name}`);
+								console.log(`${gamename.name}: ${gamename.id}`);
+								const commandEmbed = new MessageEmbed()
+									.setTitle('Command Used')
+									.setColor('RED')
+									.addFields([
+										{
+											name: 'Command Executer: ',
+											value: `\`${msg.userInfo.displayName}\``,
+											inline: true
+										},
+										{
+											name: 'New Category:',
+											value: `\`Gamename: ${gamename.name}\`, \n||\`GameID: ${gamename.id}\`||`,
+											inline: true
+										}
+									])
+									.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
+									.setTimestamp();
+								modVlogCommandUsage.send({ embeds: [commandEmbed] });
+							} else {
+								chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /commands to find out what commands you can use.`);
+							}
+						} catch (error) {
+							console.error(error);
+						}
+						break;
 				}
 			}
 			if (command === 'game') {
 				switch (channel) {
-					case 'modvlog':
-						const modcurrentGame = await apiClient.channels.getChannelInfoById(broadcaster);
-						chatClient.say(channel, `${display}, ${modcurrentGame.displayName} is currently playing ${modcurrentGame.gameName}`);
+					case '#modvlog':
+						chatClient.say(channel, `${display}, ${broadcaster.displayName} is currently playing ${broadcaster.gameName}`);
 						break;
 					default:
-						const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
-						chatClient.say(channel, `${display}, ${currentGame.displayName} is currently playing ${currentGame.gameName}`);
+						// const currentGame = await apiClient.channels.getChannelInfoById(broadcasterID);
+						chatClient.say(channel, `${display}, ${broadcasterID.displayName} is currently playing ${broadcasterID.gameName}`);
 						break;
 				}
 				// if (channel === '#skullgaming31') {
@@ -1493,8 +1628,6 @@ async function main() {
 						} else {
 							chatClient.say(channel, 'have some stuff to do but have a tab open for you, have a great stream!');
 						}
-						break;
-					default:
 						break;
 				}
 			}
@@ -1628,20 +1761,43 @@ async function main() {
 				}
 			}
 			if (command === 'commands') {
-				if (channel === '#skullgaming31') {
-					if (staff) {
-						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
-						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
-					}
-					else {
-						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
-						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
-					}
+				switch (channel) {
+					case '#skullgaming31':
+						if (staff) {
+							const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+							chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
+						} else {
+							const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+							chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
+						}
+						break;
+					case '#modvlog':
+						if (staff) {
+							const moderatorCommands = ['ping', 'settitle', 'setgame', 'game', /* 'followage', 'accountage', */ 'uptime', 'dadjoke', 'vigor'];
+							chatClient.say(channel, `${display}, Commands for this channel are ${moderatorCommands.join(', ')}`);
+						} else {
+							const modvlogCommands = ['game', /* 'followage', 'accountage', */ 'uptime', 'dadjoke', 'vigor', 'me'];
+							chatClient.say(channel, `${display}, Commands for this channel are ${modvlogCommands.join(', ')}`);
+						}
+						break;
+					default:
+						chatClient.say(channel, 'There are no registered Commands for this channel');
+						break;
 				}
-				else {
-					chatClient.say(channel, 'There are no registered Commands for this channel');
-					return;
-				}
+				// if (channel === '#skullgaming31') {
+				// 	if (staff) {
+				// 		const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+				// 		chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
+				// 	}
+				// 	else {
+				// 		const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
+				// 		chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
+				// 	}
+				// }
+				// else {
+				// 	chatClient.say(channel, 'There are no registered Commands for this channel');
+				// 	return;
+				// }
 			}
 			if (command === 'me' && channel === '#skullgaming31') {
 				let target = args[0];
