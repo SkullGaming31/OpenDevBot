@@ -1,1 +1,0 @@
-pm2 start src/index.js --name skulledbotTwitch --cron-restart="0 */2 * * *"

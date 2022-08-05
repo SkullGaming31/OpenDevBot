@@ -15,8 +15,6 @@ const twitchAuthApi = axios.create({
 	baseURL: authBaseUrl
 });
 
-
-
 // console.log(redirect_uri);
 twitchRouter.get('/', (req, res) => {
 	/* const BOTqs = new URLSearchParams({
