@@ -2,14 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const volleyball = require('volleyball');
-const { Client, Intents } = require('discord.js');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 require('./twitchChat');
 
 const client = new Client({
 	intents: [
-		Intents.FLAGS.GUILD_WEBHOOKS,
-		Intents.FLAGS.GUILD_MESSAGES
+		GatewayIntentBits.GuildWebhooks,
+		GatewayIntentBits.GuildMembers
 	]
 });
 

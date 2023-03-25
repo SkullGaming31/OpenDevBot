@@ -10,6 +10,7 @@ require('dotenv').config();
  * @prop {string} MONGO_PASS Mongo DB PasswordskulledbotTwitch/config.js
  * @prop {string} MONGO_DB Mongo Database Name
  * @prop {string} MONGO_HOST Mongo Database Host
+ * @prop {string} MONGO_URI Mongo URI
  * @prop {string} TWITTER_USER_SECRET twitter user secret
  * @prop {string} TWITTER_USER_ACCESS_TOKEN Twitter Access Token
  * @prop {string} TWITTER_APPLICATION_SECRET twitter app secret

@@ -8,7 +8,7 @@ require('./models/user');
 
 // mongodb+srv://<username>:<password>@twitch.7ipbc.mongodb.net/Twitch?retryWrites=true&w=majority
 // mongodb+srv://${config.MONGO_USER}:${config.MONGO_PASS}@twitch.7ipbc.mongodb.net/${config.MONGO_DB}?retryWrites=true&w=majority
-mongoose.connect(`mongodb+srv://${config.MONGO_USER}:${config.MONGO_PASS}@${config.MONGO_HOST}/${config.MONGO_DB}?retryWrites=true&w=majority`);
+mongoose.connect(`${process.env.MONGO_URI}`);
 const { connection: db } = mongoose;
 
 
