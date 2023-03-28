@@ -28,14 +28,14 @@
     <img src="./src/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
-<h3 align="center">skulledbotTwitch V2</h3>
+<h3 align="center">skulledbot V2</h3>
 
   <p align="center">
     Twitch Chatbot, becoming Public soon<br>
     ·
-    <a href="https://github.com/skullgaming31/skulledbotTwitch/issues">Report Bug</a>
+    <a href="https://github.com/skullgaming31/skulledbot/issues">Report Bug</a>
     ·
-    <a href="https://github.com/skullgaming31/skulledbotTwitch/issues">Request Feature</a>
+    <a href="https://github.com/skullgaming31/skulledbot/issues">Request Feature</a>
   </p>
 </div>
 
@@ -107,7 +107,7 @@ This is an example of how to list things you need to use the software and how to
 1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console), you will need access to a discord bot aswell, for webhooks
 2. Clone the repo
    ```sh
-   git clone https://github.com/skullgaming31/skulledbotTwitch.git
+   git clone https://github.com/skullgaming31/skulledbot.git
    ```
 3. Install NPM packages
    ```sh
@@ -146,7 +146,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] auto tweet when stream goes live with gameName included
 * [ ] Que/delay webhooks being sent to avoid being rate limited
 
-See the [open issues](https://github.com/skullgaming31/skulledbotTwitch/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/skullgaming31/skulledbot/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -178,7 +178,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Corey - [@skullgaming31](https://twitter.com/skullgaming31) - skullgaming8461@gmail.com
 
-Project Link: [skulledbotTwitchV2](https://github.com/skullgaming31/skulledbotTwitch)
+Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbot)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -193,16 +193,16 @@ Project Link: [skulledbotTwitchV2](https://github.com/skullgaming31/skulledbotTw
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbot.svg?style=for-the-badge
 [contributors-url]: https://github.com/SkullGaming31/skullbotTwitch/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[forks-url]: https://github.com/SkullGaming31/skulledbotTwitch/network/members
-[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[stars-url]: https://github.com/SkullGaming31/skulledbotTwitch/stargazers
-[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[issues-url]: https://github.com/SkullGaming31/skulledbotTwitch/issues
-[license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbotTwitch.svg?style=for-the-badge
-[license-url]: https://github.com/SkullGaming31/skulledbotTwitch/blob/master/LICENSE
+[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbot.svg?style=for-the-badge
+[forks-url]: https://github.com/SkullGaming31/skulledbot/network/members
+[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbot.svg?style=for-the-badge
+[stars-url]: https://github.com/SkullGaming31/skulledbot/stargazers
+[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbot.svg?style=for-the-badge
+[issues-url]: https://github.com/SkullGaming31/skulledbot/issues
+[license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbot.svg?style=for-the-badge
+[license-url]: https://github.com/SkullGaming31/skulledbot/blob/master/LICENSE
 [product-screenshot]: images/screenshot.png
 
 <!--
