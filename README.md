@@ -40,7 +40,7 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 <br />
 <div align="center">
   <a href="https://github.com/skullgaming31/skulledbot">
-    <img src="./src/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
+    <img src="./public/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
 <h3 align="center">skulledbot V2</h3>
