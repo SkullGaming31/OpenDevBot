@@ -7,15 +7,15 @@ interface Economy {
 }
 
 const economyScema = new Schema<Economy>({
-  twitchId: {
-    type: String,
-    unique: true
-  },
-  skulls: {
-    type: Number,
-    required: true,
-    default: 0
-  }
+	twitchId: {
+		type: String,
+		unique: true
+	},
+	skulls: {
+		type: Number,
+		required: true,
+		default: 0
+	}
 });
 
 const economyModel = model<Economy>('economy', economyScema);// users

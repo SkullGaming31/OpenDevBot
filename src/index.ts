@@ -10,8 +10,7 @@ async function run() {
 
 	await twitchChat();
 	await errorHandler().then(() => { console.log('Error Handler Initialized'); });
-	await init();
-
+	await init();// database not loading
 	createApp();
 }
 run();
