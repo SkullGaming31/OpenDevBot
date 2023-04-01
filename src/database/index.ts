@@ -1,16 +1,37 @@
-import mongoose from 'mongoose';
-import './models/bot';
+import mongoose, { ConnectOptions, Error } from 'mongoose';
+import './models/AuthTokenModel';
 import './models/user';
 
-
-// mongodb+srv://<username>:<password>@twitch.7ipbc.mongodb.net/Twitch?retryWrites=true&w=majority
-// mongodb+srv://${config.MONGO_USER}:${config.MONGO_PASS}@twitch.7ipbc.mongodb.net/${config.MONGO_DB}?retryWrites=true&w=majority
 export async function init() {
-	mongoose.set('strictQuery', true);
-	await mongoose.connect(`${process.env.MONGO_URI}`);
-	const { connection: DB } = mongoose;
+	try {
+		mongoose.set('strictQuery', true);
+		await mongoose.connect(process.env.MONGO_URI as string, {
+			useNewUrlParser: true,
+			useUnifiedTopology: true,
+			user: process.env.MONGO_USER as string,
+			pass: process.env.MONGO_PASS as string,
+			dbName: process.env.MONGO_DB as string
+		} as ConnectOptions);
+		console.log('Twitch Database Connected');
 
-	DB.on('connected', () => { console.log('Twitch Database Connected'); });
-	DB.on('disconnected', () => { console.log('Twitch Database Disconnected'); });
-	DB.on('error', (err: mongoose.Error) => { console.error('Twitch Database Error:' + err.message); });
+		mongoose.connection.on('disconnected', () => {
+			console.log('Twitch Database Disconnected');
+			mongoose.connection.removeAllListeners();
+			mongoose.disconnect();
+		});
+
+		mongoose.connection.on('connected', () => {
+			console.log('Twitch Database Connected');
+		});
+
+		mongoose.connection.on('error', (err: mongoose.Error) => {
+			console.error('Twitch Database Error:', err.message);
+			mongoose.connection.removeAllListeners();
+			mongoose.disconnect();
+		});
+
+	} catch (error: any) {
+		console.error('Twitch Database Error:', error.message);
+		mongoose.disconnect();
+	}
 }

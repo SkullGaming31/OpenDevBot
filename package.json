@@ -18,8 +18,6 @@
     "@twurple/api": "^6.0.9",
     "@twurple/auth": "^6.0.9",
     "@twurple/chat": "^6.0.9",
-    "@twurple/eventsub-http": "^6.0.9",
-    "@twurple/eventsub-ngrok": "^6.0.9",
     "@twurple/eventsub-ws": "^6.0.9",
     "axios": "^0.25.0",
     "cors": "^2.8.5",

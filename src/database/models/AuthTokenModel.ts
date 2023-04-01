@@ -1,7 +1,7 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
-interface Bot {
-	name: string;
+interface IToken extends Document {
+	userId: string;
 	access_token: string;
 	refresh_token: string;
 	scopes: [string];
@@ -9,8 +9,8 @@ interface Bot {
 	obtainmentTimestamp: string;
 }
 
-const botScema = new Schema<Bot>({
-	name: {
+const botSchema = new Schema<IToken>({
+	userId: {
 		type: String,
 		unique: true
 	},
@@ -36,5 +36,5 @@ const botScema = new Schema<Bot>({
 	},
 });
 
-const botModel = model<Bot>('user', botScema);
+const botModel = model<IToken>('user', botSchema);
 export default botModel;
