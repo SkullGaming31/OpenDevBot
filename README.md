@@ -43,10 +43,10 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
     <img src="./public/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
   </a>
 
-<h3 align="center">skulledbot V2</h3>
+<h3 align="center">SkulledBot</h3>
 
   <p align="center">
-    Twitch Chatbot, becoming Public soon<br>
+    Twitch Chatbot<br>
     ·
     <a href="https://github.com/skullgaming31/skulledbot/issues">Report Bug</a>
     ·
@@ -93,7 +93,7 @@ a personal chat bot for my twitch channel, will make it usable on other channels
 
 * [Twurple](https://twurple.js.org/)
 * [Express.js](https://expressjs.com/)
-* [discord.js](https://discord.js.org/) Basics, just for discord Embeds
+* [discord.js](https://discord.js.org/) Basics, just for discord Embeds for webhooks
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -142,23 +142,22 @@ This is an example of how to list things you need to use the software and how to
 
 * [x] Connected auth to account
 * [x] Connected ChatClient
-* [x] connected to PubSub
-* [x] connected to EventSub
+* [x] connected to PubSub(Dont Use Anymore)
+* [x] connected to EventSub with websockets
 * [x] add commands
   * [x] convert followage/accountage to years,months,day,hours,minutes,seconds
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
-* [x] add commands to an array to display help command easier
-* [x] add word detection to send commands without prefix
+* [x] add word detection to send commands without prefix(new command handler, this needs reworking)
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [ ] Timer Commands
 * [ ] Counters?
-* [ ] Quotes System?
+* [ ] Quotes System?(hard coded quotes only atm)
 * [ ] Viewer Watch Time?
 * [ ] Virtual Currency System
   * [ ] duel
   * [ ] dig
-  * [x] dice
-* [x] auto tweet when stream goes live with gameName included
+  * [ ] dice
+* [ ] auto tweet when stream goes live with gameName included
 * [ ] Que/delay webhooks being sent to avoid being rate limited
 
 See the [open issues](https://github.com/skullgaming31/skulledbot/issues) for a full list of proposed features (and known issues).
@@ -191,9 +190,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Corey - [@skullgaming31](https://twitter.com/skullgaming31) - skullgaming8461@gmail.com
+Corey - [CanadienDragon](https://twitter.com/canadiendragon) - skullgamingg31@gmail.com
 
-Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbot)
+Project Link: [SkulledBot](https://github.com/skullgaming31/skulledbot)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -209,7 +208,7 @@ Project Link: [skulledbotV2](https://github.com/skullgaming31/skulledbot)
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbot.svg?style=for-the-badge
-[contributors-url]: https://github.com/SkullGaming31/skullbotTwitch/graphs/contributors
+[contributors-url]: https://github.com/SkullGaming31/skullbot/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbot.svg?style=for-the-badge
 [forks-url]: https://github.com/SkullGaming31/skulledbot/network/members
 [stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbot.svg?style=for-the-badge
