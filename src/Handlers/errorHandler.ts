@@ -1,6 +1,7 @@
 import { ChannelType, EmbedBuilder }  from'discord.js';
 import { client } from '../discord';
 import { WebhookClient } from 'discord.js';
+import mongoose from 'mongoose';
 
 export async function errorHandler() {
 	const webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
@@ -10,7 +11,7 @@ export async function errorHandler() {
 	client.on('error', async(err: Error) => {
 		console.error(err);
 		if (!webhookClient) return;
-		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Discord Error** ```' + '\n' + err + '\n' + '```')] });
+		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Discord Error** ```' + '\n' + err + '\n' + '```').setTitle(err.name)] });
 		return;
 	});
 
@@ -22,7 +23,7 @@ export async function errorHandler() {
 		return;
 	});
 
-	process.on('unhandledRejection', async (reason: string, p: Promise<unknown>) => {
+	process.on('unhandledRejection', async (reason: unknown, p: Promise<unknown>) => {
 		console.error(reason, p);
 
 		if (!webhookClient) return;
@@ -34,7 +35,7 @@ export async function errorHandler() {
 		console.error(err, orgin);
 
 		if (!webhookClient) return;
-		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Uncaught Exception/Catch:\n\n** ```' + err + '\n\n' + orgin.toString() + '```')] });
+		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Uncaught Exception/Catch:\n\n** ```' + err + '\n\n' + orgin.toString() + '```').setTitle(err.name)] });
 		return;
 	});
 
@@ -42,7 +43,7 @@ export async function errorHandler() {
 		console.error(err, orgin);
 
 		if (!webhookClient) return;
-		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Uncaught Exception/Catch: (MONITOR)\n\n** ```' + err + '\n\n' + orgin.toString() + '```')] });
+		await webhookClient.send({ embeds: [errorEmbed.setDescription('**Uncaught Exception/Catch: (MONITOR)\n\n** ```' + err + '\n\n' + orgin.toString() + '```').setTitle(err.name)] });
 		return;
 	});
 
@@ -51,6 +52,12 @@ export async function errorHandler() {
 
 		if (!webhookClient) return;
 		await webhookClient.send({ embeds: [errorEmbed.setColor('Yellow').setTitle(`${warn.name}`).setDescription('**Warning**: ```' + warn.message + '```').addFields([{ name: 'Error Stack', value: `\`${warn.stack}\``, inline: false }])] });
+		return;
+	});
+
+	mongoose.connection.on('error', async (err: mongoose.Error) => {
+		if (!webhookClient) return;
+		await webhookClient.send({ embeds: [errorEmbed.setColor('Red').setTitle(`${err.name}`).setDescription('**Warning**: ```' + err.message + '```').addFields([{ name: 'Error Stack', value: `\`${err.stack}\``, inline: false }])] });
 		return;
 	});
 }

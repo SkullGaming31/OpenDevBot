@@ -1,18 +1,19 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
-interface IUser {
+interface IUser extends Document {
 	twitchId: string;
 	access_token: string;
 	refresh_token: string;
-	scopes: string[];
-	expiresIn: string;
-	obtainmentTimestamp: string;
+	scope: string[];
+	expires_in: number;
+	obtainmentTimestamp: number;
 }
 
-const userScema = new Schema<IUser>({
+const userSchema = new Schema<IUser>({
 	twitchId: {
 		type: String,
-		unique: true
+		unique: true,
+		required: true
 	},
 	access_token: {
 		type: String,
@@ -20,21 +21,22 @@ const userScema = new Schema<IUser>({
 	},
 	refresh_token: {
 		type: String,
-		require: true
+		required: true
 	},
-	scopes: {
+	scope: {
 		type: [String],
 		required: true
 	},
-	expiresIn: {
-		type: String,
+	expires_in: {
+		type: Number,
 		required: true
 	},
 	obtainmentTimestamp: {
-		type: String,
-		required: false
+		type: Number,
+		required: true
 	},
 });
+// obtainmentTimestamp is saved in seconds same with expires_in
 
-const userModel = model<IUser>('users', userScema);
+const userModel = model<IUser>('users', userSchema);
 export default userModel;

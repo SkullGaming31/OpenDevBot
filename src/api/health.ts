@@ -67,9 +67,6 @@ const healthListener: RequestHandler = async (_req: Request, res: Response) => {
 		console.error(err);
 		res.sendStatus(500);
 	} finally {
-		if (mongoConnection) {
-			mongoConnection.close();
-		}
 		if (discordClient) {
 			discordClient.destroy();
 		}

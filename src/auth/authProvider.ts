@@ -23,9 +23,7 @@ export async function getUserAuthProvider(): Promise<RefreshingAuthProvider> {
 	const userAuthProvider = new RefreshingAuthProvider({
 		clientId,
 		clientSecret,
-		onRefresh: async (userId: string, newTokenData: AccessToken) => {
-			await fs.writeFile(`./src/auth/tokens/token.${userId}.json`, JSON.stringify(newTokenData, null, 4), 'utf-8');
-		}
+		onRefresh: async (userId: string, newTokenData: AccessToken) => { await fs.writeFile(`./src/auth/tokens/token.${userId}.json`, JSON.stringify(newTokenData, null, 4), 'utf-8'); }
 	});
 	userAuthProvider.addUser('31124455', userTokenData, ['chat']);
 	userAuthProvider.addIntentsToUser('31124455', ['chat']);
