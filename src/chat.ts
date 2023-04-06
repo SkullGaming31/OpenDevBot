@@ -11,7 +11,7 @@ import { TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/cons
 
 // Holds All Twitch Chat Stuff
 export async function initializeChat(): Promise<void> {
-	const chatClient = await chatFunction();
+	const chatClient = await getChatClient();
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 		
@@ -74,11 +74,7 @@ export async function initializeChat(): Promise<void> {
 	
 			switch (command) {
 			case 'ping':
-				if (staff) {
-					await chatClient.say(channel, `${display}, Im online and working correctly`);
-				} else {
-					chatClient.say(channel, `${display}, Only a mod or the broadcaster can use this command`);
-				}
+				await chatClient.say(channel, `${display}, Im online and working correctly`);
 				break;
 			case 'quote':
 				switch (args[0]) {
@@ -637,23 +633,27 @@ export async function initializeChat(): Promise<void> {
 				break;
 			}
 		}
-	};	
+	};
 	chatClient.onMessage(commandHandler);
 }
 
 // holds the ChatClient
-export async function chatFunction(): Promise<ChatClient> {
-	const authProvider = await getAuthProvider();
+let chatClientInstance: ChatClient;
+export async function getChatClient(): Promise<ChatClient> {
+	if (!chatClientInstance) {
+		const authProvider = await getAuthProvider();
 
-	const chatClient = new ChatClient({ 
-		authProvider, 
-		channels: ['canadiendragon'], 
-		logger: { minLevel: 'error' },
-		authIntents: ['chat'],
-		botLevel: 'none',
-		isAlwaysMod: true,
-	});
-	await chatClient.connect().then(() => console.log('connected to Twitch Chat')).catch((err) => { console.error(err); });
+		chatClientInstance = new ChatClient({ 
+			authProvider, 
+			channels: ['canadiendragon'], 
+			logger: { minLevel: 'error' },
+			authIntents: ['chat'],
+			botLevel: 'none',
+			isAlwaysMod: true,
+		});
+		await chatClientInstance.connect();
+		console.log('The ChatClient has started');
+	}
 	
-	return chatClient;
+	return chatClientInstance;
 }

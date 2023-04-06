@@ -3,9 +3,7 @@ import { client } from '../discord';
 import { WebhookClient } from 'discord.js';
 import mongoose from 'mongoose';
 
-export async function errorHandler() {
-	const webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
-
+export async function errorHandler(webhookClient: WebhookClient) {
 	const errorEmbed = new EmbedBuilder().setColor('Red').setTitle('⚠ | Error Encountered').setFooter({ text: 'Development Error' }).setTimestamp();
 
 	client.on('error', async(err: Error) => {

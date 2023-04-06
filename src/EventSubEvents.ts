@@ -1,17 +1,17 @@
 import { config } from 'dotenv';
 config();
 import { WebhookClient, EmbedBuilder } from 'discord.js';
+import { EventSubWsListener } from '@twurple/eventsub-ws';
 
 // import { createChannelPointsRewards } from './misc/channelPoints';
 import { getUserApi } from './api/userApiClient';
-import { getEventSubs } from './eventSub';
 import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
-import { chatFunction } from './chat';
+import { getChatClient } from './chat';
 
 export async function EventSubEvents(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const eventSubListener = await getEventSubs();
-	const chatClient = await chatFunction();
+	const chatClient = await getChatClient();
 
 	//#region Webhooks
 	const LIVE = new WebhookClient({ id: PromoteWebhookID, token: PromoteWebhookToken });
@@ -1075,4 +1075,12 @@ export async function EventSubEvents(): Promise<void> {
 		chatClient.say(userInfo.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 	});
 		//#endregion
+}
+
+export async function getEventSubs(): Promise<EventSubWsListener> {
+	const userApiClient = await getUserApi();
+	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'error' } });
+	eventSubListener.start();
+
+	return eventSubListener;
 }
