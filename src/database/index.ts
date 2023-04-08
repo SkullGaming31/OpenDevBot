@@ -24,7 +24,7 @@ export async function init() {
 			console.log('Twitch Database Connected');
 		});
 
-		mongoose.connection.on('error', (err: mongoose.Error) => {
+		mongoose.connection.on('error', (err: Error) => {
 			console.error('Twitch Database Error:', err.message);
 			mongoose.connection.removeAllListeners();
 			mongoose.disconnect();

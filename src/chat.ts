@@ -9,11 +9,46 @@ import { getUserApi } from './api/userApiClient';
 import axios from 'axios';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
 
+
+const commands = new Set<string>(['ping', 'game']); // initialize with the commands you've already implemented
+// registerCommand('newCommand');// single Command or multiple commands, works same to remove commands instead you use RemoveCommands()
+// registerCommand(['setTitle', 'setgame']);// add name of command for the commands list when someone runs !commands it will give them all the commands in the list
+
+// Function to add new commands to the set
+function registerCommand(newCommands: string | string[]) {
+	if (!Array.isArray(newCommands)) {
+		newCommands = [newCommands]; // convert single command to array
+	}
+	newCommands.forEach((command) => {
+		commands.add(command);
+	});
+}
+// Function to remove commands from the set
+function removeCommands(commandsToRemove: string[]): void {
+	if (!Array.isArray(commandsToRemove)) {
+		commandsToRemove = [commandsToRemove]; // convert single command to array
+	}
+	commandsToRemove.forEach((command) => {
+		// Check if the command is in the set before deleting it
+		if (commands.has(command)) {
+			commands.delete(command);
+		} else {
+			console.warn(`Command "${command}" not found`);
+		}
+	});
+}
+
+// Function to generate the list of available commands
+function generateCommandList(): string {
+	return 'Available commands: !' + Array.from(commands).join(', !');
+}
 // Holds All Twitch Chat Stuff
 export async function initializeChat(): Promise<void> {
 	const chatClient = await getChatClient();
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
+
+		registerCommand(['setTitle', 'setgame', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'mod', 'socials']);
 		
 		const userApiClient = await getUserApi();
 
@@ -355,20 +390,7 @@ export async function initializeChat(): Promise<void> {
 				}
 				break;
 			case 'commands':
-				switch (channel) {
-				case '#canadiendragon':
-					if (staff) {
-						const modCommands = ['ping', 'settitle', 'setgame', 'mod', 'game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
-						chatClient.say(channel, `${display}, Commands for this channel are ${modCommands.join(', ')}`);
-					} else {
-						const commands = ['game', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'socials'];
-						chatClient.say(channel, `${display}, Commands for this channel are ${commands.join(', ')}`);
-					}
-					break;
-				default:
-					chatClient.say(channel, 'There are no registered Commands for this channel');
-					break;
-				}
+				chatClient.say(channel, generateCommandList());
 				break;
 			case 'me':
 				const target = args[0];

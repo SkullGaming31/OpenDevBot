@@ -256,7 +256,6 @@ export async function EventSubEvents(): Promise<void> {
 		try {
 			chatClient.say(userInfo.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID?.gameName} with ${stream?.viewers} viewers.`);
 			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
-			// await rwClient.v2.tweet(`${userInfo.displayName} has gone live in Category: ${stream?.gameName} here: https://twitch.tv/${userInfo.name}`);		
 		} catch (err) {
 			console.error(err);
 		}
@@ -270,7 +269,7 @@ export async function EventSubEvents(): Promise<void> {
 			.setFooter({ text: 'Ended Stream at ' })
 			.setTimestamp();
 		try {
-			chatClient.say(userInfo.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
+			chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
 			await LIVE.send({ embeds: [offlineEmbed] });
 		} catch (error) {
 			console.error(error);
@@ -285,7 +284,7 @@ export async function EventSubEvents(): Promise<void> {
 		case 'Shoutout':
 			const user = await userApiClient.users.getUserByName(cp.userName);
 			const gameLastPlayed = await userApiClient.channels.getChannelInfoById(user?.id!);
-			chatClient.say('#canadiendragon', `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${cp.userName}, last seen playing: ${gameLastPlayed?.gameName}`);
+			chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${cp.userName}, last seen playing: ${gameLastPlayed?.gameName}`);
 
 			const shoutoutEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -315,7 +314,7 @@ export async function EventSubEvents(): Promise<void> {
 			await twitchActivity.send({ embeds: [shoutoutEmbed] });
 			break;
 		case 'Tip':
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/canadiendragon`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/canadiendragon`);
 
 			const tipEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -346,7 +345,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Twitter':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/canadiendragon`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/canadiendragon`);
 
 			const twitterEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -378,7 +377,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Instagram':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Instagram: https://instagram.com/canadiendragon`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Instagram: https://instagram.com/canadiendragon`);
 
 			const instagramEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -409,7 +408,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'YouTube':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			await chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA`);
+			await chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA`);
 
 			const youtubeEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -439,7 +438,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'TicTok':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Tic-Tok: https://tiktok.com/@canadiendragon`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Tic-Tok: https://tiktok.com/@canadiendragon`);
 
 			const tiktokEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -469,7 +468,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Snapchat':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/canadiendragon`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/canadiendragon`);
 
 			const snapchatEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -499,7 +498,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Facebook':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`);
 
 			const facebookEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -529,7 +528,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Discord':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Discord: https://discord.com/invite/dHpehkD6M3`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Discord: https://discord.com/invite/dHpehkD6M3`);
 
 			const discordEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -561,7 +560,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Merch':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s Merch: https://canadiendragon-merch.creator-spring.com`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s Merch: https://canadiendragon-merch.creator-spring.com`);
 
 			const merchEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -593,7 +592,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'Hydrate!':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName}'s, you must stay hydrated, take a sip of whatever your drinking.`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s, you must stay hydrated, take a sip of whatever your drinking.`);
 
 			const hydrateEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -624,7 +623,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'DropController':
 			// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName} Put down that controller for 30 seconds`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName} Put down that controller for 30 seconds`);
 
 			const dropcontrollerEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -654,7 +653,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'MUTEHeadset':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `${cp.broadcasterDisplayName} you should not be listening to game sounds right now`);
+			chatClient.say(broadcasterID.name, `${cp.broadcasterDisplayName} you should not be listening to game sounds right now`);
 
 			const muteheadsetEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -684,7 +683,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'IRLWordBan':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`);
+			chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`);
 
 			const irlwordbanEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -714,7 +713,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'IRLVoiceBan':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			chatClient.say('#canadiendragon', `@${cp.broadcasterDisplayName} SHHHHHH why are you still talking right now`);
+			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName} SHHHHHH why are you still talking right now`);
 
 			const irlvoicebanEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -745,7 +744,7 @@ export async function EventSubEvents(): Promise<void> {
 		case 'Ban an in-game action':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userDisplayName}, ${cp.input}`);
 			const tbd = await cp.getReward();
-			chatClient.say('#canadiendragon', `${cp.userDisplayName} has redeemed Ban an In-Game Action, Action:${cp.input}`);
+			chatClient.say(broadcasterID.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action, Action:${cp.input}`);
 
 			const baningameactionEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -787,7 +786,7 @@ export async function EventSubEvents(): Promise<void> {
 	const title = eventSubListener.onChannelUpdate(userID, async (update) => {
 		const userInfo = await update.getBroadcaster();
 		const tbd = await update.getGame();
-		chatClient.say('#canadiendragon', `updated title to ${update.streamTitle}, Category: ${update.categoryName}`);
+		chatClient.say(broadcasterID.name, `updated title to ${update.streamTitle}, Category: ${update.categoryName}`);
 
 		// console.log(userInfo.name, `updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
 	});
@@ -910,7 +909,7 @@ export async function EventSubEvents(): Promise<void> {
 		const userInfo = await e.getUser();
 		const isDescriptionEmpty = userInfo.description === '';
 	
-		chatClient.say('#canadiendragon', `${randomString}`);
+		chatClient.say(broadcasterID.name, `${randomString}`);
 	
 		if (!isDescriptionEmpty) {
 			console.log(`Users Channel Description: ${userInfo.description}`);

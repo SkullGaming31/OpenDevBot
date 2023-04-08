@@ -1,11 +1,11 @@
-import mongoose from 'mongoose';
+import { model, Schema } from 'mongoose';
 interface IChannel {
     twitchId: string;
     name: string;
     enabled: boolean;
 }
 
-const channelSchema = new mongoose.Schema<IChannel>({
+const channelSchema = new Schema<IChannel>({
 	twitchId: {
 		type: String,
 		unique: true
@@ -21,5 +21,5 @@ const channelSchema = new mongoose.Schema<IChannel>({
 	},
 });
 
-const channelModel = mongoose.model<IChannel>('channel', channelSchema);// channels
+const channelModel = model<IChannel>('channel', channelSchema);// channels
 export default channelModel;

@@ -114,3 +114,11 @@ const updateAccessToken = async (twitchId: string, accessToken: string, refreshT
 		console.error('Error updating access token:', error);
 	}
 };
+
+/**
+ * https://id.twitch.tv/oauth2/authorize?response_type=token&client_id=dieihxdt0wezh4kgveyiogn3sjii5p&redirect_uri=http://localhost:3001/auth/twitch&scope=chat:edit%3Achat:read%3Achannel:moderate%3Achannel:moderate%3Achannel_commercial%3Achannel_editor
+ * https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=hof5gwx0su6owfnys0nyan9c87zr6t&redirect_uri=http://localhost:3001/auth/twitch&scope=chat:edit%3Achat:read%3Achannel:moderate%3Achannel:moderate%3Achannel_commercial%3Achannel_editor
+ * Bot Auth Scopes 
+ * 
+ * chat:edit chat:read channel:moderate channel:moderate channel_commercial channel_editor
+ */

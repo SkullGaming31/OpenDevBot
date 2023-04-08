@@ -1,7 +1,7 @@
-import { model, Schema } from 'mongoose';
-import db from '../index';
+import { Document, model, Schema } from 'mongoose';
+// import db from '../index';
 
-interface Economy {
+interface Economy extends Document {
     twitchId: string;
     skulls: number;
 }
