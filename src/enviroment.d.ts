@@ -22,6 +22,8 @@ declare global {
             DEV_DISCORD_PROMOTE_WEBHOOK_TOKEN: string;
 			DEV_DISCORD_TWITCH_ACTIVITY_ID: string;
 			DEV_DISCORD_TWITCH_ACTIVITY_TOKEN: string;
+            DISCORD_COMMAND_USAGE_ID: string;
+            DISCORD_COMMAND_USAGE_TOKEN: string;
             PORT: string;
             MONGO_USER: string;
             MONGO_PASS: string;

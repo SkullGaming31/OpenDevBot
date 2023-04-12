@@ -247,17 +247,21 @@ export async function EventSubEvents(): Promise<void> {
 					inline: true
 				},
 			])
-			.setThumbnail(`${userInfo.offlinePlaceholderUrl}`)
 			.setURL(`https://twitch.tv/${userInfo.name}`)
-			.setImage(`${stream?.thumbnailUrl}`)
 			.setColor('Green')
 			.setTimestamp();
 
 		try {
-			chatClient.say(userInfo.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID?.gameName} with ${stream?.viewers} viewers.`);
+			if (stream?.thumbnailUrl) {
+				liveEmbed.setImage(`${stream.thumbnailUrl}`);
+			}
+			if (userInfo.profilePictureUrl) {
+				liveEmbed.setThumbnail(userInfo.profilePictureUrl);
+			}
+			chatClient.say(broadcasterID.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID?.gameName} with ${stream?.viewers} viewers.`);
 			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
-		} catch (err) {
-			console.error(err);
+		} catch (err: any) {
+			console.error(err.message);
 		}
 	});
 	const offline = eventSubListener.onStreamOffline(userID, async (stream) => {
@@ -408,7 +412,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		case 'YouTube':
 			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-			await chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA`);
+			await chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCUHnQESlc-cPkp_0KvbVK6g`);
 
 			const youtubeEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -783,13 +787,18 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		}
 	});
-	const title = eventSubListener.onChannelUpdate(userID, async (update) => {
-		const userInfo = await update.getBroadcaster();
-		const tbd = await update.getGame();
-		chatClient.say(broadcasterID.name, `updated title to ${update.streamTitle}, Category: ${update.categoryName}`);
+	// const title = eventSubListener.onChannelUpdate(userID, async (update) => {
+	// 	const userInfo = await update.getBroadcaster();
+	// 	const game = await update.getGame();
+		
+	// 	if (update.streamTitle) {
+	// 		chatClient.say(broadcasterID.name, `Title updated to ${update.streamTitle}`);
+	// 	} else if (update.categoryName) {
+	// 		chatClient.say(broadcasterID.name, `Category updated to ${game?.name}`);
+	// 	}
 
-		// console.log(userInfo.name, `updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
-	});
+	// 	// console.log(userInfo.name, `updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
+	// });
 	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(userID, async (hts) => {
 		const userInfo = await hts.getBroadcaster();
 		console.log(`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);

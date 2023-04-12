@@ -7,12 +7,14 @@ import { getAuthProvider } from './auth/authProvider';
 import QuoteModel, { IQuote } from './database/models/Quote';
 import { getUserApi } from './api/userApiClient';
 import axios from 'axios';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID, CommandUssageWebhookTOKEN } from './util/constants';
 
 
 const commands = new Set<string>(['ping', 'game']); // initialize with the commands you've already implemented
 // registerCommand('newCommand');// single Command or multiple commands, works same to remove commands instead you use RemoveCommands()
 // registerCommand(['setTitle', 'setgame']);// add name of command for the commands list when someone runs !commands it will give them all the commands in the list
+// removeCommand('newCommand');// single Command or multiple commands, works same to remove commands instead you use RemoveCommands()
+// removeCommand(['setTitle', 'setgame']);// add name of command for the commands list when someone runs !commands it will give them all the commands in the list
 
 // Function to add new commands to the set
 function registerCommand(newCommands: string | string[]) {
@@ -45,10 +47,13 @@ function generateCommandList(): string {
 // Holds All Twitch Chat Stuff
 export async function initializeChat(): Promise<void> {
 	const chatClient = await getChatClient();
+
+	const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 
-		registerCommand(['setTitle', 'setgame', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'mod', 'socials']);
+		registerCommand(['settitle', 'setgame', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'mod', 'socials']);
 		
 		const userApiClient = await getUserApi();
 
@@ -65,10 +70,10 @@ export async function initializeChat(): Promise<void> {
 		let lurkingUsers = [];
 	
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
-			chatClient.say(channel, `${display}, Create overlays and alerts for your Twitch streams without OBS or any streaming software. For support, see https://overlay.expert/support`);
+			chatClient.say(channel, `Hey ${display}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
 		else if (text.includes('overlay designer') && channel === '#canadiendragon') {
-			chatClient.say(channel, `${display}, are you an overlay designer and want to make money from them check out https://overlay.expert/designers, all information should be listed on that page for you to get started.`);
+			chatClient.say(channel, `Hey ${display}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
 		}
 		else if (text.includes('wl') && channel === '#canadiendragon') {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
@@ -106,10 +111,12 @@ export async function initializeChat(): Promise<void> {
 		else if (text.startsWith('!')) {
 			const args = text.slice(1).split(' ');
 			const command = args.shift()?.toLowerCase();
+			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 	
 			switch (command) {
 			case 'ping':
 				await chatClient.say(channel, `${display}, Im online and working correctly`);
+				console.log(helixUser?.profilePictureUrl);
 				break;
 			case 'quote':
 				switch (args[0]) {
@@ -119,7 +126,7 @@ export async function initializeChat(): Promise<void> {
 					const quote = new QuoteModel({ content }); // create a new Quote document with the content
 					quote.save((err: any, savedQuote: IQuote) => {
 						if (err) {
-							console.error(err);
+							console.error(err.message);
 							// handle error
 						} else {
 							console.log(`Quote added: "${savedQuote.content}"`);
@@ -176,13 +183,16 @@ export async function initializeChat(): Promise<void> {
 										chatClient.say(channel, 'No quotes found');
 										// handle no quotes
 									} else {
-										chatClient.say(channel, `#${quote._id}: "${quote.content}"`);
+										chatClient.say(channel, `QuoteID:${quote._id}: "${quote.content}"`);
 										// handle success
 									}
 								});
 							}
 						});
 					}
+					break;
+				default:
+					chatClient.say(channel, 'Usage: !quote [add|remove|list] [quote]');
 					break;
 				}
 				break;
@@ -192,9 +202,10 @@ export async function initializeChat(): Promise<void> {
 					try {
 						if (staff) {
 							const setTitle = await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
-							chatClient.say(channel, `${display}, has updated the channel title to ${canadiendragon?.title}`);
+							chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${canadiendragon?.title}`);
 							const commandEmbed = new EmbedBuilder()
-								.setTitle('Command Used')
+								.setTitle('Command Used[settitle]')
+								.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
 								.setColor('Red')
 								.addFields([
 									{
@@ -208,14 +219,13 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									}
 								])
-								.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
+								.setFooter({ text: `Channel: ${channel.replace('#', '')}, TwitchID: ${msg.userInfo.userId}` })
 								.setTimestamp();
 						} else {
 							chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
 						}
-					} catch (error) {
-						console.error(error);
-						return;
+					} catch (error: any) {
+						console.error(error.message);
 					}
 					break;
 				}
@@ -226,9 +236,11 @@ export async function initializeChat(): Promise<void> {
 					if (staff) {
 						const gamename = await userApiClient.games.getGameByName(args.join(' '));
 						const setGame = await userApiClient.channels.updateChannelInfo(broadcasterID?.id!, { gameId: `${gamename?.id}` });
-						chatClient.say(channel, `channel game has been updated to ${gamename?.name}`);
+						chatClient.say(channel, `${display}, has changed the channel category to ${gamename?.name}`);
+
 						const commandEmbed = new EmbedBuilder()
 							.setTitle('Command Used')
+							.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
 							.setColor('Red')
 							.addFields([
 								{
@@ -244,9 +256,11 @@ export async function initializeChat(): Promise<void> {
 							])
 							.setFooter({ text: `Channel: ${channel.replace('#', '')}` })
 							.setTimestamp();
-						console.log(`${gamename?.name}: ${gamename?.id}`);
+
+						await commandUsage.send({ embeds: [commandEmbed] });
+						// console.log(`${gamename?.name}: ${gamename?.id}`);
 					} else {
-						chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /commands to find out what commands you can use.`);
+						chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to this command`);
 					}
 					break;
 				}
@@ -271,16 +285,16 @@ export async function initializeChat(): Promise<void> {
 				chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking`);
 				break;
 			case 'id':
-				const userLookup = await userApiClient.users.getUserByName(args[0].replace('@', ''));
+				const userToLookup = args[0] ? args[0].replace('@', '') : msg.userInfo.userId;
+				const userLookup = await userApiClient.users.getUserByName(userToLookup);
 				try {
 					if (userLookup) {
 						chatClient.say(channel, `${display} your TwitchId is ${userLookup.id}`);
 					} else {
-						chatClient.say(channel, `${display} you must tag yourself or someone else to use this command`);
+						chatClient.say(channel, `${display} could not find user ${userToLookup}`);
 					}
-				} catch (error) {
-					console.error(error);
-					return;
+				} catch (err: any) {
+					console.error(err.message);
 				}
 				break;
 			case 'followage':
@@ -603,7 +617,14 @@ export async function initializeChat(): Promise<void> {
 					case 'so':
 						if (!args[1]) return chatClient.say(channel, 'you must specify a person to shotout, Usage: !mod shoutout|so @name');
 						const user = await userApiClient.users.getUserByName(args[1].replace('@', ''));
-						const gameLastPlayed = await userApiClient.channels.getChannelInfoById(user?.id!);
+						if (user?.id === undefined) return;
+						const gameLastPlayed = await userApiClient.channels.getChannelInfoById(user?.id);
+						const streamOnline = await userApiClient.streams.getStreamsByUserIds(['31124455']);
+						if (streamOnline) {
+							await userApiClient.chat.shoutoutUser(broadcasterID.id, user?.id, broadcasterID.name);
+						} else {
+							// do nothing
+						}
 						await chatClient.say(channel, `go check out @${args[1].replace('@', '')}, there an awesome streamer Check them out here: https://twitch.tv/${args[1].replace('@', '').toLowerCase()} last seen playing ${gameLastPlayed?.gameName}`);
 						break;
 					default:
@@ -620,7 +641,7 @@ export async function initializeChat(): Promise<void> {
 					await chatClient.say(channel, `${display}, canadiendragon's Instagram: https://instagram.com/canadiendragon`);
 					break;
 				case 'snapchat':
-					chatClient.say(channel, `${display}, canadiendragon's Snapchat: https://snapchat.com/add/canadiendragon`);
+					chatClient.say(channel, `${display}, canadiendragon's Snapchat: https://snapchat.com/add/skullgaming31`);
 					break;
 				case 'facebook':
 					chatClient.say(channel, `${display}, canadiendragon's Facebook: canadiendragon Entertainment`);
@@ -629,7 +650,7 @@ export async function initializeChat(): Promise<void> {
 					chatClient.say(channel, `${display}, canadiendragon's Tik-Tok: https://tiktok.com/@canadiendragon`);
 					break;
 				case 'discord':
-					chatClient.say(channel, `${display}, canadiendragon's Discord: https://discord.gg/dHpehkD6M3`);
+					chatClient.say(channel, `${display}, canadiendragon's Discord: https://discord.com/invite/dHpehkD6M3`);
 					break;
 				case 'youtube':
 					chatClient.say(channel, `${display}, canadiendragon's Gaming YouTube Channel: https://www.youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA mostly just holds twitch archives`);
@@ -645,8 +666,12 @@ export async function initializeChat(): Promise<void> {
 					const tipping = 'https://overlay.expert/celebrate/canadiendragon';
 					chatClient.say(channel, `@${display}, you can help out the stream by tipping here: ${tipping}, NOTE: tips are NOT expected BUT very much appreacated, all tips go back into the stream wither it be upgrades for the stream or new games for you to watch.`);
 					break;
+				case 'website':
+					const website_URL = 'https://canadiendragon.com';
+					chatClient.say(channel, `${display}, website is ${website_URL}`);
+					break;
 				default:
-					chatClient.say(channel, 'Which social are you looking for?, Usage: -socials twitter|instagram|snapchat|facebook|tictok|discord|merch|tip');
+					chatClient.say(channel, 'Which social are you looking for?, Usage: -socials twitter|instagram|snapchat|facebook|tictok|discord|merch|tip|website');
 					break;
 				}
 				break;
@@ -673,7 +698,7 @@ export async function getChatClient(): Promise<ChatClient> {
 			botLevel: 'none',
 			isAlwaysMod: true,
 		});
-		await chatClientInstance.connect();
+		chatClientInstance.connect();
 		console.log('The ChatClient has started');
 	}
 	
