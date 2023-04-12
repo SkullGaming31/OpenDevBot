@@ -1,11 +1,9 @@
 import { ChannelType, EmbedBuilder }  from'discord.js';
 import { client } from '../discord';
 import { WebhookClient } from 'discord.js';
-import mongoose from 'mongoose';
+import { Error, connection } from 'mongoose';
 
-export async function errorHandler() {
-	const webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
-
+export async function errorHandler(webhookClient: WebhookClient) {
 	const errorEmbed = new EmbedBuilder().setColor('Red').setTitle('⚠ | Error Encountered').setFooter({ text: 'Development Error' }).setTimestamp();
 
 	client.on('error', async(err: Error) => {
@@ -55,7 +53,7 @@ export async function errorHandler() {
 		return;
 	});
 
-	mongoose.connection.on('error', async (err: mongoose.Error) => {
+	connection.on('error', async (err: Error) => {
 		if (!webhookClient) return;
 		await webhookClient.send({ embeds: [errorEmbed.setColor('Red').setTitle(`${err.name}`).setDescription('**Warning**: ```' + err.message + '```').addFields([{ name: 'Error Stack', value: `\`${err.stack}\``, inline: false }])] });
 		return;

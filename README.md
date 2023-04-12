@@ -147,18 +147,17 @@ This is an example of how to list things you need to use the software and how to
 * [x] add commands
   * [x] convert followage/accountage to years,months,day,hours,minutes,seconds
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
-* [x] add word detection to send commands without prefix(new command handler, this needs reworking)
+* [x] add word detection to send commands without prefix
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [ ] Timer Commands
 * [ ] Counters?
-* [ ] Quotes System?(hard coded quotes only atm)
+* [ ] Quotes System? <!-- hard coded quotes only atm -->
 * [ ] Viewer Watch Time?
 * [ ] Virtual Currency System
   * [ ] duel
   * [ ] dig
   * [ ] dice
-* [ ] auto tweet when stream goes live with gameName included
-* [ ] Que/delay webhooks being sent to avoid being rate limited
+* [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
 See the [open issues](https://github.com/skullgaming31/skulledbot/issues) for a full list of proposed features (and known issues).
 
@@ -228,6 +227,5 @@ Here are some ideas to get you started:
 - 🤔 I’m looking for help with ...
 - 💬 Ask me about ...
 - 📫 How to reach me: ...
-- 😄 Pronouns: ...
 - ⚡ Fun fact: ...
 -->

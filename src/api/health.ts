@@ -23,46 +23,35 @@ const healthListener: RequestHandler = async (_req: Request, res: Response) => {
 	const mongoURI = process.env.MONGO_URI as string;
 
 	try {
+		// Check MongoDB connection
 		mongoConnection = mongoose.connection;
 		await mongoConnection.db.command({ ping: 1 });
+		res.write('MongoDB: OK\n');
 
-		// Listen for MongoDB connection events
-		mongoConnection.on('connected', () => {
-			console.log('MongoDB connected');
-		});
-		mongoConnection.on('disconnected', () => {
-			console.log('MongoDB disconnected');
-			// Try to reconnect to MongoDB if the connection is lost
-			mongoose.connect(mongoURI, {
-				useNewUrlParser: true,
-				useUnifiedTopology: true,
-			} as mongoose.ConnectOptions);
-		});
-		mongoConnection.on('connecting', () => {
-			console.log('Database reconnecting');
-		});
-
+		// Check Twitch API
 		const token = await getBearerToken();
-
 		const twitchResponse: AxiosResponse = await axios.get('https://api.twitch.tv/helix/users?login=canadiendragon', {
 			headers: {
 				'Client-ID': process.env.TWITCH_CLIENT_ID as string,
 				Authorization: `Bearer ${token}`,
 			},
 		});
-
-		if (twitchResponse.status !== 200) {
-			throw new Error('Twitch API returned an error');
+		if (twitchResponse.status === 200) {
+			res.write('Twitch API: OK\n');
+		} else {
+			res.write('Twitch API: DOWN\n');
 		}
 
+		// Check Discord API
 		discordClient = new DiscordClient({ intents: [GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildWebhooks] });
 		await discordClient.login(process.env.DEV_DISCORD_BOT_TOKEN as string);
-
-		if (!discordClient.user) {
-			throw new Error('Discord API authentication failed');
+		if (discordClient.user) {
+			res.write('Discord API: OK\n');
+		} else {
+			res.write('Discord API: DOWN\n');
 		}
 
-		res.sendStatus(200);
+		res.status(200).send();
 	} catch (err) {
 		console.error(err);
 		res.sendStatus(500);
@@ -72,5 +61,6 @@ const healthListener: RequestHandler = async (_req: Request, res: Response) => {
 		}
 	}
 };
+
 
 export default healthListener;
