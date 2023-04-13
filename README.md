@@ -151,7 +151,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [ ] Timer Commands
 * [ ] Counters?
-* [ ] Quotes System? <!-- hard coded quotes only atm -->
+* [x] Quotes System?
 * [ ] Viewer Watch Time?
 * [ ] Virtual Currency System
   * [ ] duel

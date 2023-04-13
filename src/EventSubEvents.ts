@@ -223,7 +223,7 @@ export async function EventSubEvents(): Promise<void> {
 		//#endregion
 
 	//#region EventSub
-	const online = eventSubListener.onStreamOnline(userID, async (o) => {
+	const online = eventSubListener.onStreamOnline(broadcasterID.id, async (o) => {
 		const stream = await o.getStream();
 		const userInfo = await o.getBroadcaster();
 		
@@ -264,7 +264,7 @@ export async function EventSubEvents(): Promise<void> {
 			console.error(err.message);
 		}
 	});
-	const offline = eventSubListener.onStreamOffline(userID, async (stream) => {
+	const offline = eventSubListener.onStreamOffline(broadcasterID.id, async (stream) => {
 		const userInfo = await stream.getBroadcaster();
 		const offlineEmbed = new EmbedBuilder()
 			.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
@@ -279,7 +279,7 @@ export async function EventSubEvents(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const redeem = eventSubListener.onChannelRedemptionAdd(userID, async (cp) => {
+	const redeem = eventSubListener.onChannelRedemptionAdd(broadcasterID.id, async (cp) => {
 		const userInfo = await cp.getUser();
 		const streamer = await cp.getBroadcaster();
 		// console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, BroadcasterId: ${cp.id}`);
@@ -787,7 +787,7 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		}
 	});
-	// const title = eventSubListener.onChannelUpdate(userID, async (update) => {
+	// const title = eventSubListener.onChannelUpdate(broadcasterID.id, async (update) => {
 	// 	const userInfo = await update.getBroadcaster();
 	// 	const game = await update.getGame();
 		
@@ -799,12 +799,12 @@ export async function EventSubEvents(): Promise<void> {
 
 	// 	// console.log(userInfo.name, `updated title to ${update.streamTitle}, categoryName: ${update.categoryName}`);
 	// });
-	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(userID, async (hts) => {
+	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(broadcasterID.id, async (hts) => {
 		const userInfo = await hts.getBroadcaster();
 		console.log(`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);
 		chatClient.say(userInfo.name, `${hts.goal} to reach the next level of the Hype Train, Last Contributer: ${hts.lastContribution}`);
 	});
-	const hypeEventEnd = eventSubListener.onChannelHypeTrainEnd(userID, async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
+	const hypeEventEnd = eventSubListener.onChannelHypeTrainEnd(broadcasterID.id, async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
 		const userInfo = await hte.getBroadcaster();
 		console.log(`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`);
 		chatClient.say(userInfo.name, `${hte.topContributors} have contributed to the HypeTrain`);
@@ -835,11 +835,11 @@ export async function EventSubEvents(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [hypeeventendEmbed] });
 	});
-	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(userID, async (htp) => {
+	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(broadcasterID.id, async (htp) => {
 		const userInfo = await htp.getBroadcaster();
 		chatClient.say(userInfo.name, `HypeTrain Level:${htp.level}, Latest Contributer:${htp.lastContribution}, HypeTrain Progress:${htp.progress}`);
 	});
-	const giftedSubs = eventSubListener.onChannelSubscriptionGift(userID, async (gift) => {
+	const giftedSubs = eventSubListener.onChannelSubscriptionGift(broadcasterID.id, async (gift) => {
 		// console.log(broadcasterID.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 		const userInfo = await gift.getGifter();
 		chatClient.say(userInfo.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
@@ -871,7 +871,7 @@ export async function EventSubEvents(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [giftedSubs] });
 	});
-	const resub = eventSubListener.onChannelSubscriptionMessage(userID, async (s) => {
+	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterID.id, async (s) => {
 		const userInfo = await s.getUser();
 		chatClient.say(userInfo.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 		const resubEmbed = new EmbedBuilder()
@@ -900,25 +900,86 @@ export async function EventSubEvents(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [resubEmbed] });
 	});
-	const follow = eventSubListener.onChannelFollow(userID, userID, async (e) => {
-		const randomFollowMessage = [
-			`@${e.userDisplayName} has followed the channel`,
-			`@${e.userDisplayName} has joined the army and entered the barracks`,
-			`Brace yourself, @${e.userDisplayName} has followed`,
-			`HEY! LISTEN! @${e.userDisplayName} has followed`,
-			`We've been expecting you @${e.userDisplayName}`,
-			`@${e.userDisplayName} just followed, quick everyone look busy`,
-			`Challenger Approaching - @${e.userDisplayName} has followed`,
-			`Welcome @${e.userDisplayName}, stay awhile and listen`,
-			`@${e.userDisplayName} has followed, it's super effective`
-		];
-	
-		const randomString = randomFollowMessage[Math.floor(Math.random() * randomFollowMessage.length)];
-	
+	const follow = eventSubListener.onChannelFollow(broadcasterID.id, broadcasterID.id, async (e) => {
 		const userInfo = await e.getUser();
+		const stream = await userApiClient.channels.getChannelInfoById(broadcasterID.id);
 		const isDescriptionEmpty = userInfo.description === '';
-	
-		chatClient.say(broadcasterID.name, `${randomString}`);
+
+		const followerRandomMessages = [
+			{
+				name: 'Conan Exiles',
+				gameId: 493551,
+				followerMessages: [
+					`We've been waiting for a worthy adventurer like you, @${e.userDisplayName}. Welcome to this perfect place for building friendships and having fun!`, // conan exiles,
+					`Survival is in our blood, and we're thrilled to have you join us, @${e.userDisplayName}. Welcome!`, // conan exiles,
+					`The gods themselves will be pleased with your arrival, @${e.userDisplayName}. Welcome to our community!`,// conan exiles,
+					`The sands of our chat will drink the blood of our enemies together, @${e.userDisplayName}. Welcome!`, // conan exiles
+					`You are an exile no more, @${e.userDisplayName}. Welcome to the lands of adventure!`,// conan exiles
+				]
+			}, 
+			{
+				name: 'Vigor',
+				gameId: 506489,
+				followerMessages: [
+					`Welcome to Vigor, @${e.userDisplayName}. Your journey starts here.`,
+					`@${e.userDisplayName}, welcome to the harsh yet beautiful world of Vigor. May you survive and thrive!`,
+					`Greetings, @${e.userDisplayName}. In Vigor, you must always stay alert and trust no one. Welcome to the challenge!`,
+					`@${e.userDisplayName}, welcome to the Outlands. May your weapons stay sharp and your aim true!`,
+					`Welcome to Vigor, @${e.userDisplayName}. Remember: your decisions here will determine your survival. Choose wisely!`
+				]
+			},
+			{
+				name: 'Science & Technolgy',
+				gameId: 509670,
+				followerMessages: [
+					`Welcome to the world of coding, @${e.userDisplayName}. Let's create amazing things with the power of code!`,
+					`Greetings, @${e.userDisplayName}. In coding, we turn ideas into reality through the art of programming. Welcome to the journey!`,
+					`Step into the realm of coding, @${e.userDisplayName}. Here, we write, debug, and optimize. Welcome to the world of code!`,
+					`Welcome to the world of coding, @${e.userDisplayName}. Where the only limit is your imagination. Let's write some awesome code together!`,
+					`@${e.userDisplayName}, welcome to the world of logic and algorithms. Let's explore the fascinating world of coding together!`
+				]
+			},
+			{
+				name: 'Sea of Thieves',
+				gameId: 490377,
+				followerMessages: [
+					`Welcome aboard, @${e.userDisplayName}. Let's set sail and seek our fortunes on the high seas of Sea of Thieves!`,
+					`Ahoy, @${e.userDisplayName}! You've joined a crew of swashbucklers and rogues on a quest for treasure. Welcome to Sea of Thieves!`,
+					`@${e.userDisplayName}, welcome to the pirate's life. Get ready for adventure, danger, and plenty of rum!`,
+					`Hoist the sails and batten down the hatches, @${e.userDisplayName}. You're now part of the Sea of Thieves crew. Welcome!`,
+					`Ahoy, @${e.userDisplayName}! Let's pillage and plunder our way to riches on the high seas. Welcome to Sea of Thieves!`,
+				]
+			},
+			{
+				name: 'default',
+				followerMessages: [
+					`@${e.userDisplayName} has followed the channel`,
+					`@${e.userDisplayName} has joined the army and entered the barracks`,
+					`Brace yourself, @${e.userDisplayName} has followed`,
+					`HEY! LISTEN! @${e.userDisplayName} has followed`,
+					`We've been expecting you @${e.userDisplayName}`,
+					`@${e.userDisplayName} just followed, quick everyone look busy`,
+					`Challenger Approaching - @${e.userDisplayName} has followed`,
+					`Welcome @${e.userDisplayName}, stay awhile and listen`,
+					`@${e.userDisplayName} has followed, it's super effective`,
+					`@${e.userDisplayName} has joined the party! Let's rock and roll!`,
+					`Looks like @${e.userDisplayName} is ready for an adventure! Welcome to the team!`,
+					`The hero we need has arrived! Welcome, @${e.userDisplayName}!`,
+					`@${e.userDisplayName} has leveled up! Welcome to the next stage of the journey!`,
+					`It's dangerous to go alone, @${e.userDisplayName}. Take this warm welcome!`,
+					`Welcome to the battlefield, @${e.userDisplayName}. Let's conquer together!`,
+				]
+			},
+		];
+		let messages: string[] = [];
+
+		const game = followerRandomMessages.find((obj) => obj.name === stream?.gameName);
+		if (game) {
+			messages = game.followerMessages;
+		} else {
+			messages = followerRandomMessages.find((obj) => obj.name === 'default')!.followerMessages;
+		}
+		const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 	
 		if (!isDescriptionEmpty) {
 			console.log(`Users Channel Description: ${userInfo.description}`);
@@ -952,10 +1013,15 @@ export async function EventSubEvents(): Promise<void> {
 			.setThumbnail(userInfo.profilePictureUrl)
 			.setFooter({ text: 'Click Title to check out their channel', iconURL: userInfo.profilePictureUrl })
 			.setTimestamp();
-	
-		await twitchActivity.send({ embeds: [followEmbed] });
+
+		try {
+			chatClient.say(broadcasterID.name, `${randomMessage}`);
+			await twitchActivity.send({ embeds: [followEmbed] });
+		} catch (error: any) {
+			console.error(error.message);
+		}
 	});
-	const subs = eventSubListener.onChannelSubscription(userID, async (s) => {
+	const subs = eventSubListener.onChannelSubscription(broadcasterID.id, async (s) => {
 		const userInfo = await s.getUser();
 		chatClient.say(userInfo.name, `${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`);
 		switch (s.tier) {
@@ -994,7 +1060,7 @@ export async function EventSubEvents(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [subEmbed] });
 	});
-	const cheer = eventSubListener.onChannelCheer(userID, async (cheer) => {
+	const cheer = eventSubListener.onChannelCheer(broadcasterID.id, async (cheer) => {
 		const userInfo = await cheer.getBroadcaster();
 		const userCheer = await cheer.getUser();
 		chatClient.say(userInfo?.name, `${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
@@ -1026,7 +1092,7 @@ export async function EventSubEvents(): Promise<void> {
 			await twitchActivity.send({ embeds: [cheerEmbed] });
 		}
 	});
-	const raid = eventSubListener.onChannelRaidFrom(userID, async (raid) => {
+	const raid = eventSubListener.onChannelRaidFrom(broadcasterID.id, async (raid) => {
 		const raidFrom = await raid.getRaidedBroadcaster();
 		const userInfo = await raid.getRaidingBroadcaster();
 	
@@ -1056,7 +1122,7 @@ export async function EventSubEvents(): Promise<void> {
 	
 		await twitchActivity.send({ embeds: [raidEmbed] });
 	});
-	const goalBeginning = eventSubListener.onChannelGoalBegin(userID, async (gb) => {
+	const goalBeginning = eventSubListener.onChannelGoalBegin(broadcasterID.id, async (gb) => {
 		const userInfo = await gb.getBroadcaster();
 		console.log(`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`);
 		switch (gb.type) {
@@ -1070,14 +1136,14 @@ export async function EventSubEvents(): Promise<void> {
 			break;
 		}
 	});
-	const goalProgress = eventSubListener.onChannelGoalProgress(userID, async (gp) => {
+	const goalProgress = eventSubListener.onChannelGoalProgress(broadcasterID.id, async (gp) => {
 		const userInfo = await gp.getBroadcaster();
 		setTimeout(() => {
 			console.log(`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
 		}, 60000);
 		chatClient.say(userInfo.name, `${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
 	});
-	const goalEnded = eventSubListener.onChannelGoalEnd(userID, async (ge) => {
+	const goalEnded = eventSubListener.onChannelGoalEnd(broadcasterID.id, async (ge) => {
 		const userInfo = await ge.getBroadcaster();
 		console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		chatClient.say(userInfo.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);

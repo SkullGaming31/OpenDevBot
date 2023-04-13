@@ -268,7 +268,7 @@ export async function initializeChat(): Promise<void> {
 			case 'game':
 				switch (channel) {
 				case '#canadiendragon':
-					chatClient.say(channel, `${display}, ${broadcasterID?.displayName} is currently playing ${broadcasterID?.gameName}`);
+					chatClient.say(channel, `${display}, ${broadcasterID?.displayName} is currently playing ${broadcasterID?.gameName} GameID: ${broadcasterID?.gameId}`);
 					break;
 				}
 				break;
