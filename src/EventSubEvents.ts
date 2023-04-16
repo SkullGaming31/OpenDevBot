@@ -5,7 +5,7 @@ import { EventSubWsListener } from '@twurple/eventsub-ws';
 
 // import { createChannelPointsRewards } from './misc/channelPoints';
 import { getUserApi } from './api/userApiClient';
-import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
+import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, userID, skulledBotID } from './util/constants';
 import { getChatClient } from './chat';
 
 export async function EventSubEvents(): Promise<void> {
@@ -23,9 +23,10 @@ export async function EventSubEvents(): Promise<void> {
 	// await createChannelPointsRewards();
 
 	// eventSub Stuff
-	const userID = '31124455';// get twitchId from database
 	const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
+	const moderatorID = await userApiClient.channels.getChannelInfoById(skulledBotID);
 	if (broadcasterID?.id === undefined) return;
+	if (moderatorID?.id === undefined) return;
 	
 	//#region ChannelPoints
 	const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterID?.id, 'ad2a5d3f-b3fa-47a6-a362-95e19329b6ca', {
@@ -594,8 +595,8 @@ export async function EventSubEvents(): Promise<void> {
 				.setTimestamp();
 			await twitchActivity.send({ embeds: [merchEmbed] });
 			break;
-		case 'Hydrate!':
-			console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
+		case 'Hydrate':
+			// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 			chatClient.say(broadcasterID.name, `@${cp.broadcasterDisplayName}'s, you must stay hydrated, take a sip of whatever your drinking.`);
 
 			const hydrateEmbed = new EmbedBuilder()
@@ -621,7 +622,7 @@ export async function EventSubEvents(): Promise<void> {
 					}
 				])
 				.setThumbnail(`${streamer.profilePictureUrl}`)
-				.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+				.setFooter({ text: 'LevelUp Legends Lounge', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			await twitchActivity.send({ embeds: [hydrateEmbed] });
 			break;
@@ -925,7 +926,7 @@ export async function EventSubEvents(): Promise<void> {
 					`@${e.userDisplayName}, welcome to the harsh yet beautiful world of Vigor. May you survive and thrive!`,
 					`Greetings, @${e.userDisplayName}. In Vigor, you must always stay alert and trust no one. Welcome to the challenge!`,
 					`@${e.userDisplayName}, welcome to the Outlands. May your weapons stay sharp and your aim true!`,
-					`Welcome to Vigor, @${e.userDisplayName}. Remember: your decisions here will determine your survival. Choose wisely!`
+					`Welcome to the Stream, @${e.userDisplayName}. Remember: your decisions here will determine your survival. Choose wisely!`
 				]
 			},
 			{
@@ -951,7 +952,7 @@ export async function EventSubEvents(): Promise<void> {
 				]
 			},
 			{
-				name: 'default',
+				name: 'default',// if you have no coded in messages for a specific game it will default to this array of messages
 				followerMessages: [
 					`@${e.userDisplayName} has followed the channel`,
 					`@${e.userDisplayName} has joined the army and entered the barracks`,
@@ -985,7 +986,7 @@ export async function EventSubEvents(): Promise<void> {
 			console.log(`Users Channel Description: ${userInfo.description}`);
 		}
 	
-		const subed = await userInfo.isSubscribedTo(userID) ? 'yes' : 'no';
+		const subed = await userInfo.isSubscribedTo(broadcasterID?.id) ? 'yes' : 'no';
 	
 		const followEmbed = new EmbedBuilder()
 			.setTitle('FOLLOW EVENT')
@@ -1007,7 +1008,7 @@ export async function EventSubEvents(): Promise<void> {
 				{
 					name: 'Subscribed: ',
 					value: `${subed}`,
-					inline: false
+					inline: true
 				}
 			])
 			.setThumbnail(userInfo.profilePictureUrl)

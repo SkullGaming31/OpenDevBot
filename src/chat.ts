@@ -7,7 +7,7 @@ import { getAuthProvider } from './auth/authProvider';
 import QuoteModel, { IQuote } from './database/models/Quote';
 import { getUserApi } from './api/userApiClient';
 import axios from 'axios';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID, CommandUssageWebhookTOKEN } from './util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID, CommandUssageWebhookTOKEN, skulledBotID } from './util/constants';
 
 
 const commands = new Set<string>(['ping', 'game']); // initialize with the commands you've already implemented
@@ -66,8 +66,8 @@ export async function initializeChat(): Promise<void> {
 		const display = msg.userInfo.displayName;
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 		const canadiendragon = await userApiClient.channels.getChannelInfoById(userID);
-		// eslint-disable-next-line prefer-const
-		let lurkingUsers = [];
+		
+		const lurkingUsers = [];
 	
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			chatClient.say(channel, `Hey ${display}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
@@ -111,12 +111,11 @@ export async function initializeChat(): Promise<void> {
 		else if (text.startsWith('!')) {
 			const args = text.slice(1).split(' ');
 			const command = args.shift()?.toLowerCase();
-			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
+			const helixUser = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 	
 			switch (command) {
 			case 'ping':
 				await chatClient.say(channel, `${display}, Im online and working correctly`);
-				console.log(helixUser?.profilePictureUrl);
 				break;
 			case 'quote':
 				switch (args[0]) {
@@ -418,14 +417,16 @@ export async function initializeChat(): Promise<void> {
 				if (staff) {
 					switch (args[0]) {
 					case 'vip':
-						// if (await apiClient.moderation.getModerators(channel) === args[1]) return console.log(channel, 'that person is a higer rank then VIP and can not be assigned this role');
-						// if (await chatClient.getVips(channel) === args[1]) return chatClient.say(channel, 'this user is already a vip or higher');
-						if (!args[1]) return await chatClient.say(channel, `${display}, Usage: -mod vip @name`);
 						try {
-							await userApiClient.channels.addVip(userID, args[1]);
-							// await chatClient.addVip(channel, args[1].replace('@', '')).catch((err: any) => { console.error(err); }); {
-							// 	chatClient.say(channel, `@${args[1].replace('@', '')} has been upgraded to VIP`);
-							// }
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined) return;
+							const modLookup = await userApiClient.moderation.getModerators(channel); // (channel, 'that person is a higer rank then VIP and can not be assigned this role');
+							if (modLookup.data[1].userId === userSearch?.id) return chatClient.say(channel, `${args[1]} has a higer rank then VIP and can not be assigned this role`);
+							const vipLookup = await userApiClient.channels.getVips(broadcasterID.id, { limit: 10 });
+							if (vipLookup.data[1].id === userSearch?.id) return await chatClient.say(channel, 'this user is already a vip');
+							if (!args[1]) return await chatClient.say(channel, `${display}, Usage: -mod vip @name`);
+							await userApiClient.channels.addVip(broadcasterID?.id, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1]} has been added as VIP`); });
+
 							const vipEmbed = new EmbedBuilder()
 								.setTitle('Twitch Channel VIP Event')
 								.setAuthor({ name: `${args[1].replace('@', '')}` })
@@ -442,20 +443,26 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just got upgraded to VIP in ${channel.replace('#', '')}'s channel` })
+								.setFooter({ text: `Someone just got upgraded to VIP in ${channel}'s channel` })
 								.setTimestamp();
 	
 							twitchActivity.send({ embeds: [vipEmbed] });
 						} catch (error) { console.error(error); }
 						break;
 					case 'unvip':
-						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod unvip @name`);
 						try {
-							await userApiClient.channels.removeVip(userID, args[1].replace('@', ''));
-							// await chatClient.removeVip(channel, args[1].replace('@', '')).catch((err: any) => { console.error(err); }); {
-							// 	chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
-							// }
-							await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined) return;
+							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod unvip @name`);
+							// const vipLookup = await userApiClient.channels.getVips(broadcasterID.id, { limit: 20 });
+							// if (vipLookup.data[1].id === userSearch?.id) return await chatClient.say(channel, 'this user is already a vip');
+							if (userSearch) {
+								await userApiClient.channels.removeVip(broadcasterID.id, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`); });
+							} else {
+								console.error('Something happened while searching for user');
+							}
+
+							// await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
 							const vipEmbed = new EmbedBuilder()
 								.setTitle('Twitch Channel VIP REMOVE Event')
 								.setAuthor({ name: `${args[1].replace('@', '')}` })
@@ -479,10 +486,11 @@ export async function initializeChat(): Promise<void> {
 						} catch (error) { console.error(error); }
 						break;
 					case 'mod':
-						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod mod @name`);
 						try {
-							await userApiClient.moderation.addModerator(userID, args[1].replace('@', ''));
-							await chatClient.say(channel, `@${args[1]} has been givin the Moderator Powers`);
+							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod mod @name`);
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined) return;
+							await userApiClient.moderation.addModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1]} has been givin the Moderator Powers`); });
 	
 							const moderatorEmbed = new EmbedBuilder()
 								.setTitle('Twitch Channel MOD Event')
@@ -514,8 +522,9 @@ export async function initializeChat(): Promise<void> {
 					case 'unmod':
 						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod unmod @name`);
 						try {
-							await userApiClient.moderation.removeModerator(userID, args[1].replace('@', ''));
-							await chatClient.say(channel, `${args[1]} has had there moderator powers removed`);
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined) return;
+							await userApiClient.moderation.removeModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `${args[1]} has had there moderator powers removed`); });
 	
 							const unModeratorEmbed = new EmbedBuilder()
 								.setTitle('Twitch Channel UNMOD Event')
@@ -547,23 +556,36 @@ export async function initializeChat(): Promise<void> {
 						}
 						break;
 					case 'purge':
-						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod purge @name (duration) (reason)`);
+						if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod purge @name (duration[seconds]) (reason)`);
 						if (!args[2]) return chatClient.say(channel, `${display}, please specify a duration in seconds to purge texts`);
 						if (!args[3]) args[3] = 'No Reason Provided';
 						try {
-							await userApiClient.moderation.banUser(userID, userID, {
-								user: args[1],
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined || null) return;
+							if (userSearch.id === broadcasterID.id) return chatClient.say(channel, 'You can\'t ban/purge this user');
+							await userApiClient.moderation.banUser(broadcasterID.id, broadcasterID.id, {
+								user: userSearch.id,
 								duration: Number(args[2]),
 								reason: args[3],
 							});
 							const purgeEmbed = new EmbedBuilder()
 								.setTitle('Twitch Channel Purge Event')
-								.setAuthor({ name: `${msg.userInfo.userName}` })
+								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 								.setColor('Red')
 								.addFields([
 									{
 										name: 'Executer',
 										value: `${msg.userInfo.displayName}`,
+										inline: true
+									},
+									{
+										name: 'Mod',
+										value: `${msg.userInfo.isMod}`,
+										inline: true
+									},
+									{
+										name: 'broadcaster',
+										value: `${msg.userInfo.isBroadcaster}`,
 										inline: true
 									}
 								])
@@ -580,13 +602,9 @@ export async function initializeChat(): Promise<void> {
 							if (!args[2]) args[2] = 'No Reason Provided';
 							if (args[2]) args.join(' ');
 							const search = await userApiClient.users.getUserByName(args[1].replace('@', ''));
-							const user = await userApiClient.users.getUserById(search?.id!);
-							
+							if (search?.id === undefined) return;
 							try {
-								await userApiClient.moderation.banUser(userID, userID, {
-									user: user?.id!,
-									reason: args[2],
-								});
+								await userApiClient.moderation.banUser(userID, userID, { user: search?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
 								await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
 								const banEmbed = new EmbedBuilder()
 									.setTitle('Twitch Channel Ban Event')
@@ -616,12 +634,12 @@ export async function initializeChat(): Promise<void> {
 					case 'shoutout':
 					case 'so':
 						if (!args[1]) return chatClient.say(channel, 'you must specify a person to shotout, Usage: !mod shoutout|so @name');
-						const user = await userApiClient.users.getUserByName(args[1].replace('@', ''));
-						if (user?.id === undefined) return;
-						const gameLastPlayed = await userApiClient.channels.getChannelInfoById(user?.id);
+						const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+						if (userSearch?.id === undefined) return;
+						const gameLastPlayed = await userApiClient.channels.getChannelInfoById(userSearch?.id);
 						const streamOnline = await userApiClient.streams.getStreamsByUserIds(['31124455']);
 						if (streamOnline) {
-							await userApiClient.chat.shoutoutUser(broadcasterID.id, user?.id, broadcasterID.name);
+							await userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.name);
 						} else {
 							// do nothing
 						}

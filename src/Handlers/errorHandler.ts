@@ -54,6 +54,8 @@ export async function errorHandler(webhookClient: WebhookClient) {
 	});
 
 	connection.on('error', async (err: Error) => {
+		console.error(err.message);
+
 		if (!webhookClient) return;
 		await webhookClient.send({ embeds: [errorEmbed.setColor('Red').setTitle(`${err.name}`).setDescription('**Warning**: ```' + err.message + '```').addFields([{ name: 'Error Stack', value: `\`${err.stack}\``, inline: false }])] });
 		return;

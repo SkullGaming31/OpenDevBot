@@ -9,7 +9,7 @@ import userModel from '../database/models/user';
 // Twitch API configuration
 const twitchClientId = process.env.TWITCH_CLIENT_ID as string;
 const twitchClientSecret = process.env.TWITCH_CLIENT_SECRET as string;
-const twitchRedirectUri = 'http://localhost:3001/auth/twitch/callback';
+const twitchRedirectUri = 'http://localhost:3002/auth/twitch/callback';
 
 export const twitchRouter = Router();
 
@@ -18,10 +18,15 @@ twitchRouter.get('/twitch', (req: Request, res: Response) => {
 	res.send('Testing');
 });
 
+twitchRouter.get('/success', async (req: Request, res: Response) => {
+	res.send('success you can now close this window');
+});
+
 twitchRouter.get('/', (req: Request, res: Response) => {
 	// Redirect the user to the Twitch authorization page with all scopes
-	const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['bits:read','channel:edit:commercial','channel:manage:broadcast','channel:manage:polls','channel:manage:predictions','channel:manage:redemptions','channel:manage:schedule','channel:manage:moderators','channel:manage:raids','channel:manage:vips','channel:read:vips','channel:read:polls','channel:read:predictions','channel:read:redemptions','channel:read:editors','channel:read:goals','channel:read:hype_train','channel:read:subscriptions','channel_subscriptions','clips:edit','moderation:read','moderator:manage:automod','moderator:manage:shield_mode','moderator:manage:shoutouts','moderator:read:shoutouts','moderator:read:followers','moderator:read:shield_mode','user:edit','user:edit:follows','user:manage:blocked_users','user:read:blocked_users','user:read:broadcast','user:read:email','user:read:follows','user:read:subscriptions','user:edit:broadcast','moderator:manage:chat_messages','moderator:manage:banned_users',].join('%20')}`;
-	res.redirect(twitchAuthUrl);
+	const botAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['channel:moderate', 'bits:read', 'channel:edit:commercial', 'channel:manage:broadcast', 'channel:manage:moderators', 'channel:manage:polls', 'channel:manage:predictions', 'channel:manage:raids', 'channel:read:goals', 'channel:read:hype_train', 'channel:read:polls', 'channel:read:predictions', 'channel:read:redemptions', 'channel:read:subscriptions', 'channel:read:vips', 'channel:manage:vips', 'clips:edit', 'moderation:read', 'moderator:manage:announcements', 'moderator:manage:automod', 'moderator:read:automod_settings', 'moderator:manage:automod_settings', 'moderator:manage:banned_users', 'moderator:read:blocked_terms', 'moderator:manage:blocked_terms', 'moderator:manage:chat_messages', 'moderator:read:chat_settings', 'moderator:manage:chat_settings', 'moderator:read:chatters', 'moderator:read:followers', 'moderator:read:shield_mode', 'moderator:manage:shield_mode', 'moderator:read:shoutouts', 'moderator:manage:shoutouts', 'chat:edit', 'chat:read'].join('%20')}`;
+	// const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['bits:read','channel:edit:commercial','channel:manage:broadcast','channel:manage:polls','channel:manage:predictions','channel:manage:redemptions','channel:manage:schedule','channel:manage:moderators','channel:manage:raids','channel:manage:vips','channel:read:vips','channel:read:polls','channel:read:predictions','channel:read:redemptions','channel:read:editors','channel:read:goals','channel:read:hype_train','channel:read:subscriptions','channel_subscriptions','clips:edit','moderation:read','moderator:manage:automod','moderator:manage:shield_mode','moderator:manage:shoutouts','moderator:read:shoutouts','moderator:read:followers','moderator:read:shield_mode','user:edit','user:edit:follows','user:manage:blocked_users','user:read:blocked_users','user:read:broadcast','user:read:email','user:read:follows','user:read:subscriptions','user:edit:broadcast','moderator:manage:chat_messages','moderator:manage:banned_users',].join('%20')}`;
+	res.redirect(botAuthUrl);
 });
 
 
@@ -76,7 +81,12 @@ twitchRouter.get('/callback', async (req: Request, res: Response) => {
 		}
 
 		// Redirect the user to the success page
-		res.send('success, you can now close your browser');
+		// res.json({
+		// 	'Code': req.query.code,
+		// 	'AccessToken': tokenResponse.data.access_token,
+		// 	'RefreshToken': tokenResponse.data.refresh_token
+		// });
+		res.redirect('/success');
 	} catch (err) {
 		console.error('Error exchanging authorization code for access token:', err);
 		res.send('Error exchanging authorization code for access token:\n' + err);
