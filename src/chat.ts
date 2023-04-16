@@ -1,13 +1,13 @@
-import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { ChatClient } from '@twurple/chat';
 import { PrivateMessage } from '@twurple/chat/lib';
 import countdown from 'countdown';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
+import axios from 'axios';
+import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import QuoteModel, { IQuote } from './database/models/Quote';
-import { getUserApi } from './api/userApiClient';
-import axios from 'axios';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID, CommandUssageWebhookTOKEN, skulledBotID } from './util/constants';
+import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID } from './util/constants';
 
 
 const commands = new Set<string>(['ping', 'game']); // initialize with the commands you've already implemented
@@ -428,8 +428,8 @@ export async function initializeChat(): Promise<void> {
 							await userApiClient.channels.addVip(broadcasterID?.id, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1]} has been added as VIP`); });
 
 							const vipEmbed = new EmbedBuilder()
-								.setTitle('Twitch Channel VIP Event')
-								.setAuthor({ name: `${args[1].replace('@', '')}` })
+								.setTitle('Twitch Channel Purge Event')
+								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 								.setColor('Red')
 								.addFields([
 									{
@@ -438,15 +438,19 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									},
 									{
-										name: 'User: ',
-										value: `${args[1].replace('@', '')}`,
+										name: 'Mod',
+										value: `${msg.userInfo.isMod}`,
+										inline: true
+									},
+									{
+										name: 'broadcaster',
+										value: `${msg.userInfo.isBroadcaster}`,
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just got upgraded to VIP in ${channel}'s channel` })
+								.setFooter({ text: `${msg.userInfo.displayName} just viped ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 								.setTimestamp();
-	
-							twitchActivity.send({ embeds: [vipEmbed] });
+							await twitchActivity.send({ embeds: [vipEmbed] });
 						} catch (error) { console.error(error); }
 						break;
 					case 'unvip':
@@ -462,10 +466,9 @@ export async function initializeChat(): Promise<void> {
 								console.error('Something happened while searching for user');
 							}
 
-							// await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
-							const vipEmbed = new EmbedBuilder()
-								.setTitle('Twitch Channel VIP REMOVE Event')
-								.setAuthor({ name: `${args[1].replace('@', '')}` })
+							const unVIPEmbed = new EmbedBuilder()
+								.setTitle('Twitch Channel Purge Event')
+								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 								.setColor('Red')
 								.addFields([
 									{
@@ -474,15 +477,19 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									},
 									{
-										name: 'User: ',
-										value: `${args[1].replace('@', '')}`,
+										name: 'Mod',
+										value: `${msg.userInfo.isMod}`,
+										inline: true
+									},
+									{
+										name: 'broadcaster',
+										value: `${msg.userInfo.isBroadcaster}`,
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just got demoted in ${channel.replace('#', '')}'s channel` })
+								.setFooter({ text: `${msg.userInfo.displayName} just Unviped ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 								.setTimestamp();
-	
-							twitchActivity.send({ embeds: [vipEmbed] });
+							await twitchActivity.send({ embeds: [unVIPEmbed] });
 						} catch (error) { console.error(error); }
 						break;
 					case 'mod':
@@ -493,9 +500,9 @@ export async function initializeChat(): Promise<void> {
 							await userApiClient.moderation.addModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1]} has been givin the Moderator Powers`); });
 	
 							const moderatorEmbed = new EmbedBuilder()
-								.setTitle('Twitch Channel MOD Event')
-								.setAuthor({ name: `${args[1].replace('@', '')}` })
-								.setColor('Green')
+								.setTitle('Twitch Channel Purge Event')
+								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+								.setColor('Red')
 								.addFields([
 									{
 										name: 'Executer',
@@ -503,20 +510,19 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									},
 									{
-										name: 'User: ',
-										value: `${args[1].replace('@', '')}`,
+										name: 'Mod',
+										value: `${msg.userInfo.isMod}`,
 										inline: true
 									},
 									{
-										name: 'Channel: ',
-										value: `${channel.replace('#', '')}'s channel`,
+										name: 'broadcaster',
+										value: `${msg.userInfo.isBroadcaster}`,
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just got upgraded to Moderator in ${channel.replace('#', '')}'s channel` })
+								.setFooter({ text: `${msg.userInfo.displayName} just modded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 								.setTimestamp();
-	
-							twitchActivity.send({ embeds: [moderatorEmbed] });
+							await twitchActivity.send({ embeds: [moderatorEmbed] });
 						} catch (error) { console.error(error); }
 						break;
 					case 'unmod':
@@ -527,8 +533,8 @@ export async function initializeChat(): Promise<void> {
 							await userApiClient.moderation.removeModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `${args[1]} has had there moderator powers removed`); });
 	
 							const unModeratorEmbed = new EmbedBuilder()
-								.setTitle('Twitch Channel UNMOD Event')
-								.setAuthor({ name: `${args[1].replace('@', '')}` })
+								.setTitle('Twitch Channel Purge Event')
+								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 								.setColor('Red')
 								.addFields([
 									{
@@ -537,20 +543,19 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									},
 									{
-										name: 'User: ',
-										value: `${args[1].replace('@', '')}`,
+										name: 'Mod',
+										value: `${msg.userInfo.isMod}`,
 										inline: true
 									},
 									{
-										name: 'Channel: ',
-										value: `${channel.replace('#', '')}'s channel`,
+										name: 'broadcaster',
+										value: `${msg.userInfo.isBroadcaster}`,
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just got demoted from moderator in ${channel}'s channel` })
+								.setFooter({ text: `${msg.userInfo.displayName} just unmodded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 								.setTimestamp();
-	
-							twitchActivity.send({ embeds: [unModeratorEmbed] });
+							await twitchActivity.send({ embeds: [unModeratorEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -589,7 +594,7 @@ export async function initializeChat(): Promise<void> {
 										inline: true
 									}
 								])
-								.setFooter({ text: `Someone just purged in ${channel}'s channel` })
+								.setFooter({ text: `${msg.userInfo.displayName} just purged ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 								.setTimestamp();
 							await twitchActivity.send({ embeds: [purgeEmbed] });
 						} catch (error) {
@@ -601,19 +606,30 @@ export async function initializeChat(): Promise<void> {
 							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod ban @name (reason)`);
 							if (!args[2]) args[2] = 'No Reason Provided';
 							if (args[2]) args.join(' ');
-							const search = await userApiClient.users.getUserByName(args[1].replace('@', ''));
-							if (search?.id === undefined) return;
+							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+							if (userSearch?.id === undefined) return;
 							try {
-								await userApiClient.moderation.banUser(userID, userID, { user: search?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
+								await userApiClient.moderation.banUser(userID, userID, { user: userSearch?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
 								await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
+
 								const banEmbed = new EmbedBuilder()
-									.setTitle('Twitch Channel Ban Event')
-									.setAuthor({ name: `${args[1].replace('@', '')}` })
+									.setTitle('Twitch Channel Purge Event')
+									.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 									.setColor('Red')
 									.addFields([
 										{
-											name: 'User: ',
-											value: `${args[1]}`,
+											name: 'Executer',
+											value: `${msg.userInfo.displayName}`,
+											inline: true
+										},
+										{
+											name: 'Mod',
+											value: `${msg.userInfo.isMod}`,
+											inline: true
+										},
+										{
+											name: 'broadcaster',
+											value: `${msg.userInfo.isBroadcaster}`,
 											inline: true
 										},
 										{
@@ -622,9 +638,8 @@ export async function initializeChat(): Promise<void> {
 											inline: true
 										}
 									])
-									.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
+									.setFooter({ text: `${msg.userInfo.displayName} just Banned ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 									.setTimestamp();
-	
 								await twitchActivity.send({ embeds: [banEmbed] });
 							} catch (err) {
 								console.error(err);
@@ -636,14 +651,40 @@ export async function initializeChat(): Promise<void> {
 						if (!args[1]) return chatClient.say(channel, 'you must specify a person to shotout, Usage: !mod shoutout|so @name');
 						const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 						if (userSearch?.id === undefined) return;
-						const gameLastPlayed = await userApiClient.channels.getChannelInfoById(userSearch?.id);
+						const userInfo = await userApiClient.channels.getChannelInfoById(userSearch?.id);
 						const streamOnline = await userApiClient.streams.getStreamsByUserIds(['31124455']);
 						if (streamOnline) {
 							await userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.name);
 						} else {
 							// do nothing
 						}
-						await chatClient.say(channel, `go check out @${args[1].replace('@', '')}, there an awesome streamer Check them out here: https://twitch.tv/${args[1].replace('@', '').toLowerCase()} last seen playing ${gameLastPlayed?.gameName}`);
+						await chatClient.say(channel, `go check out @${userInfo?.displayName}, there an awesome streamer Check them out here: https://twitch.tv/${userInfo?.name.toLowerCase()} last seen playing ${userInfo?.gameName}`);
+						const banEmbed = new EmbedBuilder()
+							.setTitle('Twitch Shoutout')
+							.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+							.setColor('Red')
+							.addFields([
+								{
+									name: 'Executer',
+									value: `${msg.userInfo.displayName}`,
+									inline: true
+								},
+								{
+									name: 'Mod',
+									value: `${msg.userInfo.isMod}`,
+									inline: true
+								},
+								{
+									name: 'broadcaster',
+									value: `${msg.userInfo.isBroadcaster}`,
+									inline: true
+								}
+							])
+							.setThumbnail(userSearch.profilePictureUrl)
+							.setURL(`https://twitch.tv/${userInfo?.name.toLowerCase()}`)
+							.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userInfo?.displayName} in ${channel}'s twitch channel` })
+							.setTimestamp();
+						await twitchActivity.send({ embeds: [banEmbed] });
 						break;
 					default:
 						chatClient.say(channel, 'you must specify which mod action you want to do, Usage: !mod vip|unvip|purge|shoutout|ban|unban');

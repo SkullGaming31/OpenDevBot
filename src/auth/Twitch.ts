@@ -1,6 +1,5 @@
-import express, { Request, Response, Router } from 'express';
 import axios from 'axios';
-import mongoose from 'mongoose';
+import { Request, Response, Router } from 'express';
 // import { AccessTokenModel } from '../database/models/accessToken';
 import userModel from '../database/models/user';
 
@@ -24,9 +23,9 @@ twitchRouter.get('/success', async (req: Request, res: Response) => {
 
 twitchRouter.get('/', (req: Request, res: Response) => {
 	// Redirect the user to the Twitch authorization page with all scopes
-	const botAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['channel:moderate', 'bits:read', 'channel:edit:commercial', 'channel:manage:broadcast', 'channel:manage:moderators', 'channel:manage:polls', 'channel:manage:predictions', 'channel:manage:raids', 'channel:read:goals', 'channel:read:hype_train', 'channel:read:polls', 'channel:read:predictions', 'channel:read:redemptions', 'channel:read:subscriptions', 'channel:read:vips', 'channel:manage:vips', 'clips:edit', 'moderation:read', 'moderator:manage:announcements', 'moderator:manage:automod', 'moderator:read:automod_settings', 'moderator:manage:automod_settings', 'moderator:manage:banned_users', 'moderator:read:blocked_terms', 'moderator:manage:blocked_terms', 'moderator:manage:chat_messages', 'moderator:read:chat_settings', 'moderator:manage:chat_settings', 'moderator:read:chatters', 'moderator:read:followers', 'moderator:read:shield_mode', 'moderator:manage:shield_mode', 'moderator:read:shoutouts', 'moderator:manage:shoutouts', 'chat:edit', 'chat:read'].join('%20')}`;
-	// const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['bits:read','channel:edit:commercial','channel:manage:broadcast','channel:manage:polls','channel:manage:predictions','channel:manage:redemptions','channel:manage:schedule','channel:manage:moderators','channel:manage:raids','channel:manage:vips','channel:read:vips','channel:read:polls','channel:read:predictions','channel:read:redemptions','channel:read:editors','channel:read:goals','channel:read:hype_train','channel:read:subscriptions','channel_subscriptions','clips:edit','moderation:read','moderator:manage:automod','moderator:manage:shield_mode','moderator:manage:shoutouts','moderator:read:shoutouts','moderator:read:followers','moderator:read:shield_mode','user:edit','user:edit:follows','user:manage:blocked_users','user:read:blocked_users','user:read:broadcast','user:read:email','user:read:follows','user:read:subscriptions','user:edit:broadcast','moderator:manage:chat_messages','moderator:manage:banned_users',].join('%20')}`;
-	res.redirect(botAuthUrl);
+	// const botAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['channel:moderate', 'bits:read', 'channel:edit:commercial', 'channel:manage:broadcast', 'channel:manage:moderators', 'channel:manage:polls', 'channel:manage:predictions', 'channel:manage:raids', 'channel:read:goals', 'channel:read:hype_train', 'channel:read:polls', 'channel:read:predictions', 'channel:read:redemptions', 'channel:read:subscriptions', 'channel:read:vips', 'channel:manage:vips', 'clips:edit', 'moderation:read', 'moderator:manage:announcements', 'moderator:manage:automod', 'moderator:read:automod_settings', 'moderator:manage:automod_settings', 'moderator:manage:banned_users', 'moderator:read:blocked_terms', 'moderator:manage:blocked_terms', 'moderator:manage:chat_messages', 'moderator:read:chat_settings', 'moderator:manage:chat_settings', 'moderator:read:chatters', 'moderator:read:followers', 'moderator:read:shield_mode', 'moderator:manage:shield_mode', 'moderator:read:shoutouts', 'moderator:manage:shoutouts', 'chat:edit', 'chat:read'].join('%20')}`;
+	const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=${twitchClientId}&redirect_uri=${twitchRedirectUri}&scope=${['bits:read','channel:edit:commercial','channel:manage:broadcast','channel:manage:polls','channel:manage:predictions','channel:manage:redemptions','channel:manage:schedule','channel:manage:moderators','channel:manage:raids','channel:manage:vips','channel:read:vips','channel:read:polls','channel:read:predictions','channel:read:redemptions','channel:read:editors','channel:read:goals','channel:read:hype_train','channel:read:subscriptions','channel_subscriptions','clips:edit','moderation:read','moderator:manage:automod','moderator:manage:shield_mode','moderator:manage:shoutouts','moderator:read:shoutouts','moderator:read:followers','moderator:read:shield_mode','user:edit','user:edit:follows','user:manage:blocked_users','user:read:blocked_users','user:read:broadcast','user:read:email','user:read:follows','user:read:subscriptions','user:edit:broadcast','moderator:manage:chat_messages','moderator:manage:banned_users',].join('%20')}`;
+	res.redirect(twitchAuthUrl);
 });
 
 
@@ -71,7 +70,7 @@ twitchRouter.get('/callback', async (req: Request, res: Response) => {
 		const timeStamp = Math.floor(obtainmentTimestamp.getTime() / 1000);
 		const { id: twitchId } = userData.data.data[0];
 		const { access_token, refresh_token, scope, expires_in } = tokenResponse.data;
-		const existingUser = await userModel.findOne({ twitchId: userData.data.data[0].id});// axios gives a data property and twitch gives a data property
+		const existingUser = await userModel.findOne({ twitchId: twitchId });// axios gives a data property and twitch gives a data property
 		if (existingUser) {
 			await updateAccessToken(twitchId, access_token, refresh_token, scope, expires_in, timeStamp);
 			// console.log('Updating AccessToken');
@@ -81,12 +80,11 @@ twitchRouter.get('/callback', async (req: Request, res: Response) => {
 		}
 
 		// Redirect the user to the success page
-		// res.json({
-		// 	'Code': req.query.code,
-		// 	'AccessToken': tokenResponse.data.access_token,
-		// 	'RefreshToken': tokenResponse.data.refresh_token
-		// });
-		res.redirect('/success');
+		res.json({
+			'AccessToken': tokenResponse.data.access_token,
+			'RefreshToken': tokenResponse.data.refresh_token
+		});
+		// res.redirect('/auth/twitch/success');
 	} catch (err) {
 		console.error('Error exchanging authorization code for access token:', err);
 		res.send('Error exchanging authorization code for access token:\n' + err);
