@@ -39,18 +39,18 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/skullgaming31/skulledbot">
-    <img src="./public/assets/images/skulledbot.png" alt="Project Logo" width="80" height="80">
+  <a href="https://github.com/skullgaming31/OpenDevBot">
+    <img src="./public/assets/images/OpenDevBot.png" alt="Project Logo" width="80" height="80">
   </a>
 
-<h3 align="center">SkulledBot</h3>
+<h3 align="center">OpenDevBot</h3>
 
   <p align="center">
     Twitch Chatbot<br>
     ·
-    <a href="https://github.com/skullgaming31/skulledbot/issues">Report Bug</a>
+    <a href="https://github.com/skullgaming31/OpenDevBot/issues">Report Bug</a>
     ·
-    <a href="https://github.com/skullgaming31/skulledbot/issues">Request Feature</a>
+    <a href="https://github.com/skullgaming31/OpenDevBot/issues">Request Feature</a>
   </p>
 </div>
 
@@ -122,7 +122,7 @@ This is an example of how to list things you need to use the software and how to
 1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console), you will need access to a discord bot aswell, for webhooks
 2. Clone the repo
    ```sh
-   git clone https://github.com/skullgaming31/skulledbot.git
+   git clone https://github.com/skullgaming31/OpenDevBot.git
    ```
 3. Install NPM packages
    ```sh
@@ -159,7 +159,7 @@ This is an example of how to list things you need to use the software and how to
   * [ ] dice
 * [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
-See the [open issues](https://github.com/skullgaming31/skulledbot/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/skullgaming31/OpenDevBot/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -191,7 +191,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Corey - [CanadienDragon](https://twitter.com/canadiendragon) - skullgamingg31@gmail.com
 
-Project Link: [SkulledBot](https://github.com/skullgaming31/skulledbot)
+Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -206,16 +206,16 @@ Project Link: [SkulledBot](https://github.com/skullgaming31/skulledbot)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/skulledbot.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/SkullGaming31/OpenDevBot.svg?style=for-the-badge
 [contributors-url]: https://github.com/SkullGaming31/skullbot/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/skulledbot.svg?style=for-the-badge
-[forks-url]: https://github.com/SkullGaming31/skulledbot/network/members
-[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/skulledbot.svg?style=for-the-badge
-[stars-url]: https://github.com/SkullGaming31/skulledbot/stargazers
-[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/skulledbot.svg?style=for-the-badge
-[issues-url]: https://github.com/SkullGaming31/skulledbot/issues
-[license-shield]: https://img.shields.io/github/license/SkullGaming31/skulledbot.svg?style=for-the-badge
-[license-url]: https://github.com/SkullGaming31/skulledbot/blob/master/LICENSE
+[forks-shield]: https://img.shields.io/github/forks/SkullGaming31/OpenDevBot.svg?style=for-the-badge
+[forks-url]: https://github.com/SkullGaming31/OpenDevBot/network/members
+[stars-shield]: https://img.shields.io/github/stars/SkullGaming31/OpenDevBot.svg?style=for-the-badge
+[stars-url]: https://github.com/SkullGaming31/OpenDevBot/stargazers
+[issues-shield]: https://img.shields.io/github/issues/SkullGaming31/OpenDevBot.svg?style=for-the-badge
+[issues-url]: https://github.com/SkullGaming31/OpenDevBot/issues
+[license-shield]: https://img.shields.io/github/license/SkullGaming31/OpenDevBot.svg?style=for-the-badge
+[license-url]: https://github.com/SkullGaming31/OpenDevBot/blob/master/LICENSE
 [product-screenshot]: images/screenshot.png
 
 <!--
