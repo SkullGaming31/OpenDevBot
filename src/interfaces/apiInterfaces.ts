@@ -12,3 +12,9 @@ export interface Command {
   usage: string; // A usage example of the command (e.g. '!mod shoutout [name]')
   execute: (channel: string, user: string, message: string, msg: PrivateMessage) => Promise<void>; // A function that will be called when the command is executed
 }
+
+export interface LurkMessage {
+  userId: string;
+  displayName: string;
+  message: string;
+}

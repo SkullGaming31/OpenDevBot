@@ -6,6 +6,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
+import LurkMessageModel from './database/models/LurkModel';
 import QuoteModel, { IQuote } from './database/models/Quote';
 import { IDadJoke } from './interfaces/apiInterfaces';
 import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID } from './util/constants';
@@ -54,7 +55,7 @@ export async function initializeChat(): Promise<void> {
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 
-		registerCommand(['settitle', 'setgame', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'mod', 'socials']);
+		registerCommand(['settitle', 'setgame', 'lurk', 'id', 'followage', 'accountage', 'uptime', 'dadjoke', 'games', 'warframe', 'vigor', 'me', 'mod', 'socials', 'array']);
 		
 		const userApiClient = await getUserApi();
 
@@ -70,7 +71,12 @@ export async function initializeChat(): Promise<void> {
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 		const canadiendragon = await userApiClient.channels.getChannelInfoById(userID);
 		
-		const lurkingUsers = [];
+		let lurkingUsers: string[] = [];
+		const savedLurkMessage = await LurkMessageModel.findOne({ displayName: msg.userInfo.displayName });
+
+		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
+			chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+		}
 	
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			chatClient.say(channel, `Hey ${display}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
@@ -116,6 +122,10 @@ export async function initializeChat(): Promise<void> {
 			const command = args.shift()?.toLowerCase();
 	
 			switch (command) {
+			case 'array':
+				lurkingUsers = [];
+				chatClient.say(channel, 'Lurking Array set back to empty');
+				break;
 			case 'ping':
 				await chatClient.say(channel, `${display}, Im online and working correctly`);
 				break;
@@ -276,16 +286,42 @@ export async function initializeChat(): Promise<void> {
 				}
 				break;
 			case 'lurk':
-				const [lurkMessage] = args;
+				const toggle = args.shift();
+				const message = args.join(' ');
+				const savedLurkMessage = await LurkMessageModel.findOne({ userId: msg.userInfo.userId });
 				
-				if (lurkMessage) {
-					lurkingUsers.push(user);
-					chatClient.say(channel, `${user} is now lurking with the message: ${lurkMessage}`);
-				} else {
-					lurkingUsers.push(user);
-					chatClient.say(channel, `${user} is now lurking`);
+				if (toggle === 'on') {
+					if (message) {
+						if (savedLurkMessage) {
+							savedLurkMessage.message = message;
+							await savedLurkMessage.save();
+						} else {
+							await LurkMessageModel.create({ userId: msg.userInfo.userId, displayName: msg.userInfo.displayName, message });
+						}
+						lurkingUsers.push(user);
+						chatClient.say(channel, `${user} is now lurking with the message: ${message}`);
+					} else {
+						const lurkMessage = savedLurkMessage ? savedLurkMessage.message : '';
+						lurkingUsers.push(user);
+						chatClient.say(channel, `${msg.userInfo.displayName} is now lurking ${lurkMessage ? `with the message: ${lurkMessage}` : 'No Lurk Message was Provided'}`);
+					}
+				} else if (toggle === 'off') {
+					const index = lurkingUsers.indexOf(user);
+					if (index > -1) {
+						lurkingUsers.splice(index, 1);
+						chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
+					}
+					if (savedLurkMessage) {
+						await savedLurkMessage.remove();
+					}
 				}
-				chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking`);
+				
+				const numLurkers = await LurkMessageModel.countDocuments();
+				chatClient.say(channel, `Currently ${numLurkers} people are lurking`);
+				// Display lurk message if @mentioned
+				if (savedLurkMessage && message.includes('@')) {
+					chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+				}
 				break;
 			case 'id':
 				const userToLookup = args[0] ? args[0].replace('@', '') : msg.userInfo.userId;
