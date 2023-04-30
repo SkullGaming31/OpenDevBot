@@ -149,6 +149,7 @@ This is an example of how to list things you need to use the software and how to
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
 * [x] add word detection to send commands without prefix
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
+* [ ] !lurk command to send message if someone is lurking
 * [ ] Timer Commands
 * [ ] Counters?
 * [x] Quotes System?
@@ -188,8 +189,9 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <!-- CONTACT -->
 ## Contact
+<h3>📫 How to reach me:</h3>
 
-Corey - [CanadienDragon](https://twitter.com/canadiendragon) - skullgamingg31@gmail.com
+[CanadienDragon](https://twitter.com/canadiendragon) - skullgamingg31@gmail.com
 
 Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 

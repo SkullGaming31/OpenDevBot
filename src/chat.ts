@@ -1,14 +1,14 @@
 import { ChatClient } from '@twurple/chat';
 import { PrivateMessage } from '@twurple/chat/lib';
+import axios from 'axios';
 import countdown from 'countdown';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
-import axios from 'axios';
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import QuoteModel, { IQuote } from './database/models/Quote';
+import { IDadJoke } from './interfaces/apiInterfaces';
 import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID } from './util/constants';
-
 
 const commands = new Set<string>(['ping', 'game']); // initialize with the commands you've already implemented
 // registerCommand('newCommand');// single Command or multiple commands, works same to remove commands instead you use RemoveCommands()
@@ -41,9 +41,10 @@ function removeCommands(commandsToRemove: string[]): void {
 }
 
 // Function to generate the list of available commands
-function generateCommandList(): string {
-	return 'Available commands: !' + Array.from(commands).join(', !');
-}
+function generateCommandList(): string { return 'Available commands: !' + Array.from(commands).join(', !'); }
+
+// load commands
+
 // Holds All Twitch Chat Stuff
 export async function initializeChat(): Promise<void> {
 	const chatClient = await getChatClient();
@@ -59,7 +60,9 @@ export async function initializeChat(): Promise<void> {
 
 		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 
-		const userID = '31124455';// get twitchId from database
+		
+		const userID = '31124455';// get twitchId from database 31124455
+
 		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
 		if (broadcasterID?.id === undefined) return;
 	
@@ -111,7 +114,6 @@ export async function initializeChat(): Promise<void> {
 		else if (text.startsWith('!')) {
 			const args = text.slice(1).split(' ');
 			const command = args.shift()?.toLowerCase();
-			const helixUser = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 	
 			switch (command) {
 			case 'ping':
@@ -202,6 +204,7 @@ export async function initializeChat(): Promise<void> {
 						if (staff) {
 							const setTitle = await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
 							chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${canadiendragon?.title}`);
+							const helixUser = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 							const commandEmbed = new EmbedBuilder()
 								.setTitle('Command Used[settitle]')
 								.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
@@ -235,6 +238,7 @@ export async function initializeChat(): Promise<void> {
 					if (staff) {
 						const gamename = await userApiClient.games.getGameByName(args.join(' '));
 						const setGame = await userApiClient.channels.updateChannelInfo(broadcasterID?.id!, { gameId: `${gamename?.id}` });
+						const helixUser = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 						chatClient.say(channel, `${display}, has changed the channel category to ${gamename?.name}`);
 
 						const commandEmbed = new EmbedBuilder()
@@ -330,13 +334,22 @@ export async function initializeChat(): Promise<void> {
 				}
 				break;
 			case 'dadjoke':
-				const response = await axios.get('https://icanhazdadjoke.com/', {
+				const response = await axios.get<IDadJoke>('https://icanhazdadjoke.com/', {
 					headers: {
 						'Accept': 'application/json',
 						'User-Agent': 'Personal Twitch ChatBot (https://github.com/canadiendragon/skulledbotTwitch)'
 					}
 				});
-				chatClient.say(channel, `${response.data.joke}`);
+				console.log(response.data);
+				try {
+					if (response.data.status === 200) {
+						chatClient.say(channel, `${response.data.joke}`);
+					} else {
+						console.info(response.data.status);
+					}
+				} catch (error) {
+					console.error(error);
+				}
 				break;
 			case 'games':
 				switch (args[0]) {
@@ -497,12 +510,12 @@ export async function initializeChat(): Promise<void> {
 							if (!args[1]) return chatClient.say(channel, `${display}, Usage: -mod mod @name`);
 							const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 							if (userSearch?.id === undefined) return;
-							await userApiClient.moderation.addModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1]} has been givin the Moderator Powers`); });
+							await userApiClient.moderation.addModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `${args[1]} has been givin the Moderator Powers`); });
 	
 							const moderatorEmbed = new EmbedBuilder()
-								.setTitle('Twitch Channel Purge Event')
+								.setTitle('Twitch Channel MOD Event')
 								.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
-								.setColor('Red')
+								.setColor('Blue')
 								.addFields([
 									{
 										name: 'Executer',
@@ -652,17 +665,14 @@ export async function initializeChat(): Promise<void> {
 						const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 						if (userSearch?.id === undefined) return;
 						const userInfo = await userApiClient.channels.getChannelInfoById(userSearch?.id);
-						const streamOnline = await userApiClient.streams.getStreamsByUserIds(['31124455']);
-						if (streamOnline) {
-							await userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.name);
-						} else {
-							// do nothing
-						}
-						await chatClient.say(channel, `go check out @${userInfo?.displayName}, there an awesome streamer Check them out here: https://twitch.tv/${userInfo?.name.toLowerCase()} last seen playing ${userInfo?.gameName}`);
+						const stream = await userApiClient.streams.getStreamByUserName(broadcasterID.name);
+						if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
+
+						await chatClient.say(channel, `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`);
 						const banEmbed = new EmbedBuilder()
 							.setTitle('Twitch Shoutout')
 							.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
-							.setColor('Red')
+							.setColor('Yellow')
 							.addFields([
 								{
 									name: 'Executer',
@@ -705,7 +715,7 @@ export async function initializeChat(): Promise<void> {
 				case 'facebook':
 					chatClient.say(channel, `${display}, canadiendragon's Facebook: canadiendragon Entertainment`);
 					break;
-				case 'tictok':
+				case 'tiktok':
 					chatClient.say(channel, `${display}, canadiendragon's Tik-Tok: https://tiktok.com/@canadiendragon`);
 					break;
 				case 'discord':

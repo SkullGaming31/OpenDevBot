@@ -287,9 +287,12 @@ export async function EventSubEvents(): Promise<void> {
 		// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterID, `${cp.rewardId}`, `${cp.id}`);
 		switch (cp.rewardTitle || cp.rewardId) {
 		case 'ShoutOut':
-			const user = await userApiClient.users.getUserByName(cp.userName);
-			const gameLastPlayed = await userApiClient.channels.getChannelInfoById(user?.id!);
-			chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${cp.userName}, last seen playing: ${gameLastPlayed?.gameName}`);
+			const stream = await userApiClient.streams.getStreamByUserName(broadcasterID.name);
+			const userSearch = await userApiClient.users.getUserByName(userInfo.name);
+			if (userSearch?.id === undefined) return;
+
+			if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
+			chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${userInfo.name.toLowerCase()}, last seen playing: ${stream?.gameName}`);
 
 			const shoutoutEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')
@@ -303,7 +306,7 @@ export async function EventSubEvents(): Promise<void> {
 					},
 					{
 						name: 'Playing: ',
-						value: `${gameLastPlayed?.gameName}`,
+						value: `${stream?.gameName}`,
 						inline: true
 					},
 					{
@@ -313,7 +316,7 @@ export async function EventSubEvents(): Promise<void> {
 					}
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
-				.setURL(`https://twitch.tv/${cp.userName}`)
+				.setURL(`https://twitch.tv/${userInfo.name.toLowerCase()}`)
 				.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
 				.setTimestamp();
 			await twitchActivity.send({ embeds: [shoutoutEmbed] });

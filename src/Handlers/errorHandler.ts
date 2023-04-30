@@ -1,10 +1,9 @@
-import { ChannelType, EmbedBuilder }  from'discord.js';
-import { client } from '../discord';
-import { WebhookClient } from 'discord.js';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { Error, connection } from 'mongoose';
+import { client } from '../discord';
 
 export async function errorHandler(webhookClient: WebhookClient) {
-	const errorEmbed = new EmbedBuilder().setColor('Red').setTitle('⚠ | Error Encountered').setFooter({ text: 'Development Error' }).setTimestamp();
+	const errorEmbed = new EmbedBuilder().setColor('Red').setTitle('⚠ | Error Encountered').setFooter({ text: 'Development Error' }).setFooter({ text: 'Twitch Chatbot Error' }).setTimestamp();
 
 	client.on('error', async(err: Error) => {
 		console.error(err);

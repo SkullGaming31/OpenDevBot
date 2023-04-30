@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
 export function logger(err: Error, req: Request, res: Response, next: NextFunction) {
 	// if (err) throw err;

@@ -1,6 +1,6 @@
-import { Schema, model, Document } from 'mongoose';
+import { Document, Schema, model } from 'mongoose';
 
-interface IUser extends Document {
+export interface IUser extends Document {
 	twitchId: string;
 	access_token: string;
 	refresh_token: string;
