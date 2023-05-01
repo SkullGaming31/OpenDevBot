@@ -7,10 +7,11 @@ export interface IDadJoke {
 }
 
 export interface Command {
-  name: string; // The name of the command (e.g. 'ping')
-  description: string; // A brief description of what the command does
-  usage: string; // A usage example of the command (e.g. '!mod shoutout [name]')
-  execute: (channel: string, user: string, message: string, msg: PrivateMessage) => Promise<void>; // A function that will be called when the command is executed
+  name: string;
+  description: string;
+  usage: string;
+  aliases?: string[];
+  execute: (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => void;
 }
 
 export interface LurkMessage {

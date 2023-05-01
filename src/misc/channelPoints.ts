@@ -19,7 +19,11 @@ import { userID } from '../util/constants';
  * 
  */
 
-export async function createChannelPointsRewards(): Promise<void> { // creating the channel points rewards
+export async function createChannelPointsRewards(registerNewRewards: boolean = true): Promise<void> { // creating the channel points rewards
+	if (!registerNewRewards) {
+		console.log('Skipping Channel Points Rewards registration');
+		return;
+	}
 	const userApiClient = await getUserApi();
 	
 	const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);

@@ -3,9 +3,9 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
 config();
 
-// import { createChannelPointsRewards } from './misc/channelPoints';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
+import { createChannelPointsRewards } from './misc/channelPoints';
 import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, skulledBotID, userID } from './util/constants';
 
 export async function EventSubEvents(): Promise<void> {
@@ -20,7 +20,7 @@ export async function EventSubEvents(): Promise<void> {
 
 	if (process.env.NODE_ENV === 'dev') { await userApiClient.eventSub.deleteAllSubscriptions().then(() => { console.log('All Subscriptions Deleted!'); } ).catch((err) => { console.error(err); }); }
 
-	// await createChannelPointsRewards();
+	await createChannelPointsRewards(false);
 
 	// eventSub Stuff
 	const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);

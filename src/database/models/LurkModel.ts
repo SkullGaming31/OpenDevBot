@@ -7,5 +7,5 @@ const LurkMessageSchema = new Schema<LurkMessage>({
 	message: { type: String, required: false },
 });
 
-const LurkMessageModel = model<LurkMessage>('LurkMessage', LurkMessageSchema);
-export default LurkMessageModel;
+export const LurkMessageModel = model<LurkMessage>('LurkMessage', LurkMessageSchema);
+// export default LurkMessageModel;

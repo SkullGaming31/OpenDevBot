@@ -149,7 +149,7 @@ This is an example of how to list things you need to use the software and how to
   * [x] convert uptime to display days,hours,minutes,seconds(24 hour streams)
 * [x] add word detection to send commands without prefix
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
-* [ ] !lurk command to send message if someone is lurking
+* [x] Advanced Lurk Command
 * [ ] Timer Commands
 * [ ] Counters?
 * [x] Quotes System?

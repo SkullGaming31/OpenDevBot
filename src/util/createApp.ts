@@ -1,16 +1,19 @@
-import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { logger } from '../auth/middleware/Logger';
 
-import { twitchRouter } from '../auth/Twitch';
+import { aboutRouter } from '../api/about';
 import healthListener from '../api/health';
 import { homeRouter } from '../api/home';
-import { aboutRouter } from '../api/about';
+import { twitchRouter } from '../auth/Twitch';
 
-export function createApp() {
-	const port = process.env.PORT || '3002';
+/**
+ * Creates and returns an instance of an Express application with middleware
+ * for error handling, logging, and routing.
+ */
+export function createApp(port: string) {
 	const app = express();
 
 	const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -37,10 +40,8 @@ export function createApp() {
 
 
 	app.use('/auth/twitch', twitchRouter);
-
 	app.use('/home', homeRouter);
 	app.use('/about', aboutRouter);
-
 	app.use('/health', healthListener);
 
 
