@@ -18,8 +18,16 @@ export async function EventSubEvents(): Promise<void> {
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	//#endregion
 
-	if (process.env.NODE_ENV === 'dev') { await userApiClient.eventSub.deleteAllSubscriptions().then(() => { console.log('All Subscriptions Deleted!'); } ).catch((err) => { console.error(err); }); }
-
+	if (process.env.NODE_ENV === 'dev') { 
+		await userApiClient.eventSub.deleteAllSubscriptions()
+			.then(
+				() => { 
+					console.log('All Subscriptions Deleted!'); 
+				}
+			).catch((err) => { 
+				console.error(err); 
+			}); 
+	}
 	await createChannelPointsRewards(false);
 
 	// eventSub Stuff

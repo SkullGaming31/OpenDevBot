@@ -24,7 +24,7 @@ async function start() {
 	// Initialize database connection
 	await init();
 
-	// Start Express Server
+	// Start Express Server, not used for anything right now other then to get a access_token/refresh_token
 	const app = createApp(process.env.PORT || '3002');// use the port in the env or default to 3002 if the port is not defined in the env
 }
 start();
