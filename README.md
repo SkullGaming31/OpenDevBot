@@ -155,9 +155,9 @@ This is an example of how to list things you need to use the software and how to
 * [ ] Counters?
 * [x] Quotes System?
 * [ ] Viewer Watch Time?
-* [ ] Virtual Currency System
-  * [ ] duel
-  * [ ] dig
+* [x] Virtual Currency System
+  * [x] duel
+  * [x] dig
   * [ ] dice
 * [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 

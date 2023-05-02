@@ -3,7 +3,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, commandUsageWebhookID, userID } from '../../util/constants';
 
 const shoutout: Command = {
 	name: 'shoutout',
@@ -14,6 +14,8 @@ const shoutout: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const TwitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+
 		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
 		if (broadcasterID?.id === undefined) return;
 		if (!args[0]) return chatClient.say(channel, `Usage: ${shoutout.usage}`);
@@ -24,7 +26,7 @@ const shoutout: Command = {
 		if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
 
 		await chatClient.say(channel, `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`);
-		const banEmbed = new EmbedBuilder()
+		const commandUsageEmbed = new EmbedBuilder()
 			.setTitle('Twitch Shoutout')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Yellow')
@@ -49,7 +51,17 @@ const shoutout: Command = {
 			.setURL(`https://twitch.tv/${userInfo?.name.toLowerCase()}`)
 			.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userInfo?.displayName} in ${channel}'s twitch channel` })
 			.setTimestamp();
-		await commandUsage.send({ embeds: [banEmbed] });
+
+		const shoutoutEmbed = new EmbedBuilder()
+			.setTitle('')
+			.setAuthor({ name: '', iconURL: '' })
+			.setColor('Green')
+			.setThumbnail(userSearch.profilePictureUrl)
+			.setURL('')
+			.setFooter({ text: '', iconURL: '' })
+			.setTimestamp();
+		await commandUsage.send({ embeds: [commandUsageEmbed] });
+		await TwitchActivity.send({ embeds: [shoutoutEmbed] });
 	}
 };
 export default shoutout;

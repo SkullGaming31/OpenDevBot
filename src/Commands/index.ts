@@ -23,5 +23,12 @@ export default {
 	mod: './mod',
 	unmod: './unmod',
 	ban: './ban',
-	shoutout: './shoutout'
+	shoutout: './shoutout',
+	balence: './balence',
+	transfer: './transfer',
+	beg: './beg',
+	dice: './dice',
+	raffle: './raffle',
+	duel: './duel',
+	dig: './dig'
 };

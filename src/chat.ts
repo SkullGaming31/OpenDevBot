@@ -7,6 +7,7 @@ import path from 'path';
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
+import UserModel from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
 
@@ -59,6 +60,20 @@ export async function initializeChat(): Promise<void> {
 
 	// Handle commands
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
+		const username = user.toLowerCase();
+		let userDoc = await UserModel.findOne({ username });
+
+		// If user doesn't exist, create a new user with a balance of 0
+		if (!userDoc) {
+			userDoc = new UserModel({
+				id: msg.userInfo.userId,
+				username,
+				balance: 0,
+				lastBegTime: new Date(0),
+			});
+			await userDoc.save();
+		}
+
 		if (text.startsWith('!')) {
 			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 
@@ -79,6 +94,7 @@ export async function initializeChat(): Promise<void> {
 			if (command) {
 				command.execute(channel, user, args, text, msg);
 			} else {
+				if (text === '!join' || text === '!accept' || text === '!decline') return;
 				await chatClient.say(channel, 'Command not recognized, please try again');
 			}
 		}
@@ -140,20 +156,6 @@ function registerCommand(newCommand: Command) {
 		});
 	}
 }
-// Function to remove commands from the set
-// function removeCommands(commandsToRemove: string | string[]): void {
-// 	if (!Array.isArray(commandsToRemove)) {
-// 		commandsToRemove = [commandsToRemove]; // convert single command to array
-// 	}
-// 	commandsToRemove.forEach((command) => {
-// 		// Check if the command is in the set before deleting it
-// 		if (commands.has(command)) {
-// 			commands.delete(command);
-// 		} else {
-// 			console.warn(`Command "${command}" not found`);
-// 		}
-// 	});
-// }
 
 // holds the ChatClient
 let chatClientInstance: ChatClient;

@@ -9,7 +9,7 @@ export interface IUser extends Document {
 	obtainmentTimestamp: number;
 }
 
-const userSchema = new Schema<IUser>({
+const tokenSchema = new Schema<IUser>({
 	twitchId: {
 		type: String,
 		unique: true,
@@ -38,5 +38,6 @@ const userSchema = new Schema<IUser>({
 });
 // obtainmentTimestamp is saved in seconds same with expires_in
 
-const userModel = model<IUser>('users', userSchema);
-export default userModel;
+const tokenModel = model<IUser>('token', tokenSchema);
+
+export default tokenModel;

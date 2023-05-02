@@ -1,9 +1,9 @@
 import { PrivateMessage } from '@twurple/chat/lib';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
 
 const settitle: Command = {
 	name: 'settitle',
@@ -12,43 +12,48 @@ const settitle: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
 		const display = msg.userInfo.displayName;
+		const title = args.join(' ');
 		const canadiendragon = await userApiClient.channels.getChannelInfoById(userID);
+		if (!args[0]) return chatClient.say(channel, `Usage: ${settitle.usage}`);
 
-		switch (channel) {
-		case '#canadiendragon':
-			try {
-				if (staff) {
-					const setTitle = await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': `${args.join(' ')}` }); // Channel ID:'31124455'
-					chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${canadiendragon?.title}`);
-					const helixUser = await userApiClient.users.getUserByName(args[0].replace('@', ''));
-					const commandEmbed = new EmbedBuilder()
-						.setTitle('Command Used[settitle]')
-						.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
-						.setColor('Red')
-						.addFields([
-							{
-								name: 'Command Executer: ',
-								value: `\`${msg.userInfo.displayName}\``,
-								inline: true
-							},
-							{
-								name: 'New Title: ',
-								value: `\`${canadiendragon?.title}\``,
-								inline: true
-							}
-						])
-						.setFooter({ text: `Channel: ${channel.replace('#', '')}, TwitchID: ${msg.userInfo.userId}` })
-						.setTimestamp();
-				} else {
-					chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to these commands, please run /help to find out what commands you can use.`);
-				}
-			} catch (error: any) {
-				console.error(error.message);
+		try {
+			if (staff) {
+				const setTitle = await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': title }); // Channel ID:'31124455'
+				chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${title}`);
+				const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
+				const commandEmbed = new EmbedBuilder()
+					.setTitle('Command Used[settitle]')
+					.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
+					.setColor('Red')
+					.addFields([
+						{
+							name: 'Command Executer: ',
+							value: `\`${msg.userInfo.displayName}\``,
+							inline: true
+						},
+						{
+							name: 'New Title: ',
+							value: `\`${title}\``,
+							inline: true
+						},
+						{
+							name: 'Old Title',
+							value: `\`${canadiendragon?.title}\``,
+							inline: true
+						}
+					])
+					.setFooter({ text: `Channel: ${channel.replace('#', '')}, TwitchID: ${msg.userInfo.userId}` })
+					.setTimestamp();
+				await commandUsage.send({ embeds: [commandEmbed] });
+			} else {
+				chatClient.say(channel, `${display}, you are not a moderator or the broadcaster you do not have access to this command`);
 			}
-			break;
+		} catch (error: any) {
+			console.error(error.message);
 		}
 	}
 };
