@@ -7,9 +7,8 @@ import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebho
 
 const shoutout: Command = {
 	name: 'shoutout',
-	description: 'Shout out a user from your chat',
+	description: 'Shout out a user from the chat',
 	usage: '!shoutout [@name]',
-	aliases: ['so'],
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -27,7 +26,7 @@ const shoutout: Command = {
 
 		await chatClient.say(channel, `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`);
 		const commandUsageEmbed = new EmbedBuilder()
-			.setTitle('Twitch Shoutout')
+			.setTitle('CommandUsage[Shoutout]')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Yellow')
 			.addFields([
@@ -53,12 +52,12 @@ const shoutout: Command = {
 			.setTimestamp();
 
 		const shoutoutEmbed = new EmbedBuilder()
-			.setTitle('')
-			.setAuthor({ name: '', iconURL: '' })
+			.setTitle('Twitch Shoutout')
+			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Green')
 			.setThumbnail(userSearch.profilePictureUrl)
-			.setURL('')
-			.setFooter({ text: '', iconURL: '' })
+			.setURL(`https://twitch.tv/${userInfo?.name.toLowerCase()}`)
+			.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userInfo?.displayName} in ${channel}'s twitch channel` })
 			.setTimestamp();
 		await commandUsage.send({ embeds: [commandUsageEmbed] });
 		await TwitchActivity.send({ embeds: [shoutoutEmbed] });
