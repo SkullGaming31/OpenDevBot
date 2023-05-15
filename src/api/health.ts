@@ -1,7 +1,7 @@
-import { Request, RequestHandler, Response } from 'express';
-import mongoose, { Connection } from 'mongoose';
 import axios, { AxiosResponse } from 'axios';
 import { Client as DiscordClient, GatewayIntentBits } from 'discord.js';
+import { Request, RequestHandler, Response } from 'express';
+import mongoose, { Connection } from 'mongoose';
 
 const getBearerToken = async (): Promise<string> => {
 	const clientId = process.env.TWITCH_CLIENT_ID as string;

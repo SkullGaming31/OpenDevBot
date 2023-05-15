@@ -1,5 +1,5 @@
 import { model, Schema } from 'mongoose';
-interface IChannel {
+interface IChannel extends Document {
     twitchId: string;
     name: string;
     enabled: boolean;

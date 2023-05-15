@@ -5,19 +5,18 @@ import { Command } from '../../interfaces/apiInterfaces';
 import { userID } from '../../util/constants';
 
 const readGame: Command = {
-	name: 'game',
-	description: 'Displays The game the streamer is playing',
-	usage: '!game',
+	name: 'category',
+	description: 'Displays The category the streamer is streaming in',
+	usage: '!category',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
-		console.log('testing');
-    
 		const display = msg.userInfo.displayName;
 		const userApiClient = await getUserApi();
 		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
 		if (broadcasterID?.id === undefined) return;
+		console.log(` categoryID: ${broadcasterID?.gameId}`);
 		const chatClient = await getChatClient();
-		// Implementation goes here
-		chatClient.say(channel, `${display}, ${broadcasterID?.displayName} is currently playing ${broadcasterID?.gameName} GameID: ${broadcasterID?.gameId}`);
+
+		await chatClient.say(channel, `${display}, ${broadcasterID?.displayName} is currently streaming in ${broadcasterID?.gameName}`);
 	},
 };
 

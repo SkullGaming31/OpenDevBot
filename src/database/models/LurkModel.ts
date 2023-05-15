@@ -1,5 +1,10 @@
 import { Schema, model } from 'mongoose';
-import { LurkMessage } from '../../interfaces/apiInterfaces';
+
+export interface LurkMessage extends Document {
+  userId: string;
+  displayName: string;
+  message: string;
+}
 
 const LurkMessageSchema = new Schema<LurkMessage>({
 	userId: { type: String, required: true, unique: true },

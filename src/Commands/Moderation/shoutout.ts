@@ -23,8 +23,9 @@ const shoutout: Command = {
 		const userInfo = await userApiClient.channels.getChannelInfoById(userSearch?.id);
 		const stream = await userApiClient.streams.getStreamByUserName(broadcasterID.name);
 		if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
+		const shoutoutMessage = `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`;
 
-		await chatClient.say(channel, `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`);
+		await chatClient.say(channel, shoutoutMessage);
 		const commandUsageEmbed = new EmbedBuilder()
 			.setTitle('CommandUsage[Shoutout]')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
@@ -55,6 +56,7 @@ const shoutout: Command = {
 			.setTitle('Twitch Shoutout')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Green')
+			.setDescription(shoutoutMessage)
 			.setThumbnail(userSearch.profilePictureUrl)
 			.setURL(`https://twitch.tv/${userInfo?.name.toLowerCase()}`)
 			.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userInfo?.displayName} in ${channel}'s twitch channel` })

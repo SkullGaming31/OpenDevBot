@@ -8,4 +8,4 @@ export const commandUsageWebhookID = process.env.DISCORD_COMMAND_USAGE_ID as str
 export const CommandUssageWebhookTOKEN = process.env.DISCORD_COMMAND_USAGE_TOKEN as string;
 
 export const userID: string = '31124455';
-export const skulledBotID: string = '659523613';
+export const openDevBotID: string = '659523613';

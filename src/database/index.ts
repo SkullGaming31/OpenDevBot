@@ -1,11 +1,9 @@
-import mongoose, { ConnectOptions, Error } from 'mongoose';
-import './models/AuthTokenModel';
-import './models/user';
+import mongoose, { ConnectOptions, MongooseError } from 'mongoose';
 
 export async function init() {
 	try {
 		mongoose.set('strictQuery', true);
-		await mongoose.connect(process.env.MONGO_URI as string, {
+		const database = await mongoose.connect(process.env.MONGO_URI as string, {
 			useNewUrlParser: true,
 			useUnifiedTopology: true,
 			user: process.env.MONGO_USER as string,
@@ -24,7 +22,11 @@ export async function init() {
 			console.log('Twitch Database Connected');
 		});
 
-		mongoose.connection.on('error', (err: Error) => {
+		mongoose.connection.on('reconnected', () => {
+			console.log('Twitch Database re-Connected');
+		});
+
+		mongoose.connection.on('error', (err: MongooseError) => {
 			console.error('Twitch Database Error:', err.message);
 			mongoose.connection.removeAllListeners();
 			mongoose.disconnect();

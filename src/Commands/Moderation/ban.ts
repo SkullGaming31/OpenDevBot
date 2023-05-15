@@ -1,9 +1,9 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
-import { getUserApi } from '../../api/userApiClient';
+import { getBotApi, getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID, openDevBotID, userID } from '../../util/constants';
 
 const ban: Command = {
 	name: 'ban',
@@ -12,6 +12,7 @@ const ban: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
+		const botApiClient = await getBotApi();
 		const display = msg.userInfo.displayName;
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
@@ -19,11 +20,11 @@ const ban: Command = {
 			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${ban.usage}`);
 			if (!args[2]) args[2] = 'No Reason Provided';
 			if (args[2]) args.join(' ');
-			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+			const userSearch = await botApiClient.users.getUserByName(args[1].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 			try {
 				if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
-				await userApiClient.moderation.banUser(userID, userID, { user: userSearch?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
+				await botApiClient.moderation.banUser(userID, openDevBotID, { user: userSearch?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
 				await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
 
 				const banEmbed = new EmbedBuilder()

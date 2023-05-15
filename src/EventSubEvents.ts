@@ -6,7 +6,8 @@ config();
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
 import { createChannelPointsRewards } from './misc/channelPoints';
-import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, skulledBotID, userID } from './util/constants';
+import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, openDevBotID, userID } from './util/constants';
+import { sleep } from './util/util';
 
 export async function EventSubEvents(): Promise<void> {
 	const userApiClient = await getUserApi();
@@ -32,7 +33,7 @@ export async function EventSubEvents(): Promise<void> {
 
 	// eventSub Stuff
 	const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
-	const moderatorID = await userApiClient.channels.getChannelInfoById(skulledBotID);
+	const moderatorID = await userApiClient.channels.getChannelInfoById(openDevBotID);
 	if (broadcasterID?.id === undefined) return;
 	if (moderatorID?.id === undefined) return;
 	
@@ -282,8 +283,10 @@ export async function EventSubEvents(): Promise<void> {
 			.setFooter({ text: 'Ended Stream at ' })
 			.setTimestamp();
 		try {
-			chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
+			await chatClient.say(broadcasterID.name, `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`);
 			await LIVE.send({ embeds: [offlineEmbed] });
+			await sleep(2000);
+			chatClient.say(broadcasterID.name, 'dont forget you can join the discord too, https://discord.com/invite/dHpehkD6M3');
 		} catch (error) {
 			console.error(error);
 		}

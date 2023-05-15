@@ -30,5 +30,5 @@ export default {
 	dice: './dice',
 	raffle: './raffle',
 	duel: './duel',
-	dig: './dig'
+	dig: './dig',
 };

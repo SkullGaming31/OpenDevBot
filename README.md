@@ -159,6 +159,7 @@ This is an example of how to list things you need to use the software and how to
   * [x] duel
   * [x] dig
   * [ ] dice
+  * [ ] Encounter("Heist" Based around Encounters for Vigor)
 * [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
 See the [open issues](https://github.com/skullgaming31/OpenDevBot/issues) for a full list of proposed features (and known issues).

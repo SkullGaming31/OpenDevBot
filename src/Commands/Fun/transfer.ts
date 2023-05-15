@@ -6,7 +6,7 @@ import { Command } from '../../interfaces/apiInterfaces';
 const transfer: Command = {
 	name: 'transfer',
 	description: 'Transfer money to another person',
-	usage: '!transfer [@name]',
+	usage: '!transfer [@name] [amount]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const [_, recipient, amount] = text.split(' ');

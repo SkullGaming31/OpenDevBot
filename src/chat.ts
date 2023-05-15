@@ -7,17 +7,12 @@ import path from 'path';
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
-import UserModel from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
 
 // Function to generate the list of available commands
 // function generateCommandList(): string { return 'Available commands: !' + Array.from(commands).join(', !'); }
 
-function setMinuteInterval(callback: () => void, intervalMinutes: number): NodeJS.Timeout {
-	const intervalMs = intervalMinutes * 60 * 1000;
-	return setInterval(callback, intervalMs);
-}
 export const commands: Set<string> = new Set<string>();
 async function loadCommands(commandsDir: string, commands: Record<string, Command>): Promise<void> {
 	const commandModules = fs.readdirSync(commandsDir);
@@ -42,7 +37,6 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		// 	}
 		// }
 		// console.log(command);
-		
 	}
 }
 
@@ -61,25 +55,36 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		const username = user.toLowerCase();
-		let userDoc = await UserModel.findOne({ username });
+		// let userDoc = await UserModel.findOne({ username });
+		// const userFirstMessage = new Set();
+		// const hasSentMessageBefore = userFirstMessage.has(username);
 
-		// If user doesn't exist, create a new user with a balance of 0
-		if (!userDoc) {
-			userDoc = new UserModel({
-				id: msg.userInfo.userId,
-				username,
-				balance: 0,
-				lastBegTime: new Date(0),
-			});
-			await userDoc.save();
-		}
+		// if (!hasSentMessageBefore) {
+		// 	// Do something for the user's first message
+		// 	if (!userDoc) {
+		// 		userDoc = new UserModel({
+		// 			id: msg.userInfo.userId,
+		// 			username,
+		// 			balance: 0,
+		// 			lastBegTime: new Date(0),
+		// 		});
+		// 		await userDoc.save();
+		// 	}
+
+		// 	// Update the users Set to indicate that the user has sent a message
+		// 	const tbd = userFirstMessage.add(username);
+		// 	console.log(`${username} sent their first message: ${text}`);
+		// 	console.log('Size: ' + tbd.size);
+		// } else {
+		// 	UserModel.findOneAndUpdate({ username }, { 
+		// 		id: msg.userInfo.userId,
+		// 		username,
+		// 		lastBegTime: new Date(0)
+		// 	});
+		// }
 
 		if (text.startsWith('!')) {
 			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
-
-			// const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
-			// if (broadcasterID?.id === undefined) return;
-			// const canadiendragon = await userApiClient.channels.getChannelInfoById(userID);
 
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
@@ -92,14 +97,40 @@ export async function initializeChat(): Promise<void> {
 			// }
 
 			if (command) {
-				command.execute(channel, user, args, text, msg);
+				try {
+					// console.log(command.permissions);
+					// Permission Checks
+					// console.log(`isBroadcaster: ${msg.userInfo.isBroadcaster}`);
+					// if (command.permissions?.some((permission) => {
+					// 	switch (permission) {
+					// 	case 'moderator':
+					// 		return msg.userInfo.isMod;
+					// 	case 'broadcaster':
+					// 		return msg.userInfo.isBroadcaster;
+					// 	case 'vip':
+					// 		return msg.userInfo.isVip;
+					// 	case 'subscriber':
+					// 		return msg.userInfo.isSubscriber;
+					// 	case 'founder':
+					// 		return msg.userInfo.isFounder;
+					// 	case 'artist':
+					// 		return msg.userInfo.isArtist;
+					// 	default:
+					// 		return false;
+					// 	}
+					// })) {
+					// 	const requiredPermissions = command.permissions.join(', ');
+					// 	return chatClient.say(channel, `@${user}, you must have ${requiredPermissions} to use this command`);
+					// }
+			
+					command.execute(channel, user, args, text, msg);
+				} catch (error: any) {
+					console.error(error.message);
+				}
 			} else {
-				if (text === '!join' || text === '!accept' || text === '!decline') return;
 				await chatClient.say(channel, 'Command not recognized, please try again');
 			}
 		}
-		
-		
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
@@ -143,10 +174,14 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
+		setTimeout(async () => {
+			await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
+		}, 600000);
 	};
 
 	chatClient.onMessage(commandHandler);
 }
+
 function registerCommand(newCommand: Command) {
 	commands.add(newCommand.name);
 	if (newCommand.aliases) {
@@ -171,7 +206,7 @@ export async function getChatClient(): Promise<ChatClient> {
 			botLevel: 'none',
 			isAlwaysMod: true,
 		});
-		chatClientInstance.connect();
+		await chatClientInstance.connect();
 		console.log('The ChatClient has started');
 	}
 	

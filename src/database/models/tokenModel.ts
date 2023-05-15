@@ -1,6 +1,6 @@
 import { Document, Schema, model } from 'mongoose';
 
-export interface IUser extends Document {
+export interface IToken extends Document {
 	twitchId: string;
 	access_token: string;
 	refresh_token: string;
@@ -9,7 +9,7 @@ export interface IUser extends Document {
 	obtainmentTimestamp: number;
 }
 
-const tokenSchema = new Schema<IUser>({
+const tokenSchema = new Schema<IToken>({
 	twitchId: {
 		type: String,
 		unique: true,
@@ -38,6 +38,6 @@ const tokenSchema = new Schema<IUser>({
 });
 // obtainmentTimestamp is saved in seconds same with expires_in
 
-const tokenModel = model<IUser>('token', tokenSchema);
+const tokenModel = model<IToken>('token', tokenSchema);
 
 export default tokenModel;

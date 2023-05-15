@@ -9,13 +9,8 @@ export interface IDadJoke {
 export interface Command {
   name: string;
   description: string;
-  usage: string;
+  permissions?: ('broadcaster' | 'moderator' | 'artist' | 'subscriber' | 'founder' | 'vip')[]; // add the permissions property
+  usage?: string;
   aliases?: string[];
   execute: (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => void;
-}
-
-export interface LurkMessage {
-  userId: string;
-  displayName: string;
-  message: string;
 }
