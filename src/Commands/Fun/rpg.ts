@@ -27,7 +27,7 @@ const rpg: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) {
-			chatClient.say(channel, 'this Command is currently under construction');
+			chatClient.say(channel, `Command Description: ${rpg.description}, this Command is currently just a thought`);
 		}
 	}
 };
