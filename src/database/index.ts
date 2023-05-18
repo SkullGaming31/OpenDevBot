@@ -27,13 +27,39 @@ export async function init() {
 		});
 
 		mongoose.connection.on('error', (err: MongooseError) => {
-			console.error('Twitch Database Error:', err.message);
+			console.error('Twitch Database Error:', err);
 			mongoose.connection.removeAllListeners();
 			mongoose.disconnect();
 		});
 
 	} catch (error: any) {
-		console.error('Twitch Database Error:', error.message);
+		console.error('Twitch Database Error:', error);
 		mongoose.disconnect();
 	}
 }
+
+// import mysql from 'mysql2/promise';
+// import createUsersTableQuery from './models/userModel';
+
+// export async function init() {
+// 	try {
+// 		const connection = await mysql.createConnection({
+// 			host: process.env.MYSQL_HOST,
+// 			user: process.env.MYSQL_USER,
+// 			password: process.env.MYSQL_PASSWORD,
+// 			database: process.env.MYSQL_DATABASE,
+// 		});
+
+// 		console.log('Twitch Database Connected');
+
+// 		await connection.execute(createUsersTableQuery);
+
+// 		connection.on('error', (err) => {
+// 			console.error('Twitch Database Error:', err);
+// 			connection.end();
+// 		});
+
+// 	} catch (error: any) {
+// 		console.error('Twitch Database Error:', error);
+// 	}
+// }

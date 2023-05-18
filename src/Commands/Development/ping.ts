@@ -1,6 +1,6 @@
 import { PrivateMessage } from '@twurple/chat/lib';
-import fetch from 'node-fetch';
 import { getChatClient } from '../../chat';
+import UserModel, { User } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
 import { sleep } from '../../util/util';
 
@@ -10,16 +10,22 @@ const ping: Command = {
 	usage: '!ping',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const display = msg.userInfo.displayName;
+		const username = user.toLowerCase();
 
-		fetch('https://content.warframe.com/dynamic/worldState.php')
-			.then(response => response.json())
-			.then(data => console.log(data))
-			.catch(error => console.error(error));
-		// Implementation goes here
-		const chatClient = await getChatClient();
-
-		await sleep(2000);
-		await chatClient.say(channel, `${display}, Im online and working correctly`);
+		try {
+			if (msg.userInfo.isBroadcaster) {
+				const newBalance = await UserModel.findOneAndUpdate<User>({ username }, { balance: 1000000, id: msg.userInfo.userId }, { upsert: true, new: true });
+				console.log('Balance: ' + newBalance?.balance);
+				newBalance?.save().then(() => { console.log('New Balance Saved'); }).catch((err) => { console.error(err); });
+			}
+			// Implementation goes here
+			const chatClient = await getChatClient();
+	
+			await sleep(2000);
+			await chatClient.say(channel, `${display}, Im online and working correctly`);
+		} catch (error) {
+			console.error(error);
+		}
 	},
 };
 

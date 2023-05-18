@@ -10,7 +10,7 @@ const balance: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
-		const userDoc = await UserModel.findOne({ username: user });
+		const userDoc = await UserModel.findOne({ username });
 		const balance = userDoc?.balance || 0;
 		chatClient.say(channel, `@${user}, your balance is ${balance} coins.`);
 	}

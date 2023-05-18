@@ -1,4 +1,5 @@
 import { PrivateMessage } from '@twurple/chat/lib';
+import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -10,7 +11,7 @@ const beg: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
-		const userDoc = await UserModel.findOne({ username: user });
+		const userDoc = await UserModel.findOne({ username });
 		const currentTime = new Date();
 		const lastBegTime = userDoc?.lastBegTime || new Date(0);
 		const timeSinceLastBeg = Math.floor((currentTime.getTime() - lastBegTime.getTime()) / 1000);
@@ -24,7 +25,7 @@ const beg: Command = {
 			return chatClient.say(channel, `@${user}, you must wait ${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s before begging again.`);
 		}
 
-		const amount = Math.floor(Math.random() * 100) + 1;
+		const amount = randomInt(1, 101);
 
 		await UserModel.updateOne(
 			{ username },
@@ -34,4 +35,5 @@ const beg: Command = {
 		chatClient.say(channel, `@${user}, you begged and received ${amount} Gold!`);
 	}
 };
+
 export default beg;

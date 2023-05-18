@@ -4,7 +4,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 import { userID } from '../../util/constants';
 
-const readGame: Command = {
+const category: Command = {
 	name: 'category',
 	description: 'Displays The category the streamer is streaming in',
 	usage: '!category',
@@ -20,4 +20,4 @@ const readGame: Command = {
 	},
 };
 
-export default readGame;
+export default category;

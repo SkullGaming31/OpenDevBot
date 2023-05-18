@@ -7,6 +7,8 @@ import path from 'path';
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
+import knownBotsModel, { Bots } from './database/models/knownBotsModel';
+import UserModel, { User } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
 
@@ -47,44 +49,50 @@ export async function initializeChat(): Promise<void> {
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
 	console.log(`Loaded ${Object.keys(commands).length} commands.`);
-	const lurkingUsers: string[] = [];
+	// const lurkingUsers: string[] = [];
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
 
 	// Handle commands
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
-		const username = user.toLowerCase();
-		// let userDoc = await UserModel.findOne({ username });
-		// const userFirstMessage = new Set();
-		// const hasSentMessageBefore = userFirstMessage.has(username);
+		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
+		
+		const chatters = await userApiClient.chat.getChatters(userID, userID);
+		setInterval(async () => {
+			for (const chatter of chatters.data) {
+				const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
+				const knownBots = await knownBotsModel.findOne<Bots>({ id: msg.userInfo.userId });
 
-		// if (!hasSentMessageBefore) {
-		// 	// Do something for the user's first message
-		// 	if (!userDoc) {
-		// 		userDoc = new UserModel({
-		// 			id: msg.userInfo.userId,
-		// 			username,
-		// 			balance: 0,
-		// 			lastBegTime: new Date(0),
-		// 		});
-		// 		await userDoc.save();
-		// 	}
+				if (knownBots && chatter.userName === knownBots.username) {
+					continue; // Skip giving coins to known bots
+				}
 
-		// 	// Update the users Set to indicate that the user has sent a message
-		// 	const tbd = userFirstMessage.add(username);
-		// 	console.log(`${username} sent their first message: ${text}`);
-		// 	console.log('Size: ' + tbd.size);
-		// } else {
-		// 	UserModel.findOneAndUpdate({ username }, { 
-		// 		id: msg.userInfo.userId,
-		// 		username,
-		// 		lastBegTime: new Date(0)
-		// 	});
-		// }
+				if (!user) {
+					const newUser = new UserModel({
+						id: chatter.userId,
+						username: chatter.userName,
+						balance: 100,
+					});
+					console.log('Added the user to the database: ' + newUser.balance);
+					await newUser.save();
+				} else {
+					if (chatter.userName === 'opendevbot' || chatter.userName === 'streamelements' || chatter.userName === 'Streamlabs') {
+						continue; // Skip giving coins to specific usernames
+					}
+
+					const updatedBalance = (user.balance || 0) + 100;
+					await UserModel.findOneAndUpdate(
+						{ username: chatter.userName },
+						{ $set: { balance: updatedBalance } },
+						{ new: true }
+					);
+					console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+				}
+			}
+		}, 5 * 60 * 1000); // 5 * 60 * 1000 5 minutes
 
 		if (text.startsWith('!')) {
-			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
@@ -98,36 +106,23 @@ export async function initializeChat(): Promise<void> {
 
 			if (command) {
 				try {
-					// console.log(command.permissions);
-					// Permission Checks
-					// console.log(`isBroadcaster: ${msg.userInfo.isBroadcaster}`);
-					// if (command.permissions?.some((permission) => {
-					// 	switch (permission) {
-					// 	case 'moderator':
-					// 		return msg.userInfo.isMod;
-					// 	case 'broadcaster':
-					// 		return msg.userInfo.isBroadcaster;
-					// 	case 'vip':
-					// 		return msg.userInfo.isVip;
-					// 	case 'subscriber':
-					// 		return msg.userInfo.isSubscriber;
-					// 	case 'founder':
-					// 		return msg.userInfo.isFounder;
-					// 	case 'artist':
-					// 		return msg.userInfo.isArtist;
-					// 	default:
-					// 		return false;
-					// 	}
-					// })) {
-					// 	const requiredPermissions = command.permissions.join(', ');
-					// 	return chatClient.say(channel, `@${user}, you must have ${requiredPermissions} to use this command`);
-					// }
+					const currentTimestamp = Date.now();
+
+					// Check if the command has a cooldown and if enough time has passed since the last execution
+					if (command.cooldown && command.lastExecuted && currentTimestamp - command.lastExecuted < command.cooldown) {
+						const remainingTime = (command.cooldown - (currentTimestamp - command.lastExecuted)) / 1000;
+						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remainingTime} seconds.`);
+					}
+
+					// Update the last executed timestamp of the command
+					command.lastExecuted = currentTimestamp;
 			
 					command.execute(channel, user, args, text, msg);
 				} catch (error: any) {
 					console.error(error.message);
 				}
 			} else {
+				if (text.includes('!join')) return;
 				await chatClient.say(channel, 'Command not recognized, please try again');
 			}
 		}
@@ -174,9 +169,9 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
-		setTimeout(async () => {
-			await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
-		}, 600000);
+		// setTimeout(async () => {
+		// 	await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
+		// }, 600000);
 	};
 
 	chatClient.onMessage(commandHandler);

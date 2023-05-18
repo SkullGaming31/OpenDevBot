@@ -10,6 +10,7 @@ const duel: Command = {
 	usage: '!duel [user] [amount]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
+		const username = user.toLowerCase();
 
 		// Parse the challenged user and the duel amount from the arguments
 		const challengedUser = args[0];
@@ -27,7 +28,8 @@ const duel: Command = {
 		if (challengedUserDoc.id === msg.userInfo.userId) return chatClient.say(channel, 'You cannot duel yourself.');
 
 		// Check if the challenger has enough balance
-		const challengerDoc = await UserModel.findOne({ id: msg.userInfo.userId });
+		const challengerDoc = await UserModel.findOne({ username });
+		if (challengerDoc?.balance === undefined) return;
 		if (!challengerDoc || challengerDoc.balance < duelAmount) return chatClient.say(channel, 'You don\'t have enough balance to start the duel.');
 
 		// Ask the challenged user if they accept the duel
@@ -42,21 +44,21 @@ const duel: Command = {
 		}
 
 		// Deduct the duel amount from the challenger's balance
-		await UserModel.updateOne({ id: msg.userInfo.userId }, { $inc: { balance: -duelAmount } });
+		await UserModel.updateOne({ username }, { $inc: { balance: -duelAmount } });
 
 		// Choose a random winner
 		const winnerIndex = Math.floor(Math.random() * 2);
-		const winner = winnerIndex === 0 ? msg.userInfo.userId : challengedUserDoc.id;
+		const winner = winnerIndex === 0 ? msg.userInfo.userName : challengedUserDoc.id;
 		const loser = winnerIndex === 0 ? challengedUserDoc.id : msg.userInfo.userId;
 
 		// Award the prize to the winner
-		await UserModel.updateOne({ id: winner }, { $inc: { balance: duelAmount } });
+		await UserModel.updateOne({ username: winner }, { $inc: { balance: duelAmount } });
 
 		// Announce the winner in the chat
 		await chatClient.say(channel, `${msg.userInfo.displayName} has won the duel against ${challengedUser} and won ${duelAmount} gold!`);
 
 		// Reset the challenged user's duel challenge accepted flag
-		await UserModel.updateOne({ id: challengedUserDoc.id }, { $set: { duelChallengeAccepted: false } });
+		await UserModel.updateOne({ username: challengedUserDoc.username }, { $set: { duelChallengeAccepted: false } });
 	}
 };
 
