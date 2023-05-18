@@ -1,8 +1,11 @@
 import { PrivateMessage } from '@twurple/chat/lib';
+import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import UserModel, { User } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
-
+/**
+ * Bug: Not deducting correct amount when losing, FIXED
+ */
 const gamble: Command = {
 	name: 'gamble',
 	description: 'Gamble your coins and have a chance to win more',
@@ -31,20 +34,19 @@ const gamble: Command = {
 			if (!userModel || amount > userModel.balance) return chatClient.say(channel, 'You do not have enough coins to gamble.');
 
 			// Perform the gambling logic
-			const isWin = Math.random() < 0.3; // Example: 30% chance of winning
-
+			const isWin = randomInt(1, 11) <= 3; // Example: 30% chance of winning
+			console.log(isWin);
 			if (isWin) {
-				const winnings = amount * 2; // Double the amount as winnings
+				const winnings = isWin ? amount * 2 : 0;
+				const nextBalance = userModel.balance - amount + winnings;// Subtract the bet amount before doubling as winnings
+				userModel.balance = nextBalance;
 				await chatClient.say(channel, `Congratulations ${user}! You won ${winnings} coins.`);
-				// Update the user's balance with the winnings
-				userModel.balance += winnings;
 			} else {
 				await chatClient.say(channel, `${user}, better luck next time! You lost ${amount} coins.`);
 				// Deduct the amount from the user's balance
 				userModel.balance -= amount;
-				console.log(amount);
+				console.log(userModel.balance);
 			}
-
 			// Save the updated user information back to the database
 			await userModel.save();
 		} catch (error) {

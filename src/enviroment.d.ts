@@ -29,6 +29,10 @@ declare global {
             MONGO_PASS: string;
             MONGO_DB: string;
             MONGO_URI: string;
+            MYSQL_HOST: string;
+						MYSQL_USER: string;
+						MYSQL_PASSWORD: string;
+						MYSQL_DATABASE: string;
             TWITTER_USER_SECRET: string;
             TWITTER_USER_ACCESS_TOKEN: string;
             TWITTER_APPLICATION_SECRET: string;

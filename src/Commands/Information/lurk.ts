@@ -12,30 +12,31 @@ const lurk: Command = {
 		const chatClient = await getChatClient();
 		const toggle = args.shift();
 		const message = args.join(' ');
-		const savedLurkMessage = await LurkMessageModel.findOne({ userId: msg.userInfo.userId });
-		// const lurkingUsers: string[] = [];
+		const savedLurkMessage = await LurkMessageModel.findOne({ id: msg.userInfo.userId });
+		const lurkingUsers: string[] = [];
 		const numLurkers = await LurkMessageModel.countDocuments();
-				
+		
 		if (toggle === 'on') {
+			if (!args[0]) return chatClient.say(channel, `Usage: ${lurk.usage}`);
 			if (message) {
 				if (savedLurkMessage) {
 					savedLurkMessage.message = message;
 					await savedLurkMessage.save();
 				} else {
-					await LurkMessageModel.create({ userId: msg.userInfo.userId, displayName: msg.userInfo.displayName, message });
+					await LurkMessageModel.create({ id: msg.userInfo.userId, displayName: msg.userInfo.displayName, message });
 				}
 				lurkingUsers.push(user);
-				chatClient.say(channel, `${user} is now lurking with the message: ${message}`);
+				await chatClient.say(channel, `${user} is now lurking with the message: ${message}`);
 			} else {
 				const lurkMessage = savedLurkMessage ? savedLurkMessage.message : '';
 				lurkingUsers.push(user);
-				chatClient.say(channel, `${msg.userInfo.displayName} is now lurking ${lurkMessage ? `with the message: ${lurkMessage}` : 'No Lurk Message was Provided'}`);
+				await chatClient.say(channel, `${msg.userInfo.displayName} is now lurking ${lurkMessage ? `with the message: ${lurkMessage}` : 'No Lurk Message was Provided'}`);
 			}
 		} else if (toggle === 'off') {
 			const index = lurkingUsers.indexOf(user);
 			if (index > -1) {
 				lurkingUsers.splice(index, 1);
-				chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
+				await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
 			}
 			if (savedLurkMessage) {
 				await savedLurkMessage.remove();

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Request, Response, Router } from 'express';
 // import { AccessTokenModel } from '../database/models/accessToken';
 import fs from 'fs/promises';
-import userModel from '../database/models/tokenModel';
+import TokenModel from '../database/models/tokenModel';
 
 // Define the model for access tokens
 
@@ -69,7 +69,7 @@ twitchRouter.get('/callback', async (req: Request, res: Response) => {
 			const timeStamp = Math.floor(obtainmentTimestamp.getTime() / 1000);
 			const { id: twitchId } = userData.data.data[0];
 			const { access_token, refresh_token, scope, expires_in } = tokenResponse.data;
-			const existingUser = await userModel.findOne({ twitchId: twitchId });
+			const existingUser = await TokenModel.findOne({ twitchId: twitchId });
 			if (existingUser) {
 				await updateAccessToken(twitchId, access_token, refresh_token, scope, expires_in, timeStamp);
 			} else {
@@ -105,7 +105,7 @@ twitchRouter.get('/callback', async (req: Request, res: Response) => {
 
 // Save an access token to the database
 const saveAccessToken = async (twitchId: string, access_token: string, refresh_token: string, scope: string[], expires_in: number, obtainmentTimestamp: number) => {
-	const newAccessToken = new userModel({
+	const newAccessToken = new TokenModel({
 		twitchId,
 		access_token,
 		refresh_token,
@@ -124,7 +124,7 @@ const saveAccessToken = async (twitchId: string, access_token: string, refresh_t
 // Update an access token in the database with expiresIn and obtainmentTimestamp
 const updateAccessToken = async (twitchId: string, accessToken: string, refreshToken: string, scope: string[], expires_in: number, obtainmentTimestamp: number) => {
 	try {
-		const updatedAccessToken = await userModel.findOneAndUpdate(
+		const updatedAccessToken = await TokenModel.findOneAndUpdate(
 			{ twitchId },
 			{ accessToken, refreshToken, scope, expires_in, obtainmentTimestamp },
 			{ new: true },

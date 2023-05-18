@@ -14,7 +14,7 @@ interface Weapon {
   quality: string;
   basedamage: number;
   rateoffire: number;
-  range: number;
+  muzzleSpeed: number;
   magsize: number;
   weight: number;
   firemode: string[];
@@ -177,7 +177,7 @@ const vigor: Command = {
 						`Slot: ${weapon.slot || ''}`,
 						`Quality: ${weapon.quality || ''}`,
 						`Damage: ${weapon.basedamage || ''}`,
-						`Range: ${weapon.range || ''}`,
+						`Muzzle Speed: ${weapon.muzzleSpeed || ''}`,
 						`Fire Rate: ${weapon.rateoffire || ''}`,
 						`Magazine Size: ${weapon.magsize || ''}`,
 						`Fire Mode: ${weapon.firemode?.join(' ') || ''}`,

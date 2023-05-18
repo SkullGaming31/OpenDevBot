@@ -1,6 +1,6 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
+import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
 
 const transfer: Command = {
@@ -17,18 +17,19 @@ const transfer: Command = {
 		if (isNaN(parsedAmount)) return chatClient.say(channel, `@${user}, please specify a valid amount.`);
 		if (parsedAmount <= 0) return chatClient.say(channel, `@${user}, you can only transfer positive amounts.`);
 
-		const senderDoc = await UserModel.findOne({ username: sender });
+		const senderDoc = await UserModel.findOne<User>({ username: sender });
+		if (senderDoc?.balance === undefined) return;
 		if (!senderDoc || senderDoc.balance < parsedAmount) {
 			return chatClient.say(channel, `@${user}, you do not have enough gold to make this transfer.`);
 		}
 
-		const recipientDoc = await UserModel.findOneAndUpdate(
+		const recipientDoc = await UserModel.findOneAndUpdate<User>(
 			{ username: recipient.toLowerCase() },
 			{ $inc: { balance: parsedAmount } },
 			{ new: true, upsert: true }
 		);
 
-		await UserModel.updateOne(
+		await UserModel.updateOne<User>(
 			{ username: sender },
 			{ $inc: { balance: -parsedAmount } }
 		);
