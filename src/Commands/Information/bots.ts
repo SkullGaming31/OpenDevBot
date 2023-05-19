@@ -26,7 +26,7 @@ const bots: Command = {
 						const usertoGet = await userApiClient.users.getUserByName(usernameToAdd);
 						const newBot: Bots = new knownBotsModel({
 							id: usertoGet?.id,
-							username: usernameToAdd,
+							username: usernameToAdd.toLowerCase(),
 						});
 			
 						newBots.push(newBot);
@@ -50,7 +50,7 @@ const bots: Command = {
 				if (botCount === 0) {
 					await chatClient.say(channel, 'There are no bots in the database. Add bots using the command !bots add <name>');
 				} else {
-					const bots = await knownBotsModel.find({}, 'username');
+					const bots = await knownBotsModel.find<Bots>({}, 'username');
 					const botUsernames = bots.map((bot) => bot.username);
 					await chatClient.say(channel, `Known bots: ${botUsernames.join(', ')}`);
 				}

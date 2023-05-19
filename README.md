@@ -152,7 +152,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [x] Advanced Lurk Command
 * [ ] Timer Commands
-* [ ] Counters?
+* [ ] Counters?(In Testing)
 * [x] Quotes System?
 * [ ] Viewer Watch Time?
 * [x] Virtual Currency System

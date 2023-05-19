@@ -6,8 +6,8 @@ export interface Bots extends Document {
 }
 
 const knownBotSchema = new Schema<Bots>({
-	id: { type: String, required: true, unique: true },
-	username: { type: String, required: true }
+	id: { type: String, required: true },
+	username: { type: String, required: true, unique: true }
 });
 
 export const knownBotsModel = model<Bots>('bots', knownBotSchema);

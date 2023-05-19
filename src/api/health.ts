@@ -61,6 +61,4 @@ const healthListener: RequestHandler = async (_req: Request, res: Response) => {
 		}
 	}
 };
-
-
 export default healthListener;

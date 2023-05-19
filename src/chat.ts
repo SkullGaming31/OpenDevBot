@@ -58,39 +58,119 @@ export async function initializeChat(): Promise<void> {
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 		
+		// const chatters = await userApiClient.chat.getChatters(userID, userID);
+		// setInterval(async () => {
+		// 	for (const chatter of chatters.data) {
+		// 		const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
+		// 		const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
+		// 		const tbd = await chatter.getUser();
+		// 		console.log( chatter.userName + ' : ' + tbd.creationDate);
+
+		// 		console.log('chatter.userName:', chatter.userName);
+		// 		console.log('knownBots.username:', knownBots?.username);
+
+		// 		if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
+		// 			console.log('Skipping known bot:', chatter.userName);
+		// 			continue; // Skip giving coins to known bots
+		// 		}
+
+		// 		if (!user) {
+		// 			const newUser = new UserModel({
+		// 				id: chatter.userId,
+		// 				username: chatter.userName,
+		// 				balance: 100,
+		// 			});
+		// 			console.log('Added the user to the database: ' + newUser.balance);
+		// 			await newUser.save();
+		// 		} else {
+		// 			if (chatter.userName === 'opendevbot' || chatter.userName === 'streamelements' || chatter.userName === 'streamlabs') {
+		// 				console.log('Skipping bot:', chatter.userName);
+		// 				continue; // Skip giving coins to specific usernames
+		// 			}
+
+		// 			const updatedBalance = (user.balance || 0) + 100;
+		// 			await UserModel.findOneAndUpdate(
+		// 				{ username: chatter.userName },
+		// 				{ $set: { balance: updatedBalance } },
+		// 				{ new: true }
+		// 			);
+		// 			console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+		// 		}
+		// 	}
+		// }, 5 * 60 * 1000); // 5 * 60 * 1000 5 minutes
+
 		const chatters = await userApiClient.chat.getChatters(userID, userID);
-		setInterval(async () => {
-			for (const chatter of chatters.data) {
-				const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
-				const knownBots = await knownBotsModel.findOne<Bots>({ id: msg.userInfo.userId });
+		const chunkSize = 100; // Desired number of chatters per chunk
+		const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
+		const requestsPerInterval = 800; // Maximum number of requests allowed per interval
 
-				if (knownBots && chatter.userName === knownBots.username) {
-					continue; // Skip giving coins to known bots
-				}
+		const totalChunks = Math.ceil(chatters.data.length / chunkSize); // Total number of chunks
+		const requestsPerChunk = Math.ceil(requestsPerInterval / totalChunks); // Maximum number of requests allowed per chunk
+		const intervalDurationPerRequest = intervalDuration / requestsPerInterval; // Interval duration per request
 
-				if (!user) {
-					const newUser = new UserModel({
-						id: chatter.userId,
-						username: chatter.userName,
-						balance: 100,
-					});
-					console.log('Added the user to the database: ' + newUser.balance);
-					await newUser.save();
-				} else {
-					if (chatter.userName === 'opendevbot' || chatter.userName === 'streamelements' || chatter.userName === 'Streamlabs') {
+		let chunkIndex = 0; // Counter for tracking the current chunk index
+		let requestIndex = 0; // Counter for tracking the current request index
+
+		const processChatters = async () => {
+			const start = chunkIndex * chunkSize;
+			const end = (chunkIndex + 1) * chunkSize;
+			const chattersChunk = chatters.data.slice(start, end);
+
+			for (const chatter of chattersChunk) {
+				for (const chatter of chatters.data) {
+					const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
+					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
+					const tbd = await chatter.getUser();
+					// console.log( chatter.userName + ' : ' + tbd.creationDate);
+	
+					// console.log('chatter.userName:', chatter.userName);
+					// console.log('knownBots.username:', knownBots?.username);
+	
+					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
+						// console.log('Skipping known bot:', chatter.userName);
+						continue; // Skip giving coins to known bots
+					}
+					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
+						// console.log('Skipping bot:', chatter.userName);
 						continue; // Skip giving coins to specific usernames
 					}
-
-					const updatedBalance = (user.balance || 0) + 100;
-					await UserModel.findOneAndUpdate(
-						{ username: chatter.userName },
-						{ $set: { balance: updatedBalance } },
-						{ new: true }
-					);
-					console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+	
+					if (!user) {
+						const newUser = new UserModel({
+							id: chatter.userId,
+							username: chatter.userName,
+							balance: 100,
+						});
+						// console.log('Added the user to the database: ' + newUser.balance);
+						await newUser.save();
+					} else {
+						const updatedBalance = (user.balance || 0) + 100;
+						await UserModel.findOneAndUpdate(
+							{ username: chatter.userName },
+							{ $set: { balance: updatedBalance } },
+							{ new: true }
+						);
+						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+					}
 				}
 			}
-		}, 5 * 60 * 1000); // 5 * 60 * 1000 5 minutes
+
+			chunkIndex++;
+			requestIndex++;
+
+			if (chunkIndex === totalChunks) {
+				// Reset the chunk index to 0 when all chunks have been processed
+				chunkIndex = 0;
+			}
+		};
+
+		setInterval(async () => {
+			if (requestIndex < requestsPerInterval) {
+				await processChatters();
+			} else {
+				requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
+			}
+		}, intervalDurationPerRequest);
 
 		if (text.startsWith('!')) {
 
@@ -169,9 +249,9 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
-		// setTimeout(async () => {
-		// 	await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
-		// }, 600000);
+		setTimeout(async () => {
+			await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
+		}, 600000);
 	};
 
 	chatClient.onMessage(commandHandler);
