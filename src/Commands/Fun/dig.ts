@@ -1,7 +1,7 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import UserModel, { User } from '../../database/models/userModel';
+import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
 
 const dig: Command = {

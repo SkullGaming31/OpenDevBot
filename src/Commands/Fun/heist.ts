@@ -1,7 +1,7 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
-import UserModel from '../../database/models/userModel';
+import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
 import { sleep } from '../../util/util';
 

@@ -3,8 +3,10 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
 config();
 
+import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
+import { LurkMessageModel } from './database/models/LurkModel';
 import { createChannelPointsRewards } from './misc/channelPoints';
 import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, openDevBotID, userID } from './util/constants';
 import { sleep } from './util/util';
@@ -268,7 +270,9 @@ export async function EventSubEvents(): Promise<void> {
 			if (userInfo.profilePictureUrl) {
 				liveEmbed.setThumbnail(userInfo.profilePictureUrl);
 			}
+			await sleep(60000);
 			chatClient.say(broadcasterID.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterID?.gameName} with ${stream?.viewers} viewers.`);
+			await sleep(60000);
 			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
 		} catch (err: any) {
 			console.error(err.message);
@@ -287,6 +291,8 @@ export async function EventSubEvents(): Promise<void> {
 			await LIVE.send({ embeds: [offlineEmbed] });
 			await sleep(2000);
 			chatClient.say(broadcasterID.name, 'dont forget you can join the discord too, https://discord.com/invite/dHpehkD6M3');
+			lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
+			await LurkMessageModel.deleteMany({});// Clear all messages from the MongoDB collection
 		} catch (error) {
 			console.error(error);
 		}
@@ -302,8 +308,8 @@ export async function EventSubEvents(): Promise<void> {
 			const userSearch = await userApiClient.users.getUserByName(userInfo.name);
 			if (userSearch?.id === undefined) return;
 
-			if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
-			chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${userInfo.name.toLowerCase()}, last seen playing: ${stream?.gameName}`);
+			if (stream !== null) { await userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
+			await chatClient.say(broadcasterID.name, `@${cp.userDisplayName} has redeemed a shoutout, help them out by giving them a follow here: https://twitch.tv/${userInfo.name.toLowerCase()}, last seen playing: ${stream?.gameName}`);
 
 			const shoutoutEmbed = new EmbedBuilder()
 				.setTitle('REDEEM EVENT')

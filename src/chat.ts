@@ -8,7 +8,7 @@ import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
-import UserModel, { User } from './database/models/userModel';
+import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
 
@@ -33,12 +33,6 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		const command = (await import(modulePath)).default;
 		commands[name] = command;
 		registerCommand(command);
-		// if (command.aliases) {
-		// 	for (const alias of command.aliases) {
-		// 		registerCommand(command.aliases);
-		// 	}
-		// }
-		// console.log(command);
 	}
 }
 
@@ -57,47 +51,6 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
-		
-		// const chatters = await userApiClient.chat.getChatters(userID, userID);
-		// setInterval(async () => {
-		// 	for (const chatter of chatters.data) {
-		// 		const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
-		// 		const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-		// 		const tbd = await chatter.getUser();
-		// 		console.log( chatter.userName + ' : ' + tbd.creationDate);
-
-		// 		console.log('chatter.userName:', chatter.userName);
-		// 		console.log('knownBots.username:', knownBots?.username);
-
-		// 		if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
-		// 			console.log('Skipping known bot:', chatter.userName);
-		// 			continue; // Skip giving coins to known bots
-		// 		}
-
-		// 		if (!user) {
-		// 			const newUser = new UserModel({
-		// 				id: chatter.userId,
-		// 				username: chatter.userName,
-		// 				balance: 100,
-		// 			});
-		// 			console.log('Added the user to the database: ' + newUser.balance);
-		// 			await newUser.save();
-		// 		} else {
-		// 			if (chatter.userName === 'opendevbot' || chatter.userName === 'streamelements' || chatter.userName === 'streamlabs') {
-		// 				console.log('Skipping bot:', chatter.userName);
-		// 				continue; // Skip giving coins to specific usernames
-		// 			}
-
-		// 			const updatedBalance = (user.balance || 0) + 100;
-		// 			await UserModel.findOneAndUpdate(
-		// 				{ username: chatter.userName },
-		// 				{ $set: { balance: updatedBalance } },
-		// 				{ new: true }
-		// 			);
-		// 			console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
-		// 		}
-		// 	}
-		// }, 5 * 60 * 1000); // 5 * 60 * 1000 5 minutes
 
 		const chatters = await userApiClient.chat.getChatters(userID, userID);
 		const chunkSize = 100; // Desired number of chatters per chunk
@@ -145,16 +98,15 @@ export async function initializeChat(): Promise<void> {
 						await newUser.save();
 					} else {
 						const updatedBalance = (user.balance || 0) + 100;
-						await UserModel.findOneAndUpdate(
+						await UserModel.updateOne(
 							{ username: chatter.userName },
 							{ $set: { balance: updatedBalance } },
-							{ new: true }
+							{ upsert: true }
 						);
 						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
 					}
 				}
 			}
-
 			chunkIndex++;
 			requestIndex++;
 
@@ -172,30 +124,27 @@ export async function initializeChat(): Promise<void> {
 			}
 		}, intervalDurationPerRequest);
 
+		const commandCooldowns: Map<string, number> = new Map();
 		if (text.startsWith('!')) {
 
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
 			if (commandName === undefined) return;
-			const command = commands[commandName];
-
-			// if (!command && aliases.has(commandName)) {
-			// 	const commandNameFromAlias = aliases.get(commandName)!.toLowerCase();
-			// 	command = commands[commandNameFromAlias];
-			// }
+			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
 
 			if (command) {
 				try {
 					const currentTimestamp = Date.now();
 
 					// Check if the command has a cooldown and if enough time has passed since the last execution
-					if (command.cooldown && command.lastExecuted && currentTimestamp - command.lastExecuted < command.cooldown) {
-						const remainingTime = (command.cooldown - (currentTimestamp - command.lastExecuted)) / 1000;
+					const lastExecuted = commandCooldowns.get(commandName);
+					if (command.cooldown && lastExecuted && currentTimestamp - lastExecuted < command.cooldown) {
+						const remainingTime = (command.cooldown - (currentTimestamp - lastExecuted)) / 1000;
 						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remainingTime} seconds.`);
 					}
 
 					// Update the last executed timestamp of the command
-					command.lastExecuted = currentTimestamp;
+					commandCooldowns.set(commandName, currentTimestamp);
 			
 					command.execute(channel, user, args, text, msg);
 				} catch (error: any) {

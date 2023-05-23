@@ -31,4 +31,5 @@ export default {
 	raffle: './raffle',
 	duel: './duel',
 	dig: './dig',
+	createCounter: './createCounter'
 };

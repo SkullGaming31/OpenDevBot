@@ -1,6 +1,5 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-// import Game from '../../database/models/gameModel';
 import { Command } from '../../interfaces/apiInterfaces';
 
 /**

@@ -1,6 +1,6 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import UserModel, { User } from '../../database/models/userModel';
+import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
 import { sleep } from '../../util/util';
 
@@ -8,6 +8,7 @@ const ping: Command = {
 	name: 'ping',
 	description: 'Displays Pong in chat',
 	usage: '!ping',
+	cooldown: 30000,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const display = msg.userInfo.displayName;
 		const username = user.toLowerCase();

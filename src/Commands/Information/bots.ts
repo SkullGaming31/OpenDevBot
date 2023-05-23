@@ -7,7 +7,7 @@ import { Command } from '../../interfaces/apiInterfaces';
 const bots: Command = {
 	name: 'bots',
 	description: 'All known Bot names on Twitch',
-	usage: '!bots',
+	usage: '!bots [add|remove|list]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();

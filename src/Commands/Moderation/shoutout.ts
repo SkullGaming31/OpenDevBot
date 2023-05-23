@@ -9,6 +9,7 @@ const shoutout: Command = {
 	name: 'shoutout',
 	description: 'Shout out a user from the chat',
 	usage: '!shoutout [@name]',
+	aliases: ['so'],
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -61,8 +62,13 @@ const shoutout: Command = {
 			.setURL(`https://twitch.tv/${userInfo?.name.toLowerCase()}`)
 			.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userInfo?.displayName} in ${channel}'s twitch channel` })
 			.setTimestamp();
-		await commandUsage.send({ embeds: [commandUsageEmbed] });
-		await TwitchActivity.send({ embeds: [shoutoutEmbed] });
+
+		try {
+			await commandUsage.send({ embeds: [commandUsageEmbed] });
+			await TwitchActivity.send({ embeds: [shoutoutEmbed] });
+		} catch (error) {
+			console.error(error);
+		}
 	}
 };
 export default shoutout;

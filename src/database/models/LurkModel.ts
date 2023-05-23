@@ -8,9 +8,8 @@ export interface LurkMessage extends Document {
 
 const LurkMessageSchema = new Schema<LurkMessage>({
 	id: { type: String, required: true, unique: true },
-	displayName: { type: String, required: false },
+	displayName: { type: String, required: true },
 	message: { type: String, required: false },
 });
 
 export const LurkMessageModel = model<LurkMessage>('LurkMessage', LurkMessageSchema);
-// export default LurkMessageModel;

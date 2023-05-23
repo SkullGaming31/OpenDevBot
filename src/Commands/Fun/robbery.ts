@@ -11,7 +11,7 @@ import { Command } from '../../interfaces/apiInterfaces';
  * rob a store: cash in cash register, food/drinks, personal belongings etc
  */
 
-const commandname: Command = {
+const robber: Command = {
 	name: 'robber',
 	description: 'Rob a house, person, or store for quick cash',
 	usage: '!robber <house|person|store>',
@@ -20,4 +20,4 @@ const commandname: Command = {
 		chatClient.say(channel, 'This command is brand new and the functionality of it is still under construction.');
 	}
 };
-export default commandname;
+export default robber;
