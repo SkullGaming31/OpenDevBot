@@ -1,36 +1,53 @@
 import { WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
-config();
+import { generateRandomPirateName } from './util/randomFunctions';
 
-import { EventSubEvents } from './EventSubEvents';
-import { errorHandler } from './Handlers/errorHandler';
-import { getChatClient, initializeChat } from './chat';
-import { init } from './database';
+// Import other modules
+import { initializeTwitchEventSub } from './EventSubEvents';
+import { initializeErrorHandling } from './Handlers/errorHandler';
+import { initializeChat } from './chat';
+import { initializeDatabase } from './database';
 import { createApp } from './util/createApp';
-// import healthListener from './api/health';
 
-async function start() {
-	const webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
-	const chatClient = await getChatClient();
-	try {
-		// Initialize Discord webhook client for error handling
-		await errorHandler(webhookClient).then(() => { console.log('Error Handler Initialized'); });
-	
-		// Initialize database connection
-		await init();
+class OpenDevBot {
+	webhookClient: WebhookClient;
 
-		// Start Express Server, not used for anything right now other then to get a access_token/refresh_token
-		const app = createApp(process.env.PORT || '3002');// use the port in the env or default to 3002 if the port is not defined in the env
-	
-
-		// Initialize Twitch EventSub event listeners
-		await EventSubEvents();
-
-		// Initialize chat client for Twitch IRC
-		await initializeChat();
-	} catch (error) {
-		console.error(error);
+	constructor() {
+		this.webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
 	}
 
+	async start() {
+		try {
+			const pirateName = generateRandomPirateName();
+			console.log(`We shall begin the fun, ${pirateName.role} ${pirateName.name}`);
+
+			// Initialize Discord webhook client for error handling
+			await initializeErrorHandling(this.webhookClient);
+			console.log('Error Handler Initialized');
+
+			// Initialize database connection
+			await initializeDatabase();
+
+			// Start Express Server (not used for anything right now other than to get an access_token/refresh_token)
+			const app = createApp(process.env.PORT || '8001');
+
+			// Initialize Twitch EventSub event listeners
+			if (process.env.ENABLE_EVENTSUB) {
+				await initializeTwitchEventSub();
+			}
+
+			// Initialize chat client for Twitch IRC
+			if (process.env.ENABLE_CHAT) { await initializeChat(); }
+		} catch (error) {
+			console.error(error);
+		}
+	}
 }
-start();
+
+config();
+const client = new OpenDevBot();
+client.start().then(() => {
+	console.log('Bot started successfully');
+}).catch(error => {
+	console.error('Failed to start bot:', error);
+});

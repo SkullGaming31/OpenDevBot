@@ -959,12 +959,6 @@
       "carry": 2
     },
     {
-      "name": "Contact Bomb",
-      "description": "A placeable proximity-activated explosive",
-      "quality": "Military",
-      "carry": 3
-    },
-    {
       "name": "Improvised Mine",
       "description": "Probably wont kill you, but the shockwave is enough to throw anybody off balance",
       "quality": "Special Issue",
@@ -1018,7 +1012,8 @@
       "name": "M84 Flash Grenade",
       "description": "Blind and deafen your enemies for a considerable tatical advantage",
       "quality": "Military",
-      "carry": 3
+      "carry": 3,
+      "notes": "4 seconds of no vision directly looking at it"
     },
     {
       "name": "Radiation Grenade",
@@ -1032,13 +1027,22 @@
       "name": "Bear Trap",
       "description": "A placeable trap that damages and slows outlanders down",
       "quality": "Uncommon",
-      "carry": 5
+      "carry": 5,
+      "notes": ["lose 10% health and stamina"]
     },
     {
       "name": "Booby Trap",
       "description": "Upon usage, booby traps a lootable container that its aimed at",
       "quality": "Military",
-      "carry": 3
+      "carry": 3,
+      "notes": ["30hp gone if failed"]
+    },
+    {
+      "name": "Contact Bomb",
+      "description": "A placeable proximity-activated explosive",
+      "quality": "Military",
+      "carry": 3,
+      "notes": ["45-50 hp gone 1 bomb"]
     },
     {
       "name": "Alarm Trap",

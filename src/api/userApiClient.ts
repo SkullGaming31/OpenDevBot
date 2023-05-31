@@ -1,18 +1,10 @@
 import { ApiClient } from '@twurple/api';
-import { getAuthProvider, getUserAuthProvider } from '../auth/authProvider';
+import { getAuthProvider } from '../auth/authProvider';
 
 export async function getUserApi(): Promise<ApiClient> {
-	const userAuthProvider = await getUserAuthProvider();
+	const userAuthProvider = await getAuthProvider();
 
 	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel: 'error' } });
 
 	return userApiClient;
-}
-
-export async function getBotApi(): Promise<ApiClient> {
-	const botAuthProvider = await getAuthProvider();
-
-	const botApiClient = new ApiClient({ authProvider: botAuthProvider, logger: { minLevel: 'error' } });
-
-	return botApiClient;
 }

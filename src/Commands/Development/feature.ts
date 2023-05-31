@@ -8,6 +8,7 @@ const featureWebhook = new WebhookClient({ url: process.env.DEV_DISCORD_FEATURE_
 
 const feature: Command = {
 	name: 'feature',
+	cooldown: 10000,
 	description: 'Let me know what feature you would like me to add to the twitch bot',
 	usage: '!feature [name] <description>',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
@@ -18,15 +19,27 @@ const feature: Command = {
 		// code for command here
 		const name: string = args[0];
 		const description: string = args.slice(1).join(' '); // Combine args starting from index 1 into a single string
-		const featureEmbed = new EmbedBuilder()
-			.setTitle(name)
-			.setAuthor({ name: usersInfo?.name!, iconURL: usersInfo?.profilePictureUrl })
-			.setDescription(description)
-			.setFooter({ text : `Feature request from ${msg.userInfo.userName}` })
-			.setTimestamp();
+
+		if (!name || !description) {
+			return chatClient.say(channel, 'You must provide a name and description for the feature.');
+		}
+
+		const featureEmbed = new EmbedBuilder();
+
+		if (name) {
+			featureEmbed.setTitle(name);
+		}
+
+		if (usersInfo?.name && usersInfo?.profilePictureUrl) {
+			featureEmbed.setAuthor({ name: usersInfo.name, iconURL: usersInfo.profilePictureUrl });
+		}
+
+		featureEmbed.setDescription(description);
+		featureEmbed.setFooter({ text: `Feature request from ${msg.userInfo.userName}` });
+		featureEmbed.setTimestamp();
 
 		try {
-			await chatClient.say(channel, 'feature request recorded');
+			await chatClient.say(channel, 'Feature request recorded.');
 			await featureWebhook.send({ embeds: [featureEmbed] });
 		} catch (error) {
 			console.error(error);
@@ -34,4 +47,5 @@ const feature: Command = {
 		}
 	}
 };
+
 export default feature;

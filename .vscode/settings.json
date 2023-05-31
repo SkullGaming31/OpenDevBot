@@ -2,7 +2,6 @@
   "editor.tabSize": 2,
   "editor.detectIndentation": true,
   "editor.defaultFormatter": "vscode.typescript-language-features",
-  "editor.codeActionsOnSave": { "source.fixAll": true, "source.organizeImports": true },
 	"explorer.confirmDragAndDrop": false,
 	"git.openRepositoryInParentFolders": "never",
   "update.showReleaseNotes": false,

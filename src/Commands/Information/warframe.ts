@@ -1,5 +1,5 @@
 import { PrivateMessage } from '@twurple/chat/lib';
-import { getBotApi, getUserApi } from '../../api/userApiClient';
+import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 import { openDevBotID } from '../../util/constants';
@@ -101,7 +101,6 @@ const warframe: Command = {// needs more work
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const botApiClient = await getBotApi();
 
 		const display = msg.userInfo.displayName;
 		switch (args[0]) {
@@ -167,7 +166,7 @@ const warframe: Command = {// needs more work
 						await sleep(5000); // wait for 5 seconds for user response
 
 						if (prompted && text.toLowerCase() === 'yes') {
-							await botApiClient.whispers.sendWhisper(openDevBotID, msg.userInfo.userId, message);
+							await userApiClient.whispers.sendWhisper(openDevBotID, msg.userInfo.userId, message);
 							await chatClient.say(channel, 'Message sent via whisper.');
 						}
 						prompted = false;

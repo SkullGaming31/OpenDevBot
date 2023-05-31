@@ -23,12 +23,10 @@ USER- https://id.twitch.tv/oauth2/authorize?response_type=code&client_id=dieihxd
 
 <!-- bot scopes- chat:edit chat:read moderation:read -->
 
-
 <!-- 
 USER SCOPES-
 bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls channel:manage:predictions channel:manage:redemptions channel:manage:schedule channel:manage:moderators channel:manage:raids channel:manage:vips channel:read:vips channel:read:polls channel:read:predictions channel:read:redemptions channel:read:editors channel:read:goals channel:read:hype_train channel:read:subscriptions channel_subscriptions clips:edit moderation:read moderator:manage:automod moderator:manage:shield_mode moderator:manage:shoutouts moderator:read:shoutouts moderator:read:followers moderator:read:shield_mode user:edit user:edit:follows user:manage:blocked_users user:read:blocked_users user:read:broadcast user:read:email user:read:follows user:read:subscriptions user:edit:broadcast moderator:manage:chat_messages moderator:manage:banned_users
 -->
-
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
@@ -37,7 +35,6 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 [![MIT License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
-<br />
 <div align="center">
   <a href="https://github.com/skullgaming31/OpenDevBot">
     <img src="./public/assets/images/OpenDevBot.png" alt="Project Logo" width="80" height="80">
@@ -106,10 +103,13 @@ To get a local copy up and running follow these simple example steps. -->
 ### Prerequisites
 
 This is an example of how to list things you need to use the software and how to install them.
+
 * npm
+
   ```sh
   npm install npm@latest -g
   ```
+
 * node<br>
   [Node](https://nodejs.org)
   
@@ -121,13 +121,17 @@ This is an example of how to list things you need to use the software and how to
 
 1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console), you will need access to a discord bot aswell, for webhooks
 2. Clone the repo
+
    ```sh
    git clone https://github.com/skullgaming31/OpenDevBot.git
    ```
+
 3. Install NPM packages
+
    ```sh
    npm install
    ```
+
 4. Fill out the .env with all nessasary Information, check .env.example for whats needed
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -152,7 +156,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [x] Advanced Lurk Command
 * [ ] Timer Commands
-* [ ] Counters?(In Testing)
+* [ ] Counters(In Progress)
 * [x] Quotes System?
 * [ ] Viewer Watch Time?
 * [x] Virtual Currency System
@@ -191,9 +195,10 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <!-- CONTACT -->
 ## Contact
+
 <h3>📫 How to reach me:</h3>
 
-[CanadienDragon](https://twitter.com/canadiendragon) - skullgamingg31@gmail.com
+[CanadienDragon](https://twitter.com/canadiendragon) - <skullgamingg31@gmail.com>
 
 Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 
@@ -220,7 +225,6 @@ Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 [issues-url]: https://github.com/SkullGaming31/OpenDevBot/issues
 [license-shield]: https://img.shields.io/github/license/SkullGaming31/OpenDevBot.svg?style=for-the-badge
 [license-url]: https://github.com/SkullGaming31/OpenDevBot/blob/master/LICENSE
-[product-screenshot]: images/screenshot.png
 
 <!--
 Here are some ideas to get you started:

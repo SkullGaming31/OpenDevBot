@@ -9,7 +9,6 @@ export interface IDadJoke {
 export interface Command {
   name: string;
   description: string;
-  permissions?: ('broadcaster' | 'moderator' | 'artist' | 'subscriber' | 'founder' | 'vip')[]; // add the permissions property
   usage?: string;
   aliases?: string[];
   cooldown?: number; // cooldown property in milliseconds

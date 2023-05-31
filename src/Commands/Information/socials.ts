@@ -3,55 +3,33 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 
 const socials: Command = {
-	name: 'social',
+	name: 'socials',
 	description: 'A link to all my socials',
-	usage: '!social twitter|instagram|snapchat|facebook|tictok|discord|merch|tip|website|github',
+	usage: '!social twitter|instagram|tiktok|discord|merch|tip|website|github',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const display = msg.userInfo.displayName;
-		switch (args[0]) {
-		case 'instagram':
-			await chatClient.say(channel, `${display}, canadiendragon's Instagram: https://instagram.com/canadiendragon`);
-			break;
-		case 'snapchat':
-			await chatClient.say(channel, `${display}, canadiendragon's Snapchat: https://snapchat.com/add/skullgaming31`);
-			break;
-		case 'facebook':
-			await chatClient.say(channel, `${display}, canadiendragon's Facebook: canadiendragon Entertainment`);
-			break;
-		case 'tiktok':
-			await chatClient.say(channel, `${display}, canadiendragon's Tik-Tok: https://tiktok.com/@canadiendragon`);
-			break;
-		case 'discord':
-			await chatClient.say(channel, `${display}, canadiendragon's Discord: https://discord.com/invite/dHpehkD6M3`);
-			break;
-		case 'youtube':
-			const youtubeURL = 'https://www.youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA';
-			await chatClient.say(channel, `${display}, canadiendragon's Gaming YouTube Channel: ${youtubeURL} mostly just holds twitch archives`);
-			break;
-		case 'twitter':
-			await chatClient.say(channel, `${display}, canadiendragon's Twitter: https://twitter.com/canadiendragon`);
-			break;
-		case 'merch':
-			const merch = 'https://canadiendragon-merch.creator-spring.com/';
-			await chatClient.say(channel, `${display}, The new merch is here, Would Appreciate it if you checked it out ${merch}`);
-			break;
-		case 'tip':
-			const tipping = 'https://overlay.expert/celebrate/canadiendragon';
-			await chatClient.say(channel, `@${display}, you can help out the stream by tipping here: ${tipping}, NOTE: tips are NOT expected BUT very much appreacated, all tips go back into the stream wither it be upgrades for the stream or new games for you to watch.`);
-			break;
-		case 'website':
-			const website_URL = 'https://canadiendragon.com';
-			await chatClient.say(channel, `${display}, website is ${website_URL}`);
-			break;
-		case 'github':
-			const githubURL = 'https://github.com/skullgaming31/opendevbot';
-			await chatClient.say(channel, `You can find the project source code here ${githubURL}`);
-			break;
-		default:
-			chatClient.say(channel, `Which social are you looking for?, Usage: ${socials.usage}`);
-			break;
+
+		const socialURLs: Record<string, string> = {
+			twitter: 'https://twitter.com/canadiendragon',
+			instagram: 'https://instagram.com/canadiendragon',
+			tiktok: 'https://tiktok.com/@canadiendragon',
+			discord: 'https://discord.com/invite/dHpehkD6M3',
+			youtube: 'https://www.youtube.com/channel/UCaJPv2Hx2-HNwUOCkBFgngA',
+			merch: 'https://canadiendragon-merch.creator-spring.com/',
+			tip: 'https://overlay.expert/celebrate/canadiendragon',
+			website: 'https://canadiendragon.com',
+			github: 'https://github.com/skullgaming31/opendevbot',
+		};
+
+		const social = args[0]?.toLowerCase();
+
+		if (social && social in socialURLs) {
+			const socialURL = socialURLs[social];
+			await chatClient.say(channel, `${display}, canadiendragon's ${social}: ${socialURL}`);
+		} else {
+			await chatClient.say(channel, `Which social are you looking for? Usage: ${socials.usage}`);
 		}
-	}
+	},
 };
 export default socials;

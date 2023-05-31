@@ -10,6 +10,6 @@ const counterSchema = new Schema<Counter>({
 	value: { type: Number, required: true, default: 0 },
 });
 
-const CounterModel: Model<Counter> = model<Counter>('Counter', counterSchema);
+export const CounterModel: Model<Counter> = model<Counter>('Counter', counterSchema);
 
-export default CounterModel;
+// export default CounterModel;

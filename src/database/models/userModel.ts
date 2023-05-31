@@ -3,6 +3,7 @@ import { Document, Schema, model } from 'mongoose';
 export interface User extends Document {
   id: string;
   username: string;
+  roles: string;
   balance?: number;
   lastBegTime?: Date;
   challengedUser?: string;
@@ -13,6 +14,7 @@ export interface User extends Document {
 const userSchema = new Schema<User>({
 	id: { type: String, required: true, unique: true },
 	username: { type: String },
+	roles: { type: String, required: true },
 	balance: { type: Number, default: 0 },
 	lastBegTime: { type: Date, default: new Date(0) },
 	challengedUser: { type: String },
@@ -21,5 +23,3 @@ const userSchema = new Schema<User>({
 });
 
 export const UserModel = model<User>('Users', userSchema);
-
-// export default UserModel;

@@ -7,6 +7,7 @@ const balance: Command = {
 	name: 'balance',
 	description: 'Get the balance for your account',
 	usage: '!balance',
+	aliases: ['bal', 'points'],
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();

@@ -1,12 +1,11 @@
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
+import WebSocket from 'ws';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { logger } from '../auth/middleware/Logger';
+import middleware from '../auth/middleware';
 
-import { aboutRouter } from '../api/about';
 import healthListener from '../api/health';
-import { homeRouter } from '../api/home';
 import { twitchRouter } from '../auth/Twitch';
 
 /**
@@ -27,7 +26,6 @@ export function createApp(port: string) {
 	};
 	
 	// Add error logger middleware function to app
-	
 	app.use(cors());
 	app.use(helmet());
 	app.use(morgan('tiny'));
@@ -35,17 +33,18 @@ export function createApp(port: string) {
 	app.use(express.json());
 	app.use(express.static('../../public'));
 	app.use(errorLogger);
-	app.use(logger);
-
-
-
+	// app.use(middleware.logger);
 	app.use('/auth/twitch', twitchRouter);
-	app.use('/home', homeRouter);
-	app.use('/about', aboutRouter);
 	app.use('/health', healthListener);
 
+	app.get('/', (req: Request, res: Response) => {
+		res.sendFile('C:/Development/opendevbot/public/index.html');
+	});
 
-	app.listen(port, () => { console.log(`Server listening on http://localhost:${port}`); });
+
+	app.use(middleware.notFound);
+	app.use(middleware.errorHandler);
+	const server = app.listen(port, () => { console.log(`Server listening on http://localhost:${port}`); });
 
 	return app;
 }

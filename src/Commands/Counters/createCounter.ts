@@ -1,57 +1,65 @@
 import { PrivateMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import CounterModel, { Counter } from '../../database/models/counterModel';
+import { Counter, CounterModel } from '../../database/models/counterModel';
 import { Command } from '../../interfaces/apiInterfaces';
 
-const createCounter: Command = {
-	name: 'createCounter',
-	description: 'Create or remove a counter from the database',
-	usage: '!createCounter [create|remove] <counterName>',
+const createcounter: Command = {
+	name: 'counter',
+	description: 'create remove and list counters',
+	usage: '!createcounter [create|remove|list] countername',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+		console.log('we hit the counter command');
 		const chatClient = await getChatClient();
-		console.log('Text: ' + text);
-		const [subcommand, counterName] = args;
 
-		if (!subcommand || !counterName) { return chatClient.say(channel, `Invalid command usage. Usage: ${createCounter.usage}`); }
-
-		if (!msg.userInfo.isBroadcaster || !msg.userInfo.isMod) return chatClient.say(channel, 'You must be the broadcaster or Moderator of the channel to use this command');
-
-		console.log('SubCommand: ' + subcommand);
-		console.log('CounterName: ' + counterName);
+		if (args.length !== 2 || !['create', 'remove', 'list'].includes(args[0])) {
+			// Invalid command usage, display usage guide
+			await chatClient.say(channel, `Usage: ${createcounter.usage}`);
+			return;
+		}
+		const counterName = args[1];
 		try {
-			switch (subcommand) {
+			switch (args[0]) {
 			case 'create':
-				try {
-					const existingCounter = await CounterModel.findOne<Counter>({ counterName: counterName });
-	
-					if (existingCounter) { return chatClient.say(channel, `Counter '${counterName}' already exists.`); }
-	
-					const newCounter = new CounterModel();
-					newCounter.counterName = counterName;
-					newCounter.value = 0;
-					await newCounter.save();
-					await chatClient.say(channel, `Counter '${counterName}' created successfully.`);
-				} catch (error) {
-					console.error(error);
+				// Create a new counter
+				await createCounter(counterName);
+				await chatClient.say(channel, `Counter "${counterName}" created.`);
+				break;
+			case 'remove':
+				// Remove a counter
+				await removeCounter(counterName);
+				await chatClient.say(channel, `Counter "${counterName}" removed.`);
+				break;
+			case 'list':
+				// List all counters
+				const counters = await listCounters();
+				if (counters.length === 0) {
+					await chatClient.say(channel, 'No counters found.');
+				} else {
+					const counterNames = counters.map(counter => counter.counterName).join(', ');
+					await chatClient.say(channel, `Counters: ${counterNames}`);
 				}
 				break;
-
-			case 'remove':
-				const removedCounter = await CounterModel.findOneAndDelete<Counter>({ counterName: counterName });
-
-				if (!removedCounter) { return chatClient.say(channel, `Counter '${counterName}' does not exist.`);}
-
-				await chatClient.say(channel, `Counter '${counterName}' removed successfully.`);
-				break;
-
 			default:
-				await chatClient.say(channel, `Invalid subcommand. Usage: ${createCounter.usage}`);
+				await chatClient.say(channel, `Invalid command option: ${args[0]}`);
 				break;
 			}
 		} catch (error) {
-			await chatClient.say(channel, 'Error performing the counter operation.');
 			console.error(error);
+			await chatClient.say(channel, 'An error occurred while executing the command.');
 		}
 	}
 };
-export default createCounter;
+
+async function createCounter(counterName: string): Promise<void> {
+	await CounterModel.create({ counterName, value: 0 });
+}
+
+async function removeCounter(counterName: string): Promise<void> {
+	await CounterModel.findOneAndDelete({ counterName });
+}
+
+async function listCounters(): Promise<Counter[]> {
+	return CounterModel.find({});
+}
+
+export default createcounter;

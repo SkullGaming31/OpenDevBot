@@ -1,6 +1,6 @@
 import mongoose, { ConnectOptions, MongooseError } from 'mongoose';
 
-export async function init() {
+export async function initializeDatabase() {
 	try {
 		mongoose.set('strictQuery', true);
 		const database = await mongoose.connect(process.env.MONGO_URI as string, {
@@ -37,29 +37,3 @@ export async function init() {
 		mongoose.disconnect();
 	}
 }
-
-// import mysql from 'mysql2/promise';
-// import createUsersTableQuery from './models/userModel';
-
-// export async function init() {
-// 	try {
-// 		const connection = await mysql.createConnection({
-// 			host: process.env.MYSQL_HOST,
-// 			user: process.env.MYSQL_USER,
-// 			password: process.env.MYSQL_PASSWORD,
-// 			database: process.env.MYSQL_DATABASE,
-// 		});
-
-// 		console.log('Twitch Database Connected');
-
-// 		await connection.execute(createUsersTableQuery);
-
-// 		connection.on('error', (err) => {
-// 			console.error('Twitch Database Error:', err);
-// 			connection.end();
-// 		});
-
-// 	} catch (error: any) {
-// 		console.error('Twitch Database Error:', error);
-// 	}
-// }

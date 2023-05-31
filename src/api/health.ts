@@ -17,48 +17,66 @@ const getBearerToken = async (): Promise<string> => {
 	return response.data.access_token;
 };
 
-const healthListener: RequestHandler = async (_req: Request, res: Response) => {
-	let mongoConnection: Connection | null = null;
-	let discordClient: DiscordClient | null = null;
-	const mongoURI = process.env.MONGO_URI as string;
-
+const checkMongoDBConnection = async (): Promise<boolean> => {
+	const mongoConnection: Connection = mongoose.connection;
 	try {
-		// Check MongoDB connection
-		mongoConnection = mongoose.connection;
 		await mongoConnection.db.command({ ping: 1 });
-		res.write('MongoDB: OK\n');
+		return true;
+	} catch (error) {
+		return false;
+	}
+};
 
-		// Check Twitch API
-		const token = await getBearerToken();
-		const twitchResponse: AxiosResponse = await axios.get('https://api.twitch.tv/helix/users?login=canadiendragon', {
+const checkTwitchAPI = async (): Promise<boolean> => {
+	const token = await getBearerToken();
+	const twitchResponse: AxiosResponse = await axios.get(
+		'https://api.twitch.tv/helix/users?login=canadiendragon',
+		{
 			headers: {
 				'Client-ID': process.env.TWITCH_CLIENT_ID as string,
 				Authorization: `Bearer ${token}`,
 			},
-		});
-		if (twitchResponse.status === 200) {
-			res.write('Twitch API: OK\n');
-		} else {
-			res.write('Twitch API: DOWN\n');
 		}
+	);
 
-		// Check Discord API
-		discordClient = new DiscordClient({ intents: [GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildWebhooks] });
+	return twitchResponse.status === 200;
+};
+
+const checkDiscordAPI = async (): Promise<boolean> => {
+	const discordClient: DiscordClient = new DiscordClient({
+		intents: [
+			GatewayIntentBits.Guilds,
+			GatewayIntentBits.GuildMessages,
+			GatewayIntentBits.GuildMembers,
+			GatewayIntentBits.GuildWebhooks,
+		],
+	});
+
+	try {
 		await discordClient.login(process.env.DEV_DISCORD_BOT_TOKEN as string);
-		if (discordClient.user) {
-			res.write('Discord API: OK\n');
-		} else {
-			res.write('Discord API: DOWN\n');
-		}
 
-		res.status(200).send();
+		return !!discordClient.user;
+	} catch (error) {
+		return false;
+	} finally {
+		discordClient.destroy();
+	}
+};
+
+const healthListener: RequestHandler = async (_req: Request, res: Response) => {
+	try {
+		const isMongoDBConnected = await checkMongoDBConnection();
+		const isTwitchAPIUp = await checkTwitchAPI();
+		const isDiscordAPIUp = await checkDiscordAPI();
+
+		res.json({
+			mongodb: isMongoDBConnected ? 'OK' : 'DOWN',
+			twitchAPI: isTwitchAPIUp ? 'OK' : 'DOWN',
+			discordAPI: isDiscordAPIUp ? 'OK' : 'DOWN',
+		});
 	} catch (err) {
 		console.error(err);
 		res.sendStatus(500);
-	} finally {
-		if (discordClient) {
-			discordClient.destroy();
-		}
 	}
 };
 export default healthListener;

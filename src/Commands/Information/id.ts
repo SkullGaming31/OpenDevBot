@@ -16,9 +16,13 @@ const id: Command = {
 		const userLookup = await userApiClient.users.getUserByName(userToLookup);
 		try {
 			if (userLookup) {
-				chatClient.say(channel, `${display} your TwitchId is ${userLookup.id}`);
+				chatClient.say(channel, `${display}, the Twitch ID for ${userLookup.displayName} is ${userLookup.id}`);
 			} else {
-				chatClient.say(channel, `${display} could not find user ${userToLookup}`);
+				if (args[0]) {
+					chatClient.say(channel, `${display}, could not find user ${args[0]}`);
+				} else {
+					chatClient.say(channel, `${display}, your Twitch ID is ${userToLookup}`);
+				}
 			}
 		} catch (err: any) {
 			console.error(err.message);

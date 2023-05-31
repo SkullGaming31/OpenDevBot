@@ -6,6 +6,10 @@ import { Command } from '../../interfaces/apiInterfaces';
 /**
  * Bug: Not deducting correct amount when losing, FIXED
  */
+// ...
+
+// ...
+
 const gamble: Command = {
 	name: 'gamble',
 	description: 'Gamble your coins and have a chance to win more',
@@ -14,12 +18,6 @@ const gamble: Command = {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
 		try {
-			// Extract the amount from the command arguments
-			const amount = parseInt(args[0]);
-
-			// Perform validation and checks
-			if (isNaN(amount)) { return chatClient.say(channel, `Please provide a valid amount for gambling. Usage: ${gamble.usage}`); }
-
 			// Retrieve the user from the database
 			let userModel: User | null;
 			try {
@@ -29,31 +27,53 @@ const gamble: Command = {
 				await chatClient.say(channel, 'An error occurred while retrieving user information.');
 				return;
 			}
-			if (userModel?.balance === undefined) return;
-			// Check if the user exists and has enough coins to gamble
-			if (!userModel || amount > userModel.balance) return chatClient.say(channel, 'You do not have enough coins to gamble.');
+
+			if (!userModel || userModel.balance === undefined) return;
+
+			// Extract the amount from the command arguments
+			let amount: number;
+
+			if (args[0] === 'all') {
+				// Gamble all balance
+				amount = userModel?.balance ?? 0;
+			} else if (args[0].endsWith('%')) {
+				// Gamble a percentage of the balance
+				const percentage = parseInt(args[0].slice(0, -1));
+				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+					return chatClient.say(channel, `Please provide a valid percentage for gambling. Usage: ${gamble.usage}`);
+				}
+				amount = Math.floor((userModel?.balance ?? 0) * (percentage / 100));
+			} else {
+				// Gamble a specific amount
+				amount = parseInt(args[0]);
+				if (isNaN(amount)) {
+					return chatClient.say(channel, `Please provide a valid amount for gambling. Usage: ${gamble.usage}`);
+				}
+			}
+
+			// Check if the user has enough coins to gamble
+			if (amount > userModel.balance) return chatClient.say(channel, 'You do not have enough coins to gamble.');
 
 			// Perform the gambling logic
 			const isWin = randomInt(1, 11) <= 3; // Example: 30% chance of winning
-			console.log(isWin);
 			if (isWin) {
-				const winnings = isWin ? amount * 2 : 0;
-				const nextBalance = userModel.balance - amount + winnings;// Subtract the bet amount before doubling as winnings
-				userModel.balance = nextBalance;
+				const winnings = amount * 2;
+				const newBalance = userModel.balance + winnings - amount; // Calculate the new balance
+				userModel.balance = newBalance; // Update the balance in the userModel
 				await chatClient.say(channel, `Congratulations ${user}! You won ${winnings} coins.`);
 			} else {
 				await chatClient.say(channel, `${user}, better luck next time! You lost ${amount} coins.`);
-				// Deduct the amount from the user's balance
-				userModel.balance -= amount;
-				console.log(userModel.balance);
+				const newBalance = userModel.balance - amount; // Calculate the new balance
+				userModel.balance = newBalance; // Update the balance in the userModel
 			}
+
 			// Save the updated user information back to the database
 			await userModel.save();
 		} catch (error) {
 			console.error('Error saving user information:', error);
 			await chatClient.say(channel, 'An error occurred while updating user information.');
 		}
-	}
+	},
 };
 
 export default gamble;

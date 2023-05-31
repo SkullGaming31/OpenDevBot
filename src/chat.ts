@@ -1,6 +1,7 @@
 import { ChatClient } from '@twurple/chat';
 import { PrivateMessage } from '@twurple/chat/lib';
 
+import { HelixChatChatter } from '@twurple/api/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
@@ -12,8 +13,11 @@ import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
 
-// Function to generate the list of available commands
-// function generateCommandList(): string { return 'Available commands: !' + Array.from(commands).join(', !'); }
+interface Chatter {
+  userId: string;
+  userName: string;
+  getUser(): Promise<User>;
+}
 
 export const commands: Set<string> = new Set<string>();
 async function loadCommands(commandsDir: string, commands: Record<string, Command>): Promise<void> {
@@ -33,6 +37,7 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		const command = (await import(modulePath)).default;
 		commands[name] = command;
 		registerCommand(command);
+		// console.log(name);
 	}
 }
 
@@ -43,110 +48,160 @@ export async function initializeChat(): Promise<void> {
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
 	console.log(`Loaded ${Object.keys(commands).length} commands.`);
-	// const lurkingUsers: string[] = [];
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
 
 	// Handle commands
+	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
 
-		const chatters = await userApiClient.chat.getChatters(userID, userID);
-		const chunkSize = 100; // Desired number of chatters per chunk
-		const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
-		const requestsPerInterval = 800; // Maximum number of requests allowed per interval
+		try {
+			const cursor = ''; // Initialize the cursor value
+			const chattersResponse = await userApiClient.chat.getChatters(userID, userID, { after: cursor, limit: 100 });
+			const chatters = chattersResponse.data; // Retrieve the array of chatters
+			const chunkSize = 100; // Desired number of chatters per chunk
+			const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
+			const requestsPerInterval = 800; // Maximum number of requests allowed per interval
 
-		const totalChunks = Math.ceil(chatters.data.length / chunkSize); // Total number of chunks
-		const requestsPerChunk = Math.ceil(requestsPerInterval / totalChunks); // Maximum number of requests allowed per chunk
-		const intervalDurationPerRequest = intervalDuration / requestsPerInterval; // Interval duration per request
+			const totalChunks = Math.ceil(chatters.length / chunkSize); // Total number of chunks
 
-		let chunkIndex = 0; // Counter for tracking the current chunk index
-		let requestIndex = 0; // Counter for tracking the current request index
+			let chunkIndex = 0; // Counter for tracking the current chunk index
+			let requestIndex = 0; // Counter for tracking the current request index
 
-		const processChatters = async () => {
-			const start = chunkIndex * chunkSize;
-			const end = (chunkIndex + 1) * chunkSize;
-			const chattersChunk = chatters.data.slice(start, end);
-
-			for (const chatter of chattersChunk) {
-				for (const chatter of chatters.data) {
-					const user = await UserModel.findOne<User>({ username: chatter.userName }).lean();
+			const maxIterations = 1000;
+			let iterationCount = 0;
+		
+			const processChatters = async (chatters: HelixChatChatter[]) => {
+				const start = chunkIndex * chunkSize;
+				const end = (chunkIndex + 1) * chunkSize;
+				const chattersChunk = chatters.slice(start, end);
+		
+				for (const chatter of chattersChunk) {
+					const user = await UserModel.findOne<User>({ id: chatter.userId }).lean();
 					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-					const tbd = await chatter.getUser();
-					// console.log( chatter.userName + ' : ' + tbd.creationDate);
-	
-					// console.log('chatter.userName:', chatter.userName);
-					// console.log('knownBots.username:', knownBots?.username);
-	
+		
 					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
-						// console.log('Skipping known bot:', chatter.userName);
-						continue; // Skip giving coins to known bots
+						if (!user) {
+							const newUser = new UserModel({
+								id: chatter.userId,
+								username: chatter.userName,
+								roles: 'Bot',
+								balance: 100,
+							});
+							// console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
+							await newUser.save();
+						} else {
+							const updatedBalance = (user.balance || 0) + 100;
+							await UserModel.updateOne(
+								{ id: chatter.userId },
+								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } },
+								{ upsert: true }
+							);
+							// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+							// console.log('User:', user);
+							// console.log('Known Bots:', knownBots);
+						}
+						continue; // Skip the remaining checks since the user is a known bot
 					}
 					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
-						// console.log('Skipping bot:', chatter.userName);
 						continue; // Skip giving coins to specific usernames
 					}
-	
+					if (iterationCount >= maxIterations) {
+						console.log('Maximum iteration count reached. Exiting the loop.');
+						break;
+					}
+					let newUser: User;
 					if (!user) {
-						const newUser = new UserModel({
+						newUser = new UserModel({
 							id: chatter.userId,
 							username: chatter.userName,
+							roles: 'User',
 							balance: 100,
 						});
-						// console.log('Added the user to the database: ' + newUser.balance);
+						console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 						await newUser.save();
 					} else {
 						const updatedBalance = (user.balance || 0) + 100;
 						await UserModel.updateOne(
-							{ username: chatter.userName },
-							{ $set: { balance: updatedBalance } },
+							{ id: chatter.userId },
+							{ $set: { username: chatter.userName, roles: 'User', balance: updatedBalance } },
 							{ upsert: true }
 						);
 						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
 					}
 				}
-			}
-			chunkIndex++;
-			requestIndex++;
+		
+				requestIndex++;
+				chunkIndex++;
+		
+				if (chunkIndex === totalChunks) {
+					chunkIndex = 0;
+				}
+			};
+		
+			let isIntervalRunning = true;
+		
+			const intervalHandler = async () => {
+				if (iterationCount >= maxIterations) {
+					console.log('Maximum iteration count reached. Exiting the loop.');
+					clearInterval(interval);
+					isIntervalRunning = false;
+					return;
+				}
+		
+				if (requestIndex < requestsPerInterval) {
+					const chatters = await userApiClient.chat.getChatters(userID, userID, { after: cursor, limit: chunkSize });
+					await processChatters(chatters.data);
+					requestIndex++;
+				} else {
+					requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
+					iterationCount++;
+				}
+			};
+		
+			const interval = setInterval(async () => {
+				if (isIntervalRunning) {
+					await intervalHandler();
+				}
+			}, intervalDuration);
+		} catch (error) {
+			console.error(error);
+		}
 
-			if (chunkIndex === totalChunks) {
-				// Reset the chunk index to 0 when all chunks have been processed
-				chunkIndex = 0;
-			}
-		};
-
-		setInterval(async () => {
-			if (requestIndex < requestsPerInterval) {
-				await processChatters();
-			} else {
-				requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
-			}
-		}, intervalDurationPerRequest);
-
-		const commandCooldowns: Map<string, number> = new Map();
 		if (text.startsWith('!')) {
 
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
 			if (commandName === undefined) return;
+			// console.log(commandName);
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
 
+			// FIX: command cooldowns does not work at all
 			if (command) {
 				try {
 					const currentTimestamp = Date.now();
 
+					// Get the user's cooldown map for commands
+					let userCooldowns = commandCooldowns.get(user);
+					if (!userCooldowns) {
+						userCooldowns = new Map<string, number>();
+						commandCooldowns.set(user, userCooldowns);
+					}
+
 					// Check if the command has a cooldown and if enough time has passed since the last execution
-					const lastExecuted = commandCooldowns.get(commandName);
-					if (command.cooldown && lastExecuted && currentTimestamp - lastExecuted < command.cooldown) {
-						const remainingTime = (command.cooldown - (currentTimestamp - lastExecuted)) / 1000;
+					const lastExecuted = userCooldowns.get(commandName);
+					if (lastExecuted && currentTimestamp - lastExecuted < (command.cooldown || 0)) {
+						const remainingTime = Math.ceil((lastExecuted + command.cooldown! - currentTimestamp) / 1000);
 						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remainingTime} seconds.`);
 					}
 
-					// Update the last executed timestamp of the command
-					commandCooldowns.set(commandName, currentTimestamp);
-			
+					// Execute the command
 					command.execute(channel, user, args, text, msg);
+
+					// Update the last executed timestamp of the command
+					userCooldowns.set(commandName, currentTimestamp);
 				} catch (error: any) {
 					console.error(error.message);
 				}
@@ -198,16 +253,33 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
-		setTimeout(async () => {
-			await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
-		}, 600000);
-	};
+		const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)
+		const repeatDelay = 600000; // Delay between each execution in milliseconds (10 minutes)
+		const postMessage = async () => {
+			try {
+				await chatClient.say('#canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+			} catch (error: any) {
+				console.error(error);
+			}
 
+			setTimeout(postMessage, repeatDelay); // Schedule the next execution
+		};
+		// setTimeout(postMessage, initialDelay); // Schedule the first execution
+		// setTimeout(async () => {
+		// 	await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
+		// }, 600000);
+	};
 	chatClient.onMessage(commandHandler);
+	// chatClient.onAuthenticationSuccess(async () => { 
+	// 	await chatClient.say('#canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod');
+	// 	await sleep(2000);
+	// 	await chatClient.action('#canadiendragon', '/mod opendevbot');
+	// });
 }
 
 function registerCommand(newCommand: Command) {
 	commands.add(newCommand.name);
+	// console.log(commands);
 	if (newCommand.aliases) {
 		newCommand.aliases.forEach((alias) => {
 			commands.add(alias);

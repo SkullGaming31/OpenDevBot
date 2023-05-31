@@ -78,6 +78,7 @@ const vigor: Command = {
 			const chatClient = await getChatClient();
 			const userAPI = await getUserApi();
 			const display = msg.userInfo.displayName;
+			const items: Item = JSON.parse(fs.readFileSync('./src/Item_Data.json', 'utf8'));
 			
 			switch (args[0]) {
 			case 'about':
@@ -91,7 +92,7 @@ const vigor: Command = {
 				if (args.length < 2) return chatClient.say(channel, `Please specify a weapon name. Usage: ${vigor.usage}`);
 	
 				const itemName = args.slice(1).join(' '); // combine all remaining args into a single string
-				const items: Item = JSON.parse(fs.readFileSync('./src/Item_Data.json', 'utf8'));
+				// const items: Item = JSON.parse(fs.readFileSync('./src/Item_Data.json', 'utf8'));
 
 				const weapons: Weapon[] = items.weapon || [];
 				const consumables: Consumable[] = items.consumables || [];
