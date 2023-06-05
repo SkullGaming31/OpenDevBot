@@ -10,7 +10,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 		clientId,
 		clientSecret,
 		onRefresh: async (userId: string, newTokenData: AccessToken) => {
-			await TokenModel.updateOne({ twitchId: userId }, newTokenData, { upsert: true });
+			await TokenModel.findOneAndUpdate({ twitchId: userId }, newTokenData, { upsert: true, new: true });
 		},
 	});
 

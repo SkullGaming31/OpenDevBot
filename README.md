@@ -156,7 +156,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [x] Advanced Lurk Command
 * [ ] Timer Commands
-* [ ] Counters(In Progress)
+* [x] Counters
 * [x] Quotes System?
 * [ ] Viewer Watch Time?
 * [x] Virtual Currency System
@@ -198,7 +198,8 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <h3>📫 How to reach me:</h3>
 
-[CanadienDragon](https://twitter.com/canadiendragon) - <skullgamingg31@gmail.com>
+[CanadienDragon](https://twitter.com/canadiendragon)<br />
+[Email](skullgamingg31@gmail.com)
 
 Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 
@@ -207,7 +208,7 @@ Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* [Twurple](https://twurple.js.org/) <p>Twurple Community For putting up with my Constant questions about things i should already know how to do.</p>
+* [Twurple](https://twurple.js.org/) Twitch Library
 * []()
 * []()
 
@@ -225,15 +226,3 @@ Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
 [issues-url]: https://github.com/SkullGaming31/OpenDevBot/issues
 [license-shield]: https://img.shields.io/github/license/SkullGaming31/OpenDevBot.svg?style=for-the-badge
 [license-url]: https://github.com/SkullGaming31/OpenDevBot/blob/master/LICENSE
-
-<!--
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- ⚡ Fun fact: ...
--->

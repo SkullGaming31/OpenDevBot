@@ -16,8 +16,8 @@ declare global {
             DEV_DISCORD_ERROR_WEBHOOK: string;
             DEV_DISCORD_PROMOTE_WEBHOOK_ID: string;
             DEV_DISCORD_PROMOTE_WEBHOOK_TOKEN: string;
-						DEV_DISCORD_TWITCH_ACTIVITY_ID: string;
-						DEV_DISCORD_TWITCH_ACTIVITY_TOKEN: string;
+			DEV_DISCORD_TWITCH_ACTIVITY_ID: string;
+			DEV_DISCORD_TWITCH_ACTIVITY_TOKEN: string;
             DEV_DISCORD_FEATURE_REQUEST: string;
             DISCORD_COMMAND_USAGE_ID: string;
             DISCORD_COMMAND_USAGE_TOKEN: string;

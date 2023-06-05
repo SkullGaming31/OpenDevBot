@@ -4,32 +4,45 @@ import { Counter, CounterModel } from '../../database/models/counterModel';
 import { Command } from '../../interfaces/apiInterfaces';
 
 const createcounter: Command = {
-	name: 'counter',
+	name: 'createcounter',
 	description: 'create remove and list counters',
 	usage: '!createcounter [create|remove|list] countername',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
-		console.log('we hit the counter command');
+		// console.log('we hit the counter command');
 		const chatClient = await getChatClient();
 
-		if (args.length !== 2 || !['create', 'remove', 'list'].includes(args[0])) {
-			// Invalid command usage, display usage guide
+		if (args.length === 0 || !['create', 'remove', 'list'].includes(args[0])) {
+			// Invalid command or missing subcommand, display usage guide
 			await chatClient.say(channel, `Usage: ${createcounter.usage}`);
 			return;
 		}
-		const counterName = args[1];
 		try {
 			switch (args[0]) {
 			case 'create':
+				if (args.length !== 2) {
+					await chatClient.say(channel, 'Invalid usage for create command. Usage: !createcounter create countername');
+					return;
+				}
 				// Create a new counter
-				await createCounter(counterName);
-				await chatClient.say(channel, `Counter "${counterName}" created.`);
+				const counterNameCreate = args[1];
+				await createCounter(counterNameCreate);
+				await chatClient.say(channel, `Counter "${counterNameCreate}" created.`);
 				break;
 			case 'remove':
+				if (args.length !== 2) {
+					await chatClient.say(channel, 'Invalid usage for remove command. Usage: !createcounter remove countername');
+					return;
+				}
 				// Remove a counter
-				await removeCounter(counterName);
-				await chatClient.say(channel, `Counter "${counterName}" removed.`);
+				const counterNameRemove = args[1];
+				await removeCounter(counterNameRemove);
+				await chatClient.say(channel, `Counter "${counterNameRemove}" removed.`);
 				break;
 			case 'list':
+				if (args.length !== 1) {
+					await chatClient.say(channel, 'Invalid usage for list command. Usage: !createcounter list');
+					return;
+				}
 				// List all counters
 				const counters = await listCounters();
 				if (counters.length === 0) {
@@ -59,7 +72,7 @@ async function removeCounter(counterName: string): Promise<void> {
 }
 
 async function listCounters(): Promise<Counter[]> {
-	return CounterModel.find({});
+	return CounterModel.find();
 }
 
 export default createcounter;

@@ -297,9 +297,10 @@ export async function getChatClient(): Promise<ChatClient> {
 		chatClientInstance = new ChatClient({ 
 			authProvider, 
 			channels: ['canadiendragon'], 
-			logger: { minLevel: 'error' },
+			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',
+			requestMembershipEvents: true,
 			isAlwaysMod: true,
 		});
 		await chatClientInstance.connect();

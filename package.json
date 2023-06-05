@@ -11,7 +11,8 @@
     "prod": "node ./dist/index.js",
     "lint": "eslint --fix src",
     "build": "tsc",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "dependencies": {
