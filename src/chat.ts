@@ -44,10 +44,10 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 export async function initializeChat(): Promise<void> {
 	// Load commands
 	const chatClient = await getChatClient();
-	const commandsDir = path.join(__dirname, 'commands');
+	const commandsDir = path.join(__dirname, 'Commands');
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
-	console.log(`Loaded ${Object.keys(commands).length} commands.`);
+	console.log(`Loaded ${Object.keys(commands).length} Commands.`);
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
