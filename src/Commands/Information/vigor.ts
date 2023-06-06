@@ -108,7 +108,6 @@ const vigor: Command = {
 				const thrown = throwns.find((th: Throwable) => th.name.toLowerCase() === itemName.toLowerCase());
 				const melee = melees.find((m: Melee) => m.name.toLowerCase() === itemName.toLowerCase());
 				if (!moderatorID?.id) return;
-				if (msg.userInfo.userId === userID) return;
 
 				if (consumable) {
 					const consum = [
@@ -120,7 +119,11 @@ const vigor: Command = {
 
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${consumable.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${consumable.name}, ${consum.join(', ')}`);
 				}
@@ -134,7 +137,11 @@ const vigor: Command = {
 					];
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${melee.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${melee.name}, ${mel.join(', ')}`);
 				}
@@ -146,7 +153,11 @@ const vigor: Command = {
 					];
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${tool.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID?.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${tool.name}, ${tol.join(', ')}`);
 				}
@@ -158,7 +169,11 @@ const vigor: Command = {
 					];
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${trap.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID?.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${trap.name}, ${tra.join(', ')}`);
 				}
@@ -170,7 +185,11 @@ const vigor: Command = {
 					];
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${thrown.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${thrown.name}, ${thr.join(', ')}`);
 				}
@@ -189,7 +208,11 @@ const vigor: Command = {
 
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${weapon.name}`);
 					await sleep(3000);
-					await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					if (msg.userInfo.userId !== userID) {
+						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+					}	else {
+						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${weapon.name}, ${guns.join(', ')}`);
 				} else {
