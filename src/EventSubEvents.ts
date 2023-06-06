@@ -1296,7 +1296,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 export async function getEventSubs(): Promise<EventSubWsListener> {
 	const userApiClient = await getUserApi();
-	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'ERROR' } });
+	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'DEBUG' } });
 	eventSubListener.start();
 
 	return eventSubListener;
