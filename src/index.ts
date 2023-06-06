@@ -46,8 +46,4 @@ class OpenDevBot {
 
 config();
 const client = new OpenDevBot();
-client.start().then(() => {
-	console.log('Bot started successfully');
-}).catch(error => {
-	console.error('Failed to start bot:', error);
-});
+client.start().then(() => { console.log('Bot started successfully'); }).catch(error => { console.error('Failed to start bot:', error); });

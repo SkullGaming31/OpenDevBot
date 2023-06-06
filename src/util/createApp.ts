@@ -1,12 +1,11 @@
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
-import WebSocket from 'ws';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import middleware from '../auth/middleware';
 
 import healthListener from '../api/health';
-import { twitchRouter } from '../auth/Twitch';
+import twitchRouter from '../auth/Twitch';
 
 /**
  * Creates and returns an instance of an Express application with middleware
