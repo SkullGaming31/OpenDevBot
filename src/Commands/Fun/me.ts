@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 
@@ -11,7 +11,7 @@ const me: Command = {
 	description: 'do a random action to a another user in the chat',
 	usage: '!me [name]',
 	cooldown: 30000,
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const { displayName } = msg.userInfo;
 		const chatClient = await getChatClient();
 		const target = args[0];

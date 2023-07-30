@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import QuoteModel, { IQuote } from '../../database/models/Quote';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -7,7 +7,7 @@ const quoteCommand: Command = {
 	name: 'quote',
 	description: 'Add Delete or list quotes',
 	usage: '!quote [add|remove|list] [quote]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		switch (args[0]) {
 		case 'add':

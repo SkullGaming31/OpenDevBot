@@ -1,7 +1,7 @@
 import { ChatClient } from '@twurple/chat';
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 
-import { HelixChatChatter } from '@twurple/api/lib';
+import { HelixChatChatter, UserIdResolvable } from '@twurple/api/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
@@ -11,7 +11,7 @@ import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from './util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, userID } from './util/constants';
 
 interface Chatter {
   userId: string;
@@ -54,12 +54,12 @@ export async function initializeChat(): Promise<void> {
 
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
-	const commandHandler = async (channel: string, user: string, text: string, msg: PrivateMessage) => {
-		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}`);
-
+	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
+		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+		
 		try {
 			const cursor = ''; // Initialize the cursor value
-			const chattersResponse = await userApiClient.chat.getChatters(userID, userID, { after: cursor, limit: 100 });
+			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
 			const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
@@ -120,7 +120,7 @@ export async function initializeChat(): Promise<void> {
 							roles: 'User',
 							balance: 100,
 						});
-						console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
+						// console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 						await newUser.save();
 					} else {
 						const updatedBalance = (user.balance || 0) + 100;
@@ -152,7 +152,7 @@ export async function initializeChat(): Promise<void> {
 				}
 		
 				if (requestIndex < requestsPerInterval) {
-					const chatters = await userApiClient.chat.getChatters(userID, userID, { after: cursor, limit: chunkSize });
+					const chatters = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: chunkSize });
 					await processChatters(chatters.data);
 					requestIndex++;
 				} else {
@@ -178,7 +178,6 @@ export async function initializeChat(): Promise<void> {
 			// console.log(commandName);
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
 
-			// FIX: command cooldowns does not work at all
 			if (command) {
 				try {
 					const currentTimestamp = Date.now();
@@ -229,8 +228,8 @@ export async function initializeChat(): Promise<void> {
 		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
 			const mods = msg.userInfo.isMod;
 			if (msg.userInfo.userId === userID || mods) return;
-			await userApiClient.moderation.deleteChatMessages(userID, userID, msg.id);
-			await userApiClient.moderation.banUser(userID, userID, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch' });
+			await userApiClient.moderation.deleteChatMessages(userID, msg.id);
+			await userApiClient.moderation.banUser(userID, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch' });
 			chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
 			const banEmbed = new EmbedBuilder()
 				.setTitle('Automated Ban')
@@ -253,33 +252,32 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
-		const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)
-		const repeatDelay = 600000; // Delay between each execution in milliseconds (10 minutes)
-		const postMessage = async () => {
-			try {
-				await chatClient.say('#canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
-			} catch (error: any) {
-				console.error(error);
-			}
+		// TODO: send chat message every 10 minutes consistently.
+		// const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)
+		// const repeatDelay = 600000; // Delay between each execution in milliseconds (10 minutes)
+		// const postMessage = async () => {
+		// 	try {
+		// 		await chatClient.say('#canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+		// 	} catch (error) {
+		// 		console.error(error);
+		// 	}
 
-			setTimeout(postMessage, repeatDelay); // Schedule the next execution
-		};
+		// 	setTimeout(postMessage, repeatDelay); // Schedule the next execution
+		// };
+
 		// setTimeout(postMessage, initialDelay); // Schedule the first execution
-		// setTimeout(async () => {
-		// 	await chatClient.say(channel, 'check out all my social media by using the !socials command, or check out the commands by using !help');
-		// }, 600000);
 	};
 	chatClient.onMessage(commandHandler);
 	// chatClient.onAuthenticationSuccess(async () => { 
-	// 	await chatClient.say('#canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod');
+	// 	await chatClient.say('#canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
 	// 	await sleep(2000);
 	// 	await chatClient.action('#canadiendragon', '/mod opendevbot');
 	// });
+	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
 function registerCommand(newCommand: Command) {
 	commands.add(newCommand.name);
-	// console.log(commands);
 	if (newCommand.aliases) {
 		newCommand.aliases.forEach((alias) => {
 			commands.add(alias);
@@ -300,11 +298,9 @@ export async function getChatClient(): Promise<ChatClient> {
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',
-			requestMembershipEvents: true,
 			isAlwaysMod: true,
 		});
 		await chatClientInstance.connect();
-		console.log('The ChatClient has started');
 	}
 	
 	return chatClientInstance;

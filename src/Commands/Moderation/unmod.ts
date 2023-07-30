@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
@@ -9,7 +9,7 @@ const unmod: Command = {
 	name: 'unmod',
 	description: 'remove the moderator role from a user on twitch',
 	usage: '!unmmod [@name]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;

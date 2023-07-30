@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
@@ -9,7 +9,7 @@ const settitle: Command = {
 	name: 'settitle',
 	description: 'Set the Channels title',
 	usage: '!settitle [title]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });

@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import knownBotsModel, { Bots } from '../../database/models/knownBotsModel';
@@ -8,7 +8,7 @@ const bots: Command = {
 	name: 'bots',
 	description: 'All known Bot names on Twitch',
 	usage: '!bots [add|remove|list]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		// code for command here

@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { CounterModel } from '../../database/models/counterModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -7,7 +7,7 @@ const counter: Command = {
 	name: 'counter',
 	description: 'test',
 	usage: '!counter <set|inc|reset> <counterName> <value>',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 
 		if (args.length < 2 || !['set', 'inc', 'reset'].includes(args[0])) {

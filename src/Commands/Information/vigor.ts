@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import * as fs from 'fs';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
@@ -73,7 +73,7 @@ const vigor: Command = {
 	name: 'vigor',
 	description: 'Show information about vigor items',
 	usage: '!vigor [about, lore, item <item name>]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		try {
 			const chatClient = await getChatClient();
 			const userAPI = await getUserApi();
@@ -120,9 +120,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${consumable.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${consumable.name}, ${consum.join(', ')}`);
@@ -138,9 +138,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${melee.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${melee.name}, ${mel.join(', ')}`);
@@ -154,9 +154,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${tool.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${tool.name}, ${tol.join(', ')}`);
@@ -170,9 +170,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${trap.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${trap.name}, ${tra.join(', ')}`);
@@ -186,9 +186,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${thrown.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${thrown.name}, ${thr.join(', ')}`);
@@ -209,9 +209,9 @@ const vigor: Command = {
 					await chatClient.say(channel, `Hold on 1 second, i will check the Data for ${weapon.name}`);
 					await sleep(3000);
 					if (msg.userInfo.userId !== userID) {
-						await userAPI.moderation.deleteChatMessages(userID, moderatorID.id, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}	else {
-						await userAPI.moderation.deleteChatMessages(userID, userID, msg.id);
+						await userAPI.moderation.deleteChatMessages(userID, msg.id);
 					}
 					await sleep(1000);
 					await chatClient.say(channel, `@${user}, Item stats for ${weapon.name}, ${guns.join(', ')}`);

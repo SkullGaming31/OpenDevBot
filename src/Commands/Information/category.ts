@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -8,7 +8,7 @@ const category: Command = {
 	name: 'category',
 	description: 'Displays The category the streamer is streaming in',
 	usage: '!category',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const display = msg.userInfo.displayName;
 		const userApiClient = await getUserApi();
 		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);

@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
@@ -10,7 +10,7 @@ const shoutout: Command = {
 	description: 'Shout out a user from the chat',
 	usage: '!shoutout [@name]',
 	aliases: ['so'],
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
@@ -23,7 +23,7 @@ const shoutout: Command = {
 		if (userSearch?.id === undefined) return;
 		const userInfo = await userApiClient.channels.getChannelInfoById(userSearch?.id);
 		const stream = await userApiClient.streams.getStreamByUserName(broadcasterID.name);
-		if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id, broadcasterID.id); }
+		if (stream !== null) { userApiClient.chat.shoutoutUser(broadcasterID.id, userSearch?.id); }
 		const shoutoutMessage = `Yay! Look who's here! @${userInfo?.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userInfo?.name.toLowerCase()} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userInfo?.gameName}. So go check them out and join in on the fun!`;
 
 		await chatClient.say(channel, shoutoutMessage);

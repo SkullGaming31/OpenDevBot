@@ -4,12 +4,13 @@ import { config } from 'dotenv';
 import { randomInt } from 'node:crypto';
 config();
 
+import { UserIdResolvable } from '@twurple/api/lib';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
 import { LurkMessageModel } from './database/models/LurkModel';
 import { createChannelPointsRewards } from './misc/channelPoints';
-import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, moderatorID, userID } from './util/constants';
+import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, moderatorID } from './util/constants';
 import { generateRandomPirateName } from './util/randomFunctions';
 import { sleep } from './util/util';
 
@@ -238,7 +239,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 	
 	//#region EventSub
-	const online = eventSubListener.onStreamOnline(broadcasterInfo.id, async (o: { getStream: () => any; getBroadcaster: () => any; broadcasterName: any; broadcasterDisplayName: any; }) => {
+	const online = eventSubListener.onStreamOnline(broadcasterInfo.id, async (o) => {
 		const chatClient = await getChatClient();
 		const stream = await o.getStream();
 		const userInfo = await o.getBroadcaster();
@@ -272,7 +273,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			if (userInfo.profilePictureUrl) { liveEmbed.setThumbnail(userInfo.profilePictureUrl); }
 			
 			await sleep(60000);
-			await userApiClient.chat.sendAnnouncement(userID, userID, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName} with ${stream?.viewers} viewers.` });
+			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName} with ${stream?.viewers} viewers.` });
 			// await chatClient.say(broadcasterInfo.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName} with ${stream?.viewers} viewers.`);
 			await sleep(60000);
 			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
@@ -280,7 +281,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(err);
 		}
 	});
-	const offline = eventSubListener.onStreamOffline(broadcasterInfo.id, async (stream: { getBroadcaster: () => any; broadcasterDisplayName: any; }) => {
+	const offline = eventSubListener.onStreamOffline(broadcasterInfo.id, async (stream) => {
 		const userInfo = await stream.getBroadcaster();
 		const offlineEmbed = new EmbedBuilder()
 			.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
@@ -290,7 +291,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			.setTimestamp();
 		try {
 			await sleep(2000);
-			await userApiClient.chat.sendAnnouncement(userID, userID, { color: 'primary', message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!` });
+			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'primary', message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!` });
 			await sleep(2000);
 			await LIVE.send({ embeds: [offlineEmbed] });
 			await sleep(2000);
@@ -301,7 +302,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const redeem = eventSubListener.onChannelRedemptionAdd(broadcasterInfo.id, async (cp: { getUser: () => any; getBroadcaster: () => any; rewardTitle: any; rewardId: any; userDisplayName: any; rewardCost: any; broadcasterDisplayName: any; userName: any; input: string; getReward: () => any; redemptionDate: number | Date | null | undefined; }) => {
+	const redeem = eventSubListener.onChannelRedemptionAdd(broadcasterInfo.id, async (cp) => {
 		const userInfo = await cp.getUser();
 		const streamer = await cp.getBroadcaster();
 		// console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, broadcasterInfo: ${cp.id}`);
@@ -314,7 +315,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					const userSearch = await userApiClient.users.getUserByName(userInfo.name);
 					if (userSearch?.id === undefined) return;
 					if (stream !== null) {
-						await userApiClient.chat.shoutoutUser(broadcasterInfo.id, userSearch?.id, broadcasterInfo.id);
+						await userApiClient.chat.shoutoutUser(broadcasterInfo.id, userSearch?.id);
 					}
 					await chatClient.say(
 						broadcasterInfo.name,
@@ -350,7 +351,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			} catch (error) {
 				console.error('Error executing shoutout:', error);
 			}
-			
 			break;
 		case 'Tip':
 			const tipEmbed = new EmbedBuilder()
@@ -870,12 +870,12 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			break;
 		}
 	});
-	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(broadcasterInfo.id, async (hts: { getBroadcaster: () => any; goal: any; lastContribution: any; }) => {
+	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(broadcasterInfo.id, async (hts) => {
 		const userInfo = await hts.getBroadcaster();
 		console.log(`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`);
 		chatClient.say(userInfo.name, `${hts.goal} to reach the next level of the Hype Train, Last Contributer: ${hts.lastContribution}`);
 	});
-	const hypeEventEnd = eventSubListener.onChannelHypeTrainEnd(broadcasterInfo.id, async (hte: { getBroadcaster: () => any; total: any; level: any; topContributors: any; startDate: any; }) => { // needs to be tested, progress and start to be done after end has been tested and it works!
+	const hypeEventEnd = eventSubListener.onChannelHypeTrainEnd(broadcasterInfo.id, async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
 		const userInfo = await hte.getBroadcaster();
 		console.log(`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`);
 		chatClient.say(userInfo.name, `${hte.topContributors} have contributed to the HypeTrain`);
@@ -906,11 +906,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [hypeeventendEmbed] });
 	});
-	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(broadcasterInfo.id, async (htp: { getBroadcaster: () => any; level: any; lastContribution: any; progress: any; }) => {
+	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(broadcasterInfo.id, async (htp) => {
 		const userInfo = await htp.getBroadcaster();
 		chatClient.say(userInfo.name, `HypeTrain Level:${htp.level}, Latest Contributer:${htp.lastContribution}, HypeTrain Progress:${htp.progress}`);
 	});
-	const giftedSubs = eventSubListener.onChannelSubscriptionGift(broadcasterInfo.id, async (gift: { getGifter: () => any; gifterDisplayName: any; amount: any; tier: string; broadcasterName: any; cumulativeAmount: any; broadcasterDisplayName: any; }) => {
+	const giftedSubs = eventSubListener.onChannelSubscriptionGift(broadcasterInfo.id, async (gift) => {
 		// console.log(broadcasterInfo.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 		const userInfo = await gift.getGifter();
 		chatClient.say(userInfo.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
@@ -942,7 +942,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			.setTimestamp();
 		await twitchActivity.send({ embeds: [giftedSubs] });
 	});
-	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterInfo.id, async (s: { getUser: () => any; userDisplayName: any; cumulativeMonths: any; messageText: any; streakMonths: any; }) => {
+	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterInfo.id, async (s) => {
 		const userInfo = await s.getUser();
 		const resubEmbed = new EmbedBuilder()
 			.setTitle('RESUB EVENT')
@@ -975,7 +975,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const follow = eventSubListener.onChannelFollow(broadcasterInfo.id, moderatorID?.id, async (e: { getUser: () => any; userDisplayName: any; userName: any; followDate: any; }) => {
+	const follow = eventSubListener.onChannelFollow(broadcasterInfo.id as UserIdResolvable, moderatorID.id as UserIdResolvable, async (e) => {
 		try {
 			const userInfo = await e.getUser();
 			if (!broadcasterInfo) { return console.error('broadcasterInfo is undefined'); }
@@ -1125,7 +1125,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error('An error occurred in the follow event handler:', error);
 		}
 	});
-	const subs = eventSubListener.onChannelSubscription(broadcasterInfo.id, async (s: { getUser: () => any; tier: any; isGift: any; userName: any; }) => {
+	const subs = eventSubListener.onChannelSubscription(broadcasterInfo.id, async (s) => {
 		const userInfo = await s.getUser();
 		let subTier;
 		switch (s.tier) {
@@ -1158,7 +1158,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const cheer = eventSubListener.onChannelCheer(broadcasterInfo.id, async (cheer: { getUser: () => any; bits: number; message: any; userDisplayName: any; }) => {
+	const cheer = eventSubListener.onChannelCheer(broadcasterInfo.id, async (cheer) => {
 		const userInfo = await cheer.getUser();
 		if (cheer.bits >= 100) {
 			const cheerEmbed = new EmbedBuilder()
@@ -1193,7 +1193,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			}
 		}
 	});
-	const raid = eventSubListener.onChannelRaidFrom(broadcasterInfo.id, async (raid: { getRaidedBroadcaster: () => any; getRaidingBroadcaster: () => any; viewers: any; raidedBroadcasterDisplayName: any; }) => {
+	const raid = eventSubListener.onChannelRaidFrom(broadcasterInfo.id, async (raid) => {
 		const raidFrom = await raid.getRaidedBroadcaster();
 		const userInfo = await raid.getRaidingBroadcaster();
 	
@@ -1226,44 +1226,44 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const goalBeginning = eventSubListener.onChannelGoalBegin(broadcasterInfo.id, async (gb: { getBroadcaster: () => any; type: any; currentAmount: any; targetAmount: any; }) => {
+	const goalBeginning = eventSubListener.onChannelGoalBegin(broadcasterInfo.id, async (gb) => {
 		const userInfo = await gb.getBroadcaster();
 		console.log(`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`);
-		if (moderatorID?.id === undefined) return;
-		if (broadcasterInfo?.id === undefined) return;
+		// if (moderatorID?.id === undefined) return;
+		// if (broadcasterInfo?.id === undefined) return;
 		switch (gb.type) {
 		case 'follow':
 			console.log(`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
-			await chatClient.say(broadcasterInfo?.id, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
-			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id, moderatorID.id, { color: 'purple', message: `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}` }).catch((err) => { console.error(err); });
+			await chatClient.say(userInfo.name, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'purple', message: `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}` }).catch((err) => { console.error(err); });
 			break;
 		case 'subscription':
 			console.log(`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
-			await chatClient.say(broadcasterInfo?.id, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
-			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id, moderatorID.id, { color: 'purple', message: `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}` }).catch((err) => { console.error(err); });
+			await chatClient.say(userInfo.name, `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`);
+			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'purple', message: `${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}` }).catch((err) => { console.error(err); });
 			break;
-		case 'subscription_count':
-			console.log(`${gb.type}`);
-			break;
-		case 'new_subscription_count':
-			console.log(`${gb.type}`);
-			break;
-		case 'new_subscription':
-			console.log(`${gb.type}`);
-			break;
+		// case 'subscription_count':
+		// 	console.log(`${gb.type}`);
+		// 	break;
+		// case 'new_subscription_count':
+		// 	console.log(`${gb.type}`);
+		// 	break;
+		// case 'new_subscription':
+		// 	console.log(`${gb.type}`);
+		// 	break;
 		default:
 			console.log(`Default Case hit for: ${gb.type}`);
 			break;
 		}
 	});
-	const goalProgress = eventSubListener.onChannelGoalProgress(broadcasterInfo.id, async (gp: { getBroadcaster: () => any; type: any; currentAmount: any; targetAmount: any; }) => {
+	const goalProgress = eventSubListener.onChannelGoalProgress(broadcasterInfo.id, async (gp) => {
 		const userInfo = await gp.getBroadcaster();
 		setTimeout(() => {
 			console.log(`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
 		}, 60000);
 		await chatClient.say(userInfo.name, `${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`);
 	});
-	const goalEnded = eventSubListener.onChannelGoalEnd(broadcasterInfo.id, async (ge: { getBroadcaster: () => any; currentAmount: any; targetAmount: any; startDate: any; endDate: any; }) => {
+	const goalEnded = eventSubListener.onChannelGoalEnd(broadcasterInfo.id, async (ge) => {
 		const userInfo = await ge.getBroadcaster();
 		console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		if (broadcasterInfo) { await chatClient.say(broadcasterInfo?.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
@@ -1271,7 +1271,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	let previousTitle: string = '';
 	let previousCategory: string = '';
 
-	const channelUpdates = eventSubListener.onChannelUpdate(userID, async (event: { broadcasterName?: any; streamTitle?: any; categoryName?: any; }) => {
+	const channelUpdates = eventSubListener.onChannelUpdate(broadcasterInfo.id, async (event) => {
 		const { streamTitle, categoryName } = event;
 		const chatClient = await getChatClient();
 
@@ -1296,7 +1296,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 export async function getEventSubs(): Promise<EventSubWsListener> {
 	const userApiClient = await getUserApi();
-	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'DEBUG' } });
+	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'ERROR' } });
 	eventSubListener.start();
 
 	return eventSubListener;

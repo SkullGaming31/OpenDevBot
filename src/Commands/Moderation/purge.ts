@@ -1,15 +1,15 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, openDevBotID, userID } from '../../util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from '../../util/constants';
 
 const purge: Command = {
 	name: 'purge',
 	description: 'Purge the messages from someone in the twitch chat',
 	usage: '!purge [name] [duration[seconds]] (reason)',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const display = msg.userInfo.displayName;
 
 		const chatClient = await getChatClient();
@@ -27,7 +27,7 @@ const purge: Command = {
 			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 			if (userSearch?.id === undefined || null) return;
 			if (userSearch.id === broadcasterID.id) return chatClient.say(channel, 'You can\'t ban/purge this user');
-			await userApiClient.moderation.banUser(broadcasterID.id, openDevBotID, {
+			await userApiClient.moderation.banUser(broadcasterID.id, {
 				user: userSearch.id,
 				duration: Number(args[2]),
 				reason: args[3],

@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -7,7 +7,7 @@ const transfer: Command = {
 	name: 'transfer',
 	description: 'Transfer money to another person',
 	usage: '!transfer [@name] [amount]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const [_, recipient, amount] = text.split(' ');
 		const sender = user.toLowerCase();
