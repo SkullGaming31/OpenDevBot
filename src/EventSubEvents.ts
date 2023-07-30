@@ -975,7 +975,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	const follow = eventSubListener.onChannelFollow(broadcasterInfo.id as UserIdResolvable, moderatorID.id as UserIdResolvable, async (e) => {
+	const follow = eventSubListener.onChannelFollow(broadcasterInfo.id as UserIdResolvable, broadcasterInfo.id as UserIdResolvable, async (e) => {
 		try {
 			const userInfo = await e.getUser();
 			if (!broadcasterInfo) { return console.error('broadcasterInfo is undefined'); }
