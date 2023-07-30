@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
@@ -114,7 +114,7 @@ const heist: Command = {
 	name: 'heist',
 	description: 'start a heist with friends',
 	usage: '!heist <amount>',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		// Extract the amount from the command arguments
 		const amount = parseInt(args[0]);
@@ -276,7 +276,7 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 // Handle the join command
 (async () => {
 	const chatClient = await getChatClient();
-	chatClient.onMessage(async (channel: string, user: string, message: string, msg: PrivateMessage) => {
+	chatClient.onMessage(async (channel: string, user: string, message: string, msg: ChatMessage) => {
 		const command = message.trim().toLowerCase();
 
 		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {

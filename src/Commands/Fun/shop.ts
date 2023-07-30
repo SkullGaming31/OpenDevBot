@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -23,7 +23,7 @@ const shop: Command = {
 	name: 'shop',
 	description: 'Buy items from a shop',
 	usage: '!shop <buy|sell|list> [itemname]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 
 		const action = args[0];

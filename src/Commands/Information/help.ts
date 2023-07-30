@@ -1,12 +1,12 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { commands, getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 
 const command: Command = {
-	name: 'command',
+	name: 'help',
 	description: 'displays a list of commands in the chat',
-	usage: '!command',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	usage: '!help',
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const commandsList = Array.from(commands.values()).join(', ');
 

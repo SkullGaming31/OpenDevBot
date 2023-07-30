@@ -27,8 +27,9 @@ declare global {
             MONGO_DB: string;
             MONGO_URI: string;
             NODE_ENV: dev | prod | debug;
-            ENABLE_CHAT: boolean
-            ENABLE_EVENTSUB: boolean
+            ENABLE_CHAT: boolean;
+            ENABLE_EVENTSUB: boolean;
+			OPENAI_KEY: string;
         }
     }
 }

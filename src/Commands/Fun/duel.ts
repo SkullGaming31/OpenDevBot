@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -8,7 +8,7 @@ const duel: Command = {
 	name: 'duel',
 	description: 'Challenge another user to a duel for x amount of skulls',
 	usage: '!duel [user] [amount]',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
 

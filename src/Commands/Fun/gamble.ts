@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
@@ -14,7 +14,7 @@ const gamble: Command = {
 	name: 'gamble',
 	description: 'Gamble your coins and have a chance to win more',
 	usage: '!gamble <amount>',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
 		try {

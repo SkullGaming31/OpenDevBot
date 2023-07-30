@@ -1,4 +1,3 @@
-import { ActivityType } from 'discord.js';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 
 export const client = new Client({ 

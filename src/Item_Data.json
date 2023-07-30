@@ -424,7 +424,7 @@
       "basedamage": 32,
       "rateoffire": 850,
       "muzzleSpeed": 925,
-      "magsize": 201,
+      "magsize": 101,
       "weight": 7.1,
       "firemode": ["Auto"],
       "Misc": ["Heavy"]

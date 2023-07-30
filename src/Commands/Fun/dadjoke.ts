@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getChatClient } from '../../chat';
 import { Command, IDadJoke } from '../../interfaces/apiInterfaces';
@@ -7,7 +7,7 @@ const dadjoke: Command = {
 	name: 'dadjoke',
 	description: 'Gives a random dadjoke from icanhazdadjoke.com',
 	usage: '!dadjoke',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const response = await axios.get<IDadJoke>('https://icanhazdadjoke.com/', {
 			headers: {

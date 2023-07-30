@@ -1,15 +1,15 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, openDevBotID, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
 
 const ban: Command = {
 	name: 'ban',
 	description: 'Ban a user from your twitch chat',
 	usage: '!ban [@name] (reason)',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;
@@ -23,7 +23,7 @@ const ban: Command = {
 			if (userSearch?.id === undefined) return;
 			try {
 				if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
-				await userApiClient.moderation.banUser(userID, openDevBotID, { user: userSearch?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
+				await userApiClient.moderation.banUser(userID, { user: userSearch?.id, reason: args[2] }).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`); });
 				await chatClient.say(channel, `@${args[1].replace('@', '')} has been banned for Reason: ${args[2]}`);
 
 				const banEmbed = new EmbedBuilder()

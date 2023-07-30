@@ -2,7 +2,6 @@ import { WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
 import { generateRandomPirateName } from './util/randomFunctions';
 
-// Import other modules
 import { initializeTwitchEventSub } from './EventSubEvents';
 import { initializeErrorHandling } from './Handlers/errorHandler';
 import { initializeChat } from './chat';
@@ -11,7 +10,6 @@ import { createApp } from './util/createApp';
 
 class OpenDevBot {
 	webhookClient: WebhookClient;
-
 	constructor() {
 		this.webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
 	}
@@ -33,11 +31,27 @@ class OpenDevBot {
 
 			// Initialize Twitch EventSub event listeners
 			if (process.env.ENABLE_EVENTSUB) {
-				await initializeTwitchEventSub();
+				if (process.env.NODE_ENV === 'dev') {
+					console.time('Event Sub Initialized');
+					await initializeTwitchEventSub();
+					console.timeEnd('Event Sub Initialized');
+				} else {
+					await initializeTwitchEventSub();
+					console.info('Event Sub Started');
+				}
 			}
 
 			// Initialize chat client for Twitch IRC
-			if (process.env.ENABLE_CHAT) { await initializeChat(); }
+			if (process.env.ENABLE_CHAT) {
+				if (process.env.NODE_ENV === 'dev') {
+					console.time('Chat now Initialized');
+					await initializeChat();
+					console.timeEnd('Chat now Initialized');
+				} else {
+					await initializeChat();
+					console.info('Chat now Initialized');
+				}
+			}
 		} catch (error) {
 			console.error(error);
 		}

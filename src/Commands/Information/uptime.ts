@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import countdown from 'countdown';
 
 import { getUserApi } from '../../api/userApiClient';
@@ -10,7 +10,7 @@ const uptime: Command = {
 	name: 'uptime',
 	description: 'Shows the uptime of the streamer',
 	usage: '!uptime',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 

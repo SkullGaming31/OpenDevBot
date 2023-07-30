@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Counter, CounterModel } from '../../database/models/counterModel';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -7,7 +7,7 @@ const createcounter: Command = {
 	name: 'createcounter',
 	description: 'create remove and list counters',
 	usage: '!createcounter [create|remove|list] countername',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		// console.log('we hit the counter command');
 		const chatClient = await getChatClient();
 

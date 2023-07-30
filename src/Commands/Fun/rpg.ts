@@ -1,4 +1,4 @@
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
 
@@ -24,7 +24,7 @@ const rpg: Command = {
 	name: 'rpg',
 	description: 'An RPG text based game',
 	usage: '!rpg',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) {
 			chatClient.say(channel, `Command Description: ${rpg.description}, this Command is currently just a thought`);

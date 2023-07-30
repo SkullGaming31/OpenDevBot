@@ -1,5 +1,5 @@
 import { UserIdResolvable } from '@twurple/api/lib';
-import { PrivateMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
@@ -9,7 +9,7 @@ const clipCommand: Command = {
 	name: 'clip',
 	description: 'Create a clip in the stream',
 	usage: '!clip',
-	execute: async (channel: string, user: string, args: string[], text: string, msg: PrivateMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
