@@ -1,6 +1,7 @@
 
 import axios, { AxiosResponse } from 'axios';
 import { Request, Response, Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { IToken, TokenModel } from '../database/models/tokenModel';
 
 interface validate {
@@ -21,8 +22,12 @@ const botScopes = 'chat:edit chat:read channel:moderate bits:read user:edit chan
 const userScopes = 'bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls channel:manage:predictions channel:manage:redemptions channel:manage:schedule channel:manage:moderators channel:manage:raids channel:manage:vips channel:read:vips channel:read:polls channel:read:predictions channel:read:redemptions channel:read:editors channel:read:goals channel:read:hype_train channel:read:subscriptions channel_subscriptions clips:edit moderation:read moderator:manage:automod moderator:manage:automod_settings moderator:manage:banned_users moderator:manage:shield_mode moderator:manage:announcements moderator:manage:shoutouts moderator:manage:blocked_terms moderator:manage:chat_messages moderator:manage:chat_settings moderator:manage:guest_star moderator:read:automod_settings moderator:read:blocked_terms moderator:read:shoutouts moderator:read:followers moderator:read:shield_mode moderator:read:chat_settings moderator:read:chatters moderator:read:guest_star user:edit user:edit:follows user:manage:blocked_users user:read:blocked_users user:read:broadcast user:read:email user:read:follows user:read:subscriptions user:edit:broadcast user:manage:whispers';
 
 const router = Router();
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100, // Limit each IP to 100 requests per windowMs
+});
 
-router.get('/success', async (req: Request, res: Response) => { res.sendFile('C:/Development/opendevbot/public/success.html'); });
+router.get('/success', limiter, async (req: Request, res: Response) => { res.sendFile('C:/Development/opendevbot/public/success.html'); });
 
 // Define the routes for authentication (auth/twitch)
 router.get('/', (req: Request, res: Response) => {
@@ -32,7 +37,7 @@ router.get('/', (req: Request, res: Response) => {
 	res.redirect(twitchAuthUrl);
 });
 
-router.get('/callback', async (req: Request, res: Response) => {
+router.get('/callback', limiter,  async (req: Request, res: Response) => {
 	const { code } = req.query;
 	try {
 		if (typeof code === 'string') {

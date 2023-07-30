@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import middleware from '../auth/middleware';
@@ -36,7 +37,12 @@ export function createApp(port: string) {
 	app.use('/auth/twitch', twitchRouter);
 	app.use('/health', healthListener);
 
-	app.get('/', (req: Request, res: Response) => {
+	const limiter = rateLimit({
+		windowMs: 15 * 60 * 1000, // 15 minutes
+		max: 100, // Limit each IP to 100 requests per windowMs
+	});
+
+	app.get('/', limiter, (req: Request, res: Response) => {
 		res.sendFile('C:/Development/opendevbot/public/index.html');
 	});
 
