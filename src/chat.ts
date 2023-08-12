@@ -11,7 +11,8 @@ import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, userID } from './util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID, userID } from './util/constants';
+import { sleep } from './util/util';
 
 interface Chatter {
   userId: string;
@@ -283,22 +284,22 @@ export async function initializeChat(): Promise<void> {
 	// 		}
 	// 	}
 	// });
-	// chatClient.onJoin(async (channel: string, user: string) => {
-	// 	try {
-	// 		if (chatClient.isConnected) {
-	// 			const isMod = await userApiClient.moderation.checkUserMod(channel, openDevBotID);
-	// 			if (!isMod) {
-	// 				await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
-	// 				await sleep(1000);
-	// 				await chatClient.action(channel, '/mod opendevbot');
-	// 			}
-	// 		} else {
-	// 			console.info('The chatClient is not connected');
-	// 		}
-	// 	} catch (error) {
-	// 		console.error(error);
-	// 	}
-	// });
+	chatClient.onJoin(async (channel: string, user: string) => {
+		try {
+			if (chatClient.isConnected) {
+				const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo?.id!, openDevBotID);
+				if (!isMod) {
+					await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
+					await sleep(1000);
+					await chatClient.action(channel, '/mod opendevbot');
+				}
+			} else {
+				console.info('The chatClient is not connected');
+			}
+		} catch (error) {
+			console.error(error);
+		}
+	});
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 
 	// register event handlers
