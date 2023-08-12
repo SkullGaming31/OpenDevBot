@@ -221,9 +221,7 @@ export async function initializeChat(): Promise<void> {
 		}
 		if (text.includes('wl') && channel === '#canadiendragon') {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
-			setTimeout(() => {
-				chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`);
-			}, 1800000);
+			setTimeout(() => { chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
 		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
 			const mods = msg.userInfo.isMod;
@@ -252,7 +250,7 @@ export async function initializeChat(): Promise<void> {
 				
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
-		// TODO: send chat message every 10 minutes consistently.
+		// TODO: send chat message every 10 minutes consistently in typescript.
 		// const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)
 		// const repeatDelay = 600000; // Delay between each execution in milliseconds (10 minutes)
 		// const postMessage = async () => {
@@ -268,12 +266,55 @@ export async function initializeChat(): Promise<void> {
 		// setTimeout(postMessage, initialDelay); // Schedule the first execution
 	};
 	chatClient.onMessage(commandHandler);
-	// chatClient.onAuthenticationSuccess(async () => { 
-	// 	await chatClient.say('#canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
-	// 	await sleep(2000);
-	// 	await chatClient.action('#canadiendragon', '/mod opendevbot');
+	// chatClient.onAuthenticationSuccess(async () => {
+	// 	const botData = await userApiClient.asUser(openDevBotID, async (ctx) => {
+	// 		return ctx.users.getUserById(openDevBotID);
+	// 	});
+	// 	const userData = await userApiClient.asUser(broadcasterInfo?.id as UserIdResolvable, async (ctx) => {
+	// 		return ctx.users.getUserById(broadcasterInfo?.id as UserIdResolvable);
+	// 	});
+	// 	if (chatClient.isConnected) {
+	// 		const isMod = await userApiClient.moderation.checkUserMod('canadiendragon', botData?.id as UserIdResolvable);
+	// 		console.log('Bots ModStatus', isMod);
+	// 		if (!isMod) {
+	// 			await chatClient.say('canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
+	// 			await sleep(1000);
+	// 			await chatClient.action('canadiendragon', '/mod opendevbot');
+	// 		}
+	// 	}
+	// });
+	// chatClient.onJoin(async (channel: string, user: string) => {
+	// 	try {
+	// 		if (chatClient.isConnected) {
+	// 			const isMod = await userApiClient.moderation.checkUserMod(channel, openDevBotID);
+	// 			if (!isMod) {
+	// 				await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
+	// 				await sleep(1000);
+	// 				await chatClient.action(channel, '/mod opendevbot');
+	// 			}
+	// 		} else {
+	// 			console.info('The chatClient is not connected');
+	// 		}
+	// 	} catch (error) {
+	// 		console.error(error);
+	// 	}
 	// });
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
+
+	// register event handlers
+	// chatClient.onJoin(async (channel: string, user: string) => {
+	// check if the bot is a mod
+	// 	if (chatClient.isConnected) {
+	// 		const isMod = await userApiClient.moderation.checkUserMod(channel, openDevBotID as UserIdResolvable);
+	// 		if (!isMod) {
+	// 			chatClient.say(channel, 'Hi, im not a mod of your channel, for me to function properly i need the mod status, to mod me use the message below');
+	// 			await sleep(1000);
+	// 			chatClient.action(channel, '/mod @opendevbot');
+	// 		} else {
+	// 			chatClient.action(channel, 'i have joined your channel and will function properly');
+	// 		}
+	// 	}
+	// });
 }
 
 function registerCommand(newCommand: Command) {
@@ -298,10 +339,10 @@ export async function getChatClient(): Promise<ChatClient> {
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',
-			isAlwaysMod: true,
+			isAlwaysMod: false,
+			requestMembershipEvents: true,
 		});
-		await chatClientInstance.connect();
+		chatClientInstance.connect();
 	}
-	
 	return chatClientInstance;
 }

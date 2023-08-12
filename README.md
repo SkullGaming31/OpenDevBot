@@ -37,7 +37,7 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 <!-- PROJECT LOGO -->
 <div align="center">
   <a href="https://github.com/skullgaming31/OpenDevBot">
-    <img src="./public/assets/images/OpenDevBot.png" alt="Project Logo" width="80" height="80">
+    <img src="./public/assets/images/logo.png" alt="Project Logo" width="100" height="100">
   </a>
 
 <h3 align="center">OpenDevBot</h3>

@@ -1,4 +1,5 @@
-import mongoose, { ConnectOptions, MongooseError } from 'mongoose';
+import mongoose, { ConnectOptions, MongooseError, connection } from 'mongoose';
+import { sleep } from '../util/util';
 
 export async function initializeDatabase() {
 	try {
@@ -12,10 +13,18 @@ export async function initializeDatabase() {
 		} as ConnectOptions);
 		console.log('Twitch Database Connected');
 
-		mongoose.connection.on('disconnected', () => {
+		mongoose.connection.on('disconnected', async () => {
 			console.log('Twitch Database Disconnected');
-			mongoose.connection.removeAllListeners();
-			mongoose.disconnect();
+			// connection.removeAllListeners();
+			await mongoose.disconnect();
+			sleep(1000);
+			try {
+				if (mongoose.connection.readyState === 0) {
+					await database.connect(process.env.MONGO_URI as string);
+				} else { console.log('error connecting to the database'); }
+			} catch (error) {
+				console.error(error);
+			}
 		});
 
 		mongoose.connection.on('connected', () => {
@@ -28,7 +37,7 @@ export async function initializeDatabase() {
 
 		mongoose.connection.on('error', (err: MongooseError) => {
 			console.error('Twitch Database Error:', err);
-			mongoose.connection.removeAllListeners();
+			connection.removeAllListeners();
 			mongoose.disconnect();
 		});
 
