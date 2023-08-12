@@ -31,14 +31,21 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 			await loadCommands(modulePath, commands); // Recursively load commands in subdirectories
 			continue;
 		}
-
-		if (!module.endsWith('.ts') || module === 'index.ts') continue;
+		
+		if (
+			(!module.endsWith('.ts') && process.env.NODE_ENV !== 'prod') ||
+			(!module.endsWith('.js') && process.env.NODE_ENV === 'prod') ||
+			module === 'index.ts' ||
+			module === 'index.js'
+		) {
+			continue;
+		}
 
 		const { name } = path.parse(module);
 		const command = (await import(modulePath)).default;
 		commands[name] = command;
 		registerCommand(command);
-		// console.log(name);
+		console.log(name);
 	}
 }
 
@@ -48,6 +55,7 @@ export async function initializeChat(): Promise<void> {
 	const commandsDir = path.join(__dirname, 'Commands');
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
+	console.log('Commands Dir: ', commandsDir, ' Commands: ', commands);
 	console.log(`Loaded ${Object.keys(commands).length} Commands.`);
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
@@ -267,23 +275,7 @@ export async function initializeChat(): Promise<void> {
 		// setTimeout(postMessage, initialDelay); // Schedule the first execution
 	};
 	chatClient.onMessage(commandHandler);
-	// chatClient.onAuthenticationSuccess(async () => {
-	// 	const botData = await userApiClient.asUser(openDevBotID, async (ctx) => {
-	// 		return ctx.users.getUserById(openDevBotID);
-	// 	});
-	// 	const userData = await userApiClient.asUser(broadcasterInfo?.id as UserIdResolvable, async (ctx) => {
-	// 		return ctx.users.getUserById(broadcasterInfo?.id as UserIdResolvable);
-	// 	});
-	// 	if (chatClient.isConnected) {
-	// 		const isMod = await userApiClient.moderation.checkUserMod('canadiendragon', botData?.id as UserIdResolvable);
-	// 		console.log('Bots ModStatus', isMod);
-	// 		if (!isMod) {
-	// 			await chatClient.say('canadiendragon', 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
-	// 			await sleep(1000);
-	// 			await chatClient.action('canadiendragon', '/mod opendevbot');
-	// 		}
-	// 	}
-	// });
+	
 	chatClient.onJoin(async (channel: string, user: string) => {
 		try {
 			if (chatClient.isConnected) {
@@ -301,21 +293,6 @@ export async function initializeChat(): Promise<void> {
 		}
 	});
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
-
-	// register event handlers
-	// chatClient.onJoin(async (channel: string, user: string) => {
-	// check if the bot is a mod
-	// 	if (chatClient.isConnected) {
-	// 		const isMod = await userApiClient.moderation.checkUserMod(channel, openDevBotID as UserIdResolvable);
-	// 		if (!isMod) {
-	// 			chatClient.say(channel, 'Hi, im not a mod of your channel, for me to function properly i need the mod status, to mod me use the message below');
-	// 			await sleep(1000);
-	// 			chatClient.action(channel, '/mod @opendevbot');
-	// 		} else {
-	// 			chatClient.action(channel, 'i have joined your channel and will function properly');
-	// 		}
-	// 	}
-	// });
 }
 
 function registerCommand(newCommand: Command) {
@@ -336,7 +313,7 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance = new ChatClient({ 
 			authProvider, 
-			channels: ['canadiendragon'], 
+			channels: ['canadiendragon', 'modvlog'], 
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',
