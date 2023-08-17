@@ -31,7 +31,7 @@ export let moderatorID: ChannelInfo | undefined;
 
 export async function initializeConstants() {
 	const userApiClient = await getUserApi();
-
+	
 	const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userID);
 	const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(openDevBotID);
   

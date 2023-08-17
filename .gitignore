@@ -2,3 +2,4 @@
 .env
 notes.txt
 /dist
+script.ts

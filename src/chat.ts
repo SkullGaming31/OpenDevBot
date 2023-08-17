@@ -45,7 +45,6 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		const command = (await import(modulePath)).default;
 		commands[name] = command;
 		registerCommand(command);
-		console.log(name);
 	}
 }
 
@@ -55,7 +54,6 @@ export async function initializeChat(): Promise<void> {
 	const commandsDir = path.join(__dirname, 'Commands');
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
-	console.log('Commands Dir: ', commandsDir, ' Commands: ', commands);
 	console.log(`Loaded ${Object.keys(commands).length} Commands.`);
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
@@ -313,7 +311,7 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance = new ChatClient({ 
 			authProvider, 
-			channels: ['canadiendragon', 'modvlog'], 
+			channels: ['canadiendragon'],
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',

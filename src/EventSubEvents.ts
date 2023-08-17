@@ -979,7 +979,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		try {
 			const userInfo = await e.getUser();
 			if (!broadcasterInfo) { return console.error('broadcasterInfo is undefined'); }
-			const stream = await userApiClient.channels.getChannelInfoById(broadcasterInfo.id);
+			const stream = await userApiClient.channels.getChannelInfoById(broadcasterInfo.id as UserIdResolvable);
 			const isDescriptionEmpty = userInfo.description === '';
 	
 			const pirateName = generateRandomPirateName();
@@ -1088,13 +1088,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const randomMessage = messages[randomIndex];
 		
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
-		
-			const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
-		
+			const subed = await userInfo.hasSubscriber(userInfo.id) ? 'yes' : 'no';
+			// const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
 			const followEmbed = new EmbedBuilder()
 				.setTitle('FOLLOW EVENT')
 				.setAuthor({ name: e.userDisplayName, iconURL: userInfo.profilePictureUrl })
-				.setDescription(userInfo.description)
 				.setURL(`https://twitch.tv/${e.userName}`)
 				.setColor('Random')
 				.addFields([
@@ -1110,19 +1108,29 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					},
 					{
 						name: 'Subscribed: ',
-						value: `${subed}`,
+						value: `${subed}`,// needs testing
 						inline: true
 					}
 				])
 				.setThumbnail(userInfo.profilePictureUrl)
 				.setFooter({ text: 'Click Title to check out their channel', iconURL: userInfo.profilePictureUrl })
 				.setTimestamp();
-	
-	
+			if (userInfo.description !== '') {
+				followEmbed.setDescription(userInfo.description);
+			} else {
+				followEmbed.setDescription('No Channel Description');
+			}
+
+			if (userInfo.broadcasterType === '') {
+				followEmbed.addFields([{ name: 'BroadcasterType', value: 'Streamer', inline: false }]);
+			} else if (userInfo.broadcasterType === 'affiliate' || userInfo.broadcasterType === 'partner') {
+				followEmbed.addFields([{ name: 'BroadcasterType', value: userInfo.broadcasterType, inline: false }]);
+			}
+			
 			await chatClient.say(broadcasterInfo.name, `${randomMessage}`);
 			await twitchActivity.send({ embeds: [followEmbed] });
 		} catch (error) {
-			console.error('An error occurred in the follow event handler:', error);
+			console.error('An error occurred in the follower event handler:', error);
 		}
 	});
 	const subs = eventSubListener.onChannelSubscription(broadcasterInfo.id, async (s) => {
