@@ -22,7 +22,7 @@ const settitle: Command = {
 
 		try {
 			if (staff) {
-				const setTitle = await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': title }); // Channel ID:'31124455'
+				await userApiClient.channels.updateChannelInfo(canadiendragon?.id!, { 'title': title }); // Channel ID:'31124455'
 				chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${title}`);
 				const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 				const commandEmbed = new EmbedBuilder()

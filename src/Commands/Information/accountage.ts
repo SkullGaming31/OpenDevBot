@@ -10,7 +10,7 @@ const accountage: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
-    
+
 		const account = await userApiClient.users.getUserByName(args[0] || msg.userInfo.userName);
 		if (account) {
 			chatClient.say(channel, `${account.creationDate}`);

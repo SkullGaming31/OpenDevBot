@@ -15,9 +15,9 @@ import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, o
 import { sleep } from './util/util';
 
 interface Chatter {
-  userId: string;
-  userName: string;
-  getUser(): Promise<User>;
+	userId: string;
+	userName: string;
+	getUser(): Promise<User>;
 }
 
 export const commands: Set<string> = new Set<string>();
@@ -31,7 +31,7 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 			await loadCommands(modulePath, commands); // Recursively load commands in subdirectories
 			continue;
 		}
-		
+
 		if (
 			(!module.endsWith('.ts') && process.env.NODE_ENV !== 'prod') ||
 			(!module.endsWith('.js') && process.env.NODE_ENV === 'prod') ||
@@ -63,7 +63,7 @@ export async function initializeChat(): Promise<void> {
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
 		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-		
+
 		try {
 			const cursor = ''; // Initialize the cursor value
 			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: 100 });
@@ -79,16 +79,16 @@ export async function initializeChat(): Promise<void> {
 
 			const maxIterations = 1000;
 			let iterationCount = 0;
-		
+
 			const processChatters = async (chatters: HelixChatChatter[]) => {
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
 				const chattersChunk = chatters.slice(start, end);
-		
+
 				for (const chatter of chattersChunk) {
 					const user = await UserModel.findOne<User>({ id: chatter.userId }).lean();
 					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-		
+
 					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
 						if (!user) {
 							const newUser = new UserModel({
@@ -139,17 +139,17 @@ export async function initializeChat(): Promise<void> {
 						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
 					}
 				}
-		
+
 				requestIndex++;
 				chunkIndex++;
-		
+
 				if (chunkIndex === totalChunks) {
 					chunkIndex = 0;
 				}
 			};
-		
+
 			let isIntervalRunning = true;
-		
+
 			const intervalHandler = async () => {
 				if (iterationCount >= maxIterations) {
 					console.log('Maximum iteration count reached. Exiting the loop.');
@@ -157,7 +157,7 @@ export async function initializeChat(): Promise<void> {
 					isIntervalRunning = false;
 					return;
 				}
-		
+
 				if (requestIndex < requestsPerInterval) {
 					const chatters = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: chunkSize });
 					await processChatters(chatters.data);
@@ -167,7 +167,7 @@ export async function initializeChat(): Promise<void> {
 					iterationCount++;
 				}
 			};
-		
+
 			const interval = setInterval(async () => {
 				if (isIntervalRunning) {
 					await intervalHandler();
@@ -184,6 +184,12 @@ export async function initializeChat(): Promise<void> {
 			if (commandName === undefined) return;
 			// console.log(commandName);
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
+			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
+			const moderatorsData = moderatorsResponse.data; // Access the moderator data
+
+			const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
+			const isBroadcaster = broadcasterInfo?.id === msg.userInfo.userId;
+			const isStaff = isModerator || isBroadcaster;
 
 			if (command) {
 				try {
@@ -201,6 +207,21 @@ export async function initializeChat(): Promise<void> {
 					if (lastExecuted && currentTimestamp - lastExecuted < (command.cooldown || 0)) {
 						const remainingTime = Math.ceil((lastExecuted + command.cooldown! - currentTimestamp) / 1000);
 						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remainingTime} seconds.`);
+					}
+
+					// If the command is marked as moderator-only and the user is not a moderator, restrict access
+					if (command.moderator && !isStaff) {
+						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
+					}
+
+					// If the command is marked as devOnly and the user is not a moderator or broadcaster in the specific channel, restrict access
+					if (command.devOnly && msg.channelId !== '31124455') {
+						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragons Channel');
+					}
+
+					// If the command is restricted to the broadcaster and moderators, enforce the restriction
+					if (msg.channelId === '31124455' && (command.moderator && !isStaff)) {
+						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
 					}
 
 					// Execute the command
@@ -254,7 +275,7 @@ export async function initializeChat(): Promise<void> {
 				])
 				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
 				.setTimestamp();
-				
+
 			await twitchActivity.send({ embeds: [banEmbed] });
 		}
 		// TODO: send chat message every 10 minutes consistently in typescript.
@@ -273,13 +294,13 @@ export async function initializeChat(): Promise<void> {
 		// setTimeout(postMessage, initialDelay); // Schedule the first execution
 	};
 	chatClient.onMessage(commandHandler);
-	
+
 	chatClient.onJoin(async (channel: string, user: string) => {
 		try {
 			if (chatClient.isConnected) {
 				const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo?.id!, openDevBotID);
 				if (!isMod) {
-					await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {  }, { limitReachedBehavior: 'enqueue' });
+					await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
 					await sleep(1000);
 					await chatClient.action(channel, '/mod opendevbot');
 				}
@@ -309,8 +330,8 @@ export async function getChatClient(): Promise<ChatClient> {
 	if (!chatClientInstance) {
 		const authProvider = await getAuthProvider();
 
-		chatClientInstance = new ChatClient({ 
-			authProvider, 
+		chatClientInstance = new ChatClient({
+			authProvider,
 			channels: ['canadiendragon'],
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],

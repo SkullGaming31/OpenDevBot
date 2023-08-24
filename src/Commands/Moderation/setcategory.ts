@@ -1,3 +1,4 @@
+import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
@@ -7,55 +8,70 @@ import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../
 
 const setcategory: Command = {
 	name: 'setcategory',
+	aliases: ['setgame'],
 	description: 'set the channel category for the broadcaster',
-	usage: '!setgame [gamename]',
+	usage: '!setcategory [gamename]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
-		if (broadcasterID?.id === undefined) return;
-		const staff = msg.userInfo.isMod || msg.userInfo.isBroadcaster;
-		const display = msg.userInfo.displayName;
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
-		const category = args.join(' ');
-		const canadiendragon = await userApiClient.channels.getChannelInfoById(userID);
-		if (!args[0]) return chatClient.say(channel, `Usage: ${setcategory.usage}`);
+		const broadcasterInfo = await userApiClient.channels.getChannelInfoById(userID);
+		if (!broadcasterInfo?.id) return;
 
-		if (staff) {
-			const gamename = await userApiClient.games.getGameByName(category);
-			await userApiClient.channels.updateChannelInfo(broadcasterID?.id!, { gameId: `${gamename?.id}` });
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo.id as UserIdResolvable);
+		const moderatorsData = moderatorsResponse.data; // Access the moderator data
+
+		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
+		const isBroadcaster = broadcasterInfo.id === msg.userInfo.userId;
+		const isStaff = isModerator || isBroadcaster;
+		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const category = args.join(' ');
+		const channelInfo = await userApiClient.channels.getChannelInfoById(userID);
+		
+
+		if (!args[0]) {
+			return chatClient.say(channel, `Usage: ${setcategory.usage}`);
+		}
+
+		if (isStaff) {
+			const newGame = await userApiClient.games.getGameByName(category);
+			await userApiClient.channels.updateChannelInfo(broadcasterInfo.id, { gameId: `${newGame?.id}` });
 			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
-			await chatClient.say(channel, `${display}, has changed the channel category to ${gamename?.name}`);
 
 			const commandEmbed = new EmbedBuilder()
-				.setTitle('Command Used[setgame]')
-				.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
+				.setTitle('Command Used [setcategory]')
+				.setAuthor({ name: `${helixUser?.displayName}`, iconURL: helixUser?.profilePictureUrl })
 				.setColor('Red')
 				.addFields([
 					{
-						name: 'Command Executer: ',
+						name: 'Command Executer:',
 						value: `\`${msg.userInfo.displayName}\``,
 						inline: true
 					},
 					{
 						name: 'New Category:',
-						value: `\`Gamename: ${gamename?.name}\`, \n||\`GameID: ${gamename?.id}\`||`,
+						value: `\`Gamename: ${newGame?.name}\`, \n||\`GameID: ${newGame?.id}\`||`,
 						inline: true
 					},
 					{
 						name: 'Old Category:',
-						value: `\`Gamename: ${canadiendragon?.gameName}\`, \n||\`GameID: ${canadiendragon?.gameId}\`||`,
+						value: `\`Gamename: ${channelInfo?.gameName}\`, \n||\`GameID: ${channelInfo?.gameId}\`||`,
 						inline: true
 					}
 				])
 				.setFooter({ text: `Channel: ${channel}` })
 				.setTimestamp();
 
-			await commandUsage.send({ embeds: [commandEmbed] });
+			try {
+				await chatClient.say(channel, `${msg.userInfo.displayName}, has changed the channel category to ${newGame?.name}`);
+				await commandUsageWebhook.send({ embeds: [commandEmbed] });
+			} catch (error) {
+				console.error(error);
+			}
 		} else {
-			chatClient.say(channel, `${display}, you are not a moderator or the broadcaster, you do not have access to this command`);
+			await chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster, you do not have access to this command`);
 		}
+
 	}
 };
 export default setcategory;
