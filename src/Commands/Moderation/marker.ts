@@ -19,7 +19,7 @@ function formatStreamTime(seconds: number) {
 const marker: Command = {
 	name: 'marker',
 	description: 'Creates a marker at the current location in the broadcaster\'s stream',
-	usage: '!marker <description>',
+	usage: '!marker [description] description is optional',
 	moderator: true,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
@@ -35,12 +35,11 @@ const marker: Command = {
 		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
 
 		// Check if args have the description
-		if (!args[0]) return chatClient.say(channel, `Usage: ${marker.usage}`);
 		if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Channel {Broadcaster or Moderator}');
 
 		try {
 			if (stream !== null) {
-				const tbd = userApiClient.streams.createStreamMarker(broadcasterInfo.id, args.join(' '));
+				const tbd = userApiClient.streams.createStreamMarker(broadcasterInfo.id, args.length > 0 ? args.join(' ') : undefined);
 
 				tbd.then(async (createdSegment) => {
 					const positionInSeconds = createdSegment.positionInSeconds;

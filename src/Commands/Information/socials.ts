@@ -9,7 +9,6 @@ const socials: Command = {
 	usage: '!socials twitter|instagram|facebook|tiktok|discord|merch|tip|website|github',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
-		const display = msg.userInfo.displayName;
 
 		const socialURLs: Record<string, string> = {
 			twitter: 'https://twitter.com/canadiendragon1',
@@ -28,7 +27,7 @@ const socials: Command = {
 
 		if (social && social in socialURLs) {
 			const socialURL = socialURLs[social];
-			await chatClient.say(channel, `${display}, ${broadcasterInfo?.displayName}'s ${social}: ${socialURL}`);
+			await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterInfo?.displayName}'s ${social}: ${socialURL}`);
 		} else {
 			await chatClient.say(channel, `Which social are you looking for? Usage: ${socials.usage}`);
 		}

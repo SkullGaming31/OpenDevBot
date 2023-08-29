@@ -1,9 +1,10 @@
+import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from '../../util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
 
 const unvip: Command = {
 	name: 'unvip',
@@ -15,19 +16,15 @@ const unvip: Command = {
 
 		const display = msg.userInfo.displayName;
 		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
+
 		try {
-			const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
-			if (broadcasterID?.id === undefined) return;
+			const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+			if (broadcasterResponse?.id === undefined) return;
 			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 			if (userSearch?.id === undefined) return;
-			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
-			// const vipLookup = await userApiClient.channels.getVips(broadcasterID.id, { limit: 20 });
-			// if (vipLookup.data[1].id === userSearch?.id) return await chatClient.say(channel, 'this user is already a vip');
-			if (userSearch) {
-				await userApiClient.channels.removeVip(broadcasterID.id, userSearch?.id).then(async () => { await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`); });
-			} else {
-				console.error('Something happened while searching for user');
-			}
+			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo?.id as UserIdResolvable, { limit: 20 });
+			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is already a vip');
 
 			const unVIPEmbed = new EmbedBuilder()
 				.setTitle('Twitch Channel Purge Event')
@@ -52,7 +49,17 @@ const unvip: Command = {
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just Unviped ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
-			await twitchActivity.send({ embeds: [unVIPEmbed] });
+			try {
+				if (userSearch) {
+					await userApiClient.channels.removeVip(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
+					await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
+				} else {
+					console.error('Something happened while searching for user');
+				}
+				await twitchActivity.send({ embeds: [unVIPEmbed] });
+			} catch (error) {
+				console.error(error);
+			}
 		} catch (error) { console.error(error); }
 	}
 };

@@ -5,8 +5,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import middleware from '../auth/middleware';
 
+import { apiRouter } from '../api';
 import healthListener from '../api/health';
-import twitchRouter from '../auth/Twitch';
 
 /**
  * Creates and returns an instance of an Express application with middleware
@@ -17,24 +17,23 @@ export function createApp(port: string) {
 
 	const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
 		// Log error to console
-		console.error(err.stack);
+		console.error(err);
 		// Send error response to client
 		res.status(500).json({
 			message: 'Internal server error',
-			error: err.message,
+			error: err
 		});
 	};
-	
-	// Add error logger middleware function to app
 	app.use(cors());
 	app.use(helmet());
 	app.use(morgan('tiny'));
 	app.use(express.urlencoded({ extended: false }));
 	app.use(express.json());
-	app.use(express.static('../../public'));
+	app.use(express.static('public'));
 	app.use(errorLogger);
 	// app.use(middleware.logger);
-	app.use('/auth/twitch', twitchRouter);
+	app.use('/api', apiRouter);
+	// app.use('/auth/twitch', twitchRouter);
 	app.use('/health', healthListener);
 
 	const limiter = rateLimit({

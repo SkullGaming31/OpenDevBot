@@ -39,10 +39,10 @@ const pirateRoles = [
 export function generateRandomPirateName() {
 	const randomNameIndex = Math.floor(Math.random() * pirateNames.length);
 	const randomRoleIndex = Math.floor(Math.random() * pirateRoles.length);
-  
+
 	const randomName = pirateNames[randomNameIndex];
 	const randomRole = pirateRoles[randomRoleIndex];
-  
+
 	return {
 		name: randomName,
 		role: randomRole

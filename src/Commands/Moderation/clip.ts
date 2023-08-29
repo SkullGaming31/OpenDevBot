@@ -20,7 +20,7 @@ const clipCommand: Command = {
 				if (msg.userInfo.isBroadcaster || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip) {
 					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo.id as UserIdResolvable, createAfterDelay: false });
 					const clipUrl = `https://clips.twitch.tv/${clipId}`;
-					chatClient.say(channel, `Clip Created: ${clipUrl}`);
+					await chatClient.say(channel, `Clip Created: ${clipUrl}`);
 					// Code for using the clip URL
 				} else {
 					chatClient.say(channel, 'You must be the broadcaster, mod, sub, or a VIP to use this command.');

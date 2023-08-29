@@ -18,10 +18,10 @@ const dadjoke: Command = {
 		// console.log(response.data);
 		try {
 			if (response.data.status === 200) {
-				chatClient.say(channel, `${response.data.joke}`);
+				await chatClient.say(channel, `${response.data.joke}`);
 			} else {
-				chatClient.say(channel, 'An error occured while trying to send the dadjoke');
-				console.info(response.data.status);
+				await chatClient.say(channel, 'An error occured while trying to send the dadjoke');
+				// console.info(response.data.status);
 			}
 		} catch (error) {
 			console.error(error);

@@ -11,7 +11,7 @@ import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID, userID } from './util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
 
 interface Chatter {
@@ -187,9 +187,11 @@ export async function initializeChat(): Promise<void> {
 			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
 			const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
-			const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-			const isBroadcaster = broadcasterInfo?.id === msg.userInfo.userId;
-			const isStaff = isModerator || isBroadcaster;
+			const isModerator = msg.userInfo.isMod;
+			const isBroadcaster = msg.userInfo.isBroadcaster;
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
+			const isStaff = isModerator || isBroadcaster || isEditor;
 
 			if (command) {
 				try {
@@ -238,25 +240,28 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
-			chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
+			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
 		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
 		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
-			chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
 		}
 		if (text.includes('overlay designer') && channel === '#canadiendragon') {
-			chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
+			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
 		}
 		if (text.includes('wl') && channel === '#canadiendragon') {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
-			setTimeout(() => { chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
+			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
 		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
-			const mods = msg.userInfo.isMod;
-			if (msg.userInfo.userId === userID || mods) return;
-			await userApiClient.moderation.deleteChatMessages(userID, msg.id);
-			await userApiClient.moderation.banUser(userID, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch' });
-			chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
+			const isMods = msg.userInfo.isMod;
+			const isBroadcaster = msg.userInfo.isBroadcaster;
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
+
+			const isStaff = isMods || isBroadcaster || isEditor;
+			if (isStaff) return;
+
 			const banEmbed = new EmbedBuilder()
 				.setTitle('Automated Ban')
 				.setAuthor({ name: `${msg.userInfo.displayName}` })
@@ -269,14 +274,22 @@ export async function initializeChat(): Promise<void> {
 					},
 					{
 						name: 'Reason',
-						value: 'Promoting of selling followers to a broadcaster for twitch',
+						value: 'Promoting of selling followers to a broadcaster for twitch breaking TwitchTOS',
 						inline: true
 					}
 				])
 				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
 				.setTimestamp();
-
-			await twitchActivity.send({ embeds: [banEmbed] });
+			try {
+				await userApiClient.moderation.deleteChatMessages(broadcasterInfo?.id as UserIdResolvable, msg.id);
+				await sleep(1000);
+				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch breaking TwitchTOS' });
+				await sleep(1000);
+				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
+				await twitchActivity.send({ embeds: [banEmbed] });
+			} catch (error) {
+				console.error(error);
+			}
 		}
 		// TODO: send chat message every 10 minutes consistently in typescript.
 		// const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)

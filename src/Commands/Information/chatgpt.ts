@@ -27,7 +27,7 @@ const chatgpt: Command = {
 			message = message.substring(500);
 
 			console.log(chunk);
-			chatClient.say(channel, chunk);
+			await chatClient.say(channel, chunk);
 
 			if (message.length > 0) {
 				await sleep(2000); // Wait for 2 seconds before sending the next chunk

@@ -1,9 +1,10 @@
+import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, userID } from '../../util/constants';
+import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
 
 const unmod: Command = {
 	name: 'unmod',
@@ -15,14 +16,16 @@ const unmod: Command = {
 		const display = msg.userInfo.displayName;
 		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
+
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+
+		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 		try {
-			if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
 			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
 			if (userSearch?.id === undefined) return;
-			await userApiClient.moderation.removeModerator(userID, userSearch?.id).then(async () => { await chatClient.say(channel, `${args[1]} has had there moderator powers removed`); });
-	
+
 			const unModeratorEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel Purge Event')
+				.setTitle('Twitch Channel Unmod Event')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
@@ -44,7 +47,17 @@ const unmod: Command = {
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just unmodded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
-			await twitchActivity.send({ embeds: [unModeratorEmbed] });
+			try {
+				if (isEditor || msg.userInfo.isBroadcaster) {
+					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
+					await chatClient.say(channel, `${args[1]} has had there moderator powers removed by ${msg.userInfo.displayName}`);
+					await twitchActivity.send({ embeds: [unModeratorEmbed] });
+				} else {
+					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');
+				}
+			} catch (error) {
+				console.error(error);
+			}
 		} catch (error) {
 			console.error(error);
 		}

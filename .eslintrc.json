@@ -19,14 +19,8 @@
         "@typescript-eslint"
     ],
     "rules": {
-        "indent": [
-            "error",
-            "tab"
-        ],
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
+        "indent": ["error", "tab", { "SwitchCase": 1 }],
+        "linebreak-style": ["error", "unix"],
         "quotes": [
             "error",
             "single"
@@ -36,7 +30,6 @@
             "always"
         ],
         "no-case-declarations":"off",
-        "no-unused-vars": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "@typescript-eslint/no-non-null-assertion": "off",
         "@typescript-eslint/no-non-null-asserted-optional-chain": "off",

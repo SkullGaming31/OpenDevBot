@@ -1,20 +1,22 @@
 body {
-	background-image: linear-gradient(from top, limegreen, black);
-	margin:0;
-	font-family: Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
 }
-a {
-	outline:none;
-}
-a:active {
-	color: green;
-}
-a:hover {
-	color: blue;
-}
-h1 {
-	text-align: center;
-}
-.buttonTwitch {
-	text-align: center;
+
+/* Center the links and buttons */
+a, button {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 10px;
+  text-align: center;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
 }

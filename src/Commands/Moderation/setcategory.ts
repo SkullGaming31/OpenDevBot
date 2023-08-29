@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const setcategory: Command = {
 	name: 'setcategory',
@@ -15,27 +15,29 @@ const setcategory: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const broadcasterInfo = await userApiClient.channels.getChannelInfoById(userID);
-		if (!broadcasterInfo?.id) return;
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		if (!broadcasterResponse?.id) return;
 
-		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo.id as UserIdResolvable);
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+
 		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-		const isBroadcaster = broadcasterInfo.id === msg.userInfo.userId;
-		const isStaff = isModerator || isBroadcaster;
+		const isBroadcaster = broadcasterResponse.id === msg.userInfo.userId;
+		const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
+
+		const isStaff = isModerator || isBroadcaster || isEditor;
 		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		const category = args.join(' ');
-		const channelInfo = await userApiClient.channels.getChannelInfoById(userID);
-		
+		const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
 
-		if (!args[0]) {
-			return chatClient.say(channel, `Usage: ${setcategory.usage}`);
-		}
+
+		if (!args[0]) return chatClient.say(channel, `Usage: ${setcategory.usage}`);
 
 		if (isStaff) {
 			const newGame = await userApiClient.games.getGameByName(category);
-			await userApiClient.channels.updateChannelInfo(broadcasterInfo.id, { gameId: `${newGame?.id}` });
+			await userApiClient.channels.updateChannelInfo(broadcasterInfo?.id as UserIdResolvable, { gameId: `${newGame?.id}` });
 			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 
 			const commandEmbed = new EmbedBuilder()

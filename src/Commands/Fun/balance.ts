@@ -13,7 +13,7 @@ const balance: Command = {
 		const username = user.toLowerCase();
 		const userDoc = await UserModel.findOne({ username });
 		const balance = userDoc?.balance || 0;
-		chatClient.say(channel, `@${user}, your balance is ${balance} coins.`);
+		await chatClient.say(channel, `@${user}, your balance is ${balance} coins.`);
 	}
 };
 export default balance;

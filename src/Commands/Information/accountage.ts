@@ -11,11 +11,11 @@ const accountage: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const account = await userApiClient.users.getUserByName(args[0] || msg.userInfo.userName);
+		const account = await userApiClient.users.getUserByName(args[0].replace('@', '') || msg.userInfo.userName);
 		if (account) {
-			chatClient.say(channel, `${account.creationDate}`);
+			await chatClient.say(channel, `${account.creationDate}`);
 		} else {
-			chatClient.say(channel, `${user}, that name could not be found`);
+			await chatClient.say(channel, `${user}, that name could not be found`);
 		}
 	}
 };

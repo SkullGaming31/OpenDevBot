@@ -10,18 +10,17 @@ const id: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
-    
-		const display = msg.userInfo.displayName;
+
 		const userToLookup = args[0] ? args[0].replace('@', '') : msg.userInfo.userId;
 		const userLookup = await userApiClient.users.getUserByName(userToLookup);
 		try {
 			if (userLookup) {
-				chatClient.say(channel, `${display}, the Twitch ID for ${userLookup.displayName} is ${userLookup.id}`);
+				await chatClient.say(channel, `${msg.userInfo.displayName}, the Twitch ID for ${userLookup.displayName} is ${userLookup.id}`);
 			} else {
 				if (args[0]) {
-					chatClient.say(channel, `${display}, could not find user ${args[0]}`);
+					chatClient.say(channel, `${msg.userInfo.displayName}, could not find user ${args[0]}`);
 				} else {
-					chatClient.say(channel, `${display}, your Twitch ID is ${userToLookup}`);
+					chatClient.say(channel, `${msg.userInfo.displayName}, your Twitch ID is ${userToLookup}`);
 				}
 			}
 		} catch (err: any) {

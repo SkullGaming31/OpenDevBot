@@ -6,10 +6,10 @@ import { IToken, TokenModel } from '../database/models/tokenModel';
 
 interface validate {
 	client_id: string,
-  login: string,
-  scopes: string[],
-  user_id: string,
-  expires_in: number
+	login: string,
+	scopes: string[],
+	user_id: string,
+	expires_in: number
 }
 
 // Define the model for access tokens
@@ -37,7 +37,7 @@ router.get('/', (req: Request, res: Response) => {
 	res.redirect(botAuthUrl);
 });
 
-router.get('/callback', limiter,  async (req: Request, res: Response) => {
+router.get('/callback', limiter, async (req: Request, res: Response) => {
 	const { code } = req.query;
 	try {
 		if (typeof code === 'string') {

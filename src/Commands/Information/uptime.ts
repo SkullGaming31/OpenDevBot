@@ -1,10 +1,11 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import countdown from 'countdown';
 
+import { UserIdResolvable } from '@twurple/api';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { userID } from '../../util/constants';
+import { broadcasterInfo } from '../../util/constants';
 
 const uptime: Command = {
 	name: 'uptime',
@@ -14,20 +15,19 @@ const uptime: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const display = msg.userInfo.displayName;
-		const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
-		if (broadcasterID?.id === undefined) return;
-		const stream = await userApiClient.streams.getStreamByUserId(broadcasterID?.id!);
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		if (broadcasterResponse?.id === undefined) return;
+		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo?.id as UserIdResolvable);
 		switch (channel) {
-		case '#canadiendragon':
-			if (stream) {
-				const uptime = countdown(new Date(stream.startDate));
-				chatClient.say(channel, `${display}, the stream has been live for ${uptime}`);
-			}
-			else {
-				return chatClient.say(channel, 'the Stream is currently Offline');
-			}
-			break;
+			case 'canadiendragon':
+				if (stream !== null) {
+					const uptime = countdown(new Date(stream.startDate));
+					await chatClient.say(channel, `${msg.userInfo.displayName}, the stream has been live for ${uptime}`);
+				}
+				else {
+					return chatClient.say(channel, 'the Stream is currently Offline');
+				}
+				break;
 		}
 	}
 };

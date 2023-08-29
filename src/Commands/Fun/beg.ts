@@ -32,7 +32,7 @@ const beg: Command = {
 			{ $inc: { balance: amount }, $set: { lastBegTime: currentTime } }
 		);
 
-		chatClient.say(channel, `@${user}, you begged and received ${amount} Gold!`);
+		await chatClient.say(channel, `@${user}, you begged and received ${amount} Gold!`);
 	}
 };
 

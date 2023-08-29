@@ -6,15 +6,15 @@ import { openDevBotID } from '../../util/constants';
 import { sleep } from '../../util/util';
 
 interface WarframeData {
-  uniqueName: string;
-  name: string;
-  health: number;
-  shield: number;
-  armor: number;
-  power: number;
-  masteryReq: number;
+	uniqueName: string;
+	name: string;
+	health: number;
+	shield: number;
+	armor: number;
+	power: number;
+	masteryReq: number;
 	buildTime: number;
-  abilities: Abilities[];
+	abilities: Abilities[];
 	components: Components[];
 	conclave: boolean;
 	consumeOnBuild: boolean;
@@ -76,8 +76,8 @@ interface Drops {
 }
 
 interface Abilities {
-  name: string;
-  description: string;
+	name: string;
+	description: string;
 }
 
 function formatTime(timeInSeconds: number) {
@@ -104,84 +104,84 @@ const warframe: Command = {// needs more work
 
 		const display = msg.userInfo.displayName;
 		switch (args[0]) {
-		case 'about':
-			chatClient.say(channel, 'Warframe is a free-to-play action role-playing third-person shooter multiplayer online game developed and published by Digital Extremes.');
-			break;
-		case 'lore':
-			const warframeURL = 'https://warframe.com/landing';
-			chatClient.say(channel, `In Warframe, players control members of the Tenno, a race of ancient warriors who have awoken from centuries of suspended animation far into Earth's future to find themselves at war in the planetary system with different factions. The Tenno use their powered Warframes along with a variety of weapons and abilities to complete missions. ${warframeURL}`);
-			break;
-		case 'mr':
-			const xblWFRank = 11;
-			const ps4WFRank = 16;
-			const pcWFRank = 1;
-			chatClient.say(channel, `Mastery Rank: XBOX: ${xblWFRank}, PS4: ${ps4WFRank}, PC: ${pcWFRank}`);
-			break;
-		case 'frames':
-			if (args.length < 2) {
-				chatClient.say(channel, `Usage: ${warframe.usage}`);
-				return;
-			}
-
-			const warframeName = args.slice(1).join(' ');
-			const warframeUrl = `https://api.warframestat.us/warframes/search/${warframeName}`;
-
-			try {
-				const response = await fetch(warframeUrl);
-				const data = await response.json();
-				if (!data || !data[0]) {
-					return chatClient.say(channel, `No Warframe found with the name "${warframeName}"`);
+			case 'about':
+				await chatClient.say(channel, 'Warframe is a free-to-play action role-playing third-person shooter multiplayer online game developed and published by Digital Extremes.');
+				break;
+			case 'lore':
+				const warframeURL = 'https://warframe.com/landing';
+				await chatClient.say(channel, `In Warframe, players control members of the Tenno, a race of ancient warriors who have awoken from centuries of suspended animation far into Earth's future to find themselves at war in the planetary system with different factions. The Tenno use their powered Warframes along with a variety of weapons and abilities to complete missions. ${warframeURL}`);
+				break;
+			case 'mr':
+				const xblWFRank = 12;
+				const ps4WFRank = 17;
+				const pcWFRank = 1;
+				await chatClient.say(channel, `Mastery Rank: XBOX: ${xblWFRank}, PS4: ${ps4WFRank}, PC: ${pcWFRank}`);
+				break;
+			case 'frames':
+				if (args.length < 2) {
+					await chatClient.say(channel, `Usage: ${warframe.usage}`);
+					return;
 				}
-				const warframeData: WarframeData = data[0];
-				console.log(warframeData.components[0]);
-				if (warframeName.endsWith('prime')) return chatClient.say(channel, 'I can not look up prime version of warframes yet');
-				
-				let prompted = false;
 
-				chatClient.onMessage(async (channel, user, text, msg) => {
-					let message;
-					if (warframeData) {
-						const components = warframeData.components
-							.map((component) => {
-								const drops = component.drops
-									.map((drop) => {
-										return `${drop.type} (Rarity: ${drop.rarity}, Chance: ${drop.chance.toFixed(3)}%, Location: ${drop.location}`;
-									})
-									.join('; ');
-								return `${component.name} (Tradeable: ${component.tradable}) - Drops: ${drops}`;
-							})
-							.join(' - ');
+				const warframeName = args.slice(1).join(' ');
+				const warframeUrl = `https://api.warframestat.us/warframes/search/${warframeName}`;
 
-						const buildTime = formatTime(warframeData.buildTime);
-						message = `Warframe: ${warframeData.name},\n - Build Time: ${buildTime},\n Components: ${components},\n Tradable: ${warframeData.tradable},\n Masterable: ${warframeData.masterable},\n Mastery Requirement: ${warframeData.masteryReq},\n Wiki: ${warframeData.wikiaUrl}`;
-					} else {
-						message = 'No data found for that Warframe.';
+				try {
+					const response = await fetch(warframeUrl);
+					const data = await response.json();
+					if (!data || !data[0]) {
+						return chatClient.say(channel, `No Warframe found with the name "${warframeName}"`);
 					}
+					const warframeData: WarframeData = data[0];
+					console.log(warframeData.components[0]);
+					if (warframeName.endsWith('prime')) return chatClient.say(channel, 'I can not look up prime version of warframes yet');
 
-					await chatClient.say(channel, message);
-  
-					if (message.length > 500) {
-						await chatClient.say(channel, 'The message is too long to be sent in chat. Do you want me to send it to you via whisper? (yes|no)');
-						prompted = true;
-						await sleep(5000); // wait for 5 seconds for user response
+					let prompted = false;
 
-						if (prompted && text.toLowerCase() === 'yes') {
-							await userApiClient.whispers.sendWhisper(openDevBotID, msg.userInfo.userId, message);
-							await chatClient.say(channel, 'Message sent via whisper.');
+					chatClient.onMessage(async (channel, user, text, msg) => {
+						let message;
+						if (warframeData) {
+							const components = warframeData.components
+								.map((component) => {
+									const drops = component.drops
+										.map((drop) => {
+											return `${drop.type} (Rarity: ${drop.rarity}, Chance: ${drop.chance.toFixed(3)}%, Location: ${drop.location}`;
+										})
+										.join('; ');
+									return `${component.name} (Tradeable: ${component.tradable}) - Drops: ${drops}`;
+								})
+								.join(' - ');
+
+							const buildTime = formatTime(warframeData.buildTime);
+							message = `Warframe: ${warframeData.name},\n - Build Time: ${buildTime},\n Components: ${components},\n Tradable: ${warframeData.tradable},\n Masterable: ${warframeData.masterable},\n Mastery Requirement: ${warframeData.masteryReq},\n Wiki: ${warframeData.wikiaUrl}`;
+						} else {
+							message = 'No data found for that Warframe.';
 						}
-						prompted = false;
-					} else {
-						prompted = false;
-					}
-				});
-			} catch (e) {
-				console.error(`Error fetching Warframe data: ${e}`);
-				chatClient.say(channel, `An error occurred while fetching data for "${warframeName}"`);
-			}
-			break;
-		default:
-			chatClient.say(channel, `${display}, Usage: ${warframe.usage}`);
-			break;
+
+						await chatClient.say(channel, message);
+
+						if (message.length > 500) {
+							await chatClient.say(channel, 'The message is too long to be sent in chat. Do you want me to send it to you via whisper? (yes|no)');
+							prompted = true;
+							await sleep(5000); // wait for 5 seconds for user response
+
+							if (prompted && text.toLowerCase() === 'yes') {
+								await userApiClient.whispers.sendWhisper(openDevBotID, msg.userInfo.userId, message);
+								await chatClient.say(channel, `${user} check your whispers.`);
+							}
+							prompted = false;
+						} else {
+							prompted = false;
+						}
+					});
+				} catch (e) {
+					console.error(`Error fetching Warframe data: ${e}`);
+					await chatClient.say(channel, `An error occurred while fetching data for "${warframeName}"`);
+				}
+				break;
+			default:
+				await chatClient.say(channel, `${display}, Usage: ${warframe.usage}`);
+				break;
 		}
 	}
 };

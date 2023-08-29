@@ -1,9 +1,11 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import countdown from 'countdown';
 
+import { UserIdResolvable } from '@twurple/api';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
+import { broadcasterInfo } from '../../util/constants';
 
 const followage: Command = {
 	name: 'followage',
@@ -12,15 +14,16 @@ const followage: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const display = msg.userInfo.displayName;
-		const broadcasterId = msg.channelId!;
-		const { data: [follow] } = await userApiClient.channels.getChannelFollowers(broadcasterId, msg.userInfo.userId);
+
+		const { data: [follow] } = await userApiClient.channels.getChannelFollowers(broadcasterInfo?.id as UserIdResolvable, msg.userInfo.userId);
 		if (follow) {
 			const followStartTimestamp = follow.followDate.getTime();
-			chatClient.say(channel, `@${display} You have been following for ${countdown(new Date(followStartTimestamp))}!`);
+			await chatClient.say(channel, `@${msg.userInfo.displayName} You have been following for ${countdown(new Date(followStartTimestamp))}!`);
+		} else if (msg.userInfo.isBroadcaster) {
+			await chatClient.say(channel, 'You cant follow your own channel');
 		}
 		else {
-			chatClient.say(channel, `@${display} You are not following!`);
+			await chatClient.say(channel, `@${msg.userInfo.displayName} You are not following!`);
 		}
 	}
 };
