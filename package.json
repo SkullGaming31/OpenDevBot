@@ -9,9 +9,8 @@
     "start": "ts-node ./src/index.ts",
     "script": "ts-node script.ts",
     "dev": "nodemon ./src/index.ts",
-    "prod": "node ./dist/index.js",
+    "prod": "tsc && node ./dist/index.js",
     "lint": "eslint --fix src",
-    "build": "tsc",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit"
   },

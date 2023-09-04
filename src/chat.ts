@@ -184,8 +184,8 @@ export async function initializeChat(): Promise<void> {
 			if (commandName === undefined) return;
 			// console.log(commandName);
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
-			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
-			const moderatorsData = moderatorsResponse.data; // Access the moderator data
+			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
+			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
 			const isModerator = msg.userInfo.isMod;
 			const isBroadcaster = msg.userInfo.isBroadcaster;

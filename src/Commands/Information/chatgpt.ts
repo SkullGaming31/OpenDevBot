@@ -18,7 +18,7 @@ const chatgpt: Command = {
 		}, {
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${process.env.OPENAI_KEY}`
+				'Authorization': `Bearer ${process.env.OPEN_API_KEY}`
 			}
 		});
 		let message = response.data.choices[0].message.content;

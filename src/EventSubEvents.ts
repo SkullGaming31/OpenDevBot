@@ -233,6 +233,18 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		prompt: 'Ban an In-Game Action while playing a game only!',
 		userInputRequired: true
 	});
+	const NBJ = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
+		title: 'No Bullet Jumping',
+		cost: 600,
+		autoFulfill: false,
+		backgroundColor: '#32CD32',
+		globalCooldown: 60,
+		isEnabled: true,
+		maxRedemptionsPerUserPerStream: null,
+		maxRedemptionsPerStream: null,
+		prompt: 'Not aloud to bullet jump in warframe for a full mission',
+		userInputRequired: false
+	});
 	//#endregion
 
 
@@ -304,7 +316,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const userInfo = await cp.getUser();
 		const streamer = await cp.getBroadcaster();
 		// console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, broadcasterInfo: ${cp.id}`);
-		// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterInfo, `${cp.rewardId}`, `${cp.id}`);
+		// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterInfo?.id!, `${cp.rewardId}`, `${cp.id}`);
 		switch (cp.rewardTitle || cp.rewardId) {
 			case 'ShoutOut':
 				try {
@@ -822,9 +834,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 				break;
 			case 'Ban an in-game action':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userDisplayName}, ${cp.input}`);
-				const tbd = await cp.getReward();
-
 				const baningameactionEmbed = new EmbedBuilder()
 					.setTitle('REDEEM EVENT')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
@@ -857,6 +866,38 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				try {
 					if (broadcasterInfo) { chatClient.say(broadcasterInfo.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action, Action:${cp.input}`); }
 					await twitchActivity.send({ embeds: [baningameactionEmbed] });
+				} catch (error) {
+					console.error(error);
+				}
+				break;
+			case 'No Bullet Jumping':
+				const nbjEmbed = new EmbedBuilder()
+					.setTitle('REDEEM EVENT')
+					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+					.setColor('Random')
+					.addFields([
+						{
+							name: 'User',
+							value: `${cp.userDisplayName}`,
+							inline: true
+						},
+						{
+							name: 'Redeemed',
+							value: `${cp.rewardTitle}`,
+							inline: true
+						},
+						{
+							name: 'Skulls',
+							value: `${cp.rewardCost}`,
+							inline: true
+						}
+					])
+					.setThumbnail(`${streamer.profilePictureUrl}`)
+					.setFooter({ text: 'LegendsLounge', iconURL: `${userInfo.profilePictureUrl}` })
+					.setTimestamp(cp.redemptionDate);
+				try {
+					if (broadcasterInfo) { chatClient.say(broadcasterInfo?.name, 'No Bullet Jumping for you'); }
+					await twitchActivity.send({ embeds: [nbjEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
