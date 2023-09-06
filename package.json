@@ -35,6 +35,9 @@
     "openai": "^3.3.0",
     "ws": "^8.13.0"
   },
+  "engines": {
+    "node": "18.15.0"
+  },
   "devDependencies": {
     "@types/cors": "^2.8.13",
     "@types/countdown": "^0.0.8",

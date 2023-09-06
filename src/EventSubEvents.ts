@@ -41,18 +41,18 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	if (moderatorID === undefined) return;
 
 	//#region ChannelPoints
-	// const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, 'ad2a5d3f-b3fa-47a6-a362-95e19329b6ca', {
-	// 	title: 'Shoutout',
-	// 	cost: 2000,
-	// 	autoFulfill: true,
-	// 	backgroundColor: '#09CB4C',
-	// 	globalCooldown: 60,
-	// 	isEnabled: true,
-	// 	maxRedemptionsPerUserPerStream: 3,
-	// 	maxRedemptionsPerStream: null,
-	// 	prompt: 'shout yourself out with Channel Points',
-	// 	userInputRequired: false
-	// });
+	const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '27716a8a-496d-4b94-b727-33be94b81611', {
+		title: 'Shoutout',
+		cost: 2000,
+		autoFulfill: true,
+		backgroundColor: '#09CB4C',
+		globalCooldown: 60,
+		isEnabled: true,
+		maxRedemptionsPerUserPerStream: 3,
+		maxRedemptionsPerStream: null,
+		prompt: 'shout yourself out with Channel Points',
+		userInputRequired: false
+	});
 	const Hydrate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
 		title: 'Hydrate',
 		cost: 250,
@@ -249,6 +249,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 
 	//#region EventSub
+
 	const online = eventSubListener.onStreamOnline(broadcasterInfo.id, async (o) => {
 		const chatClient = await getChatClient();
 		const stream = await o.getStream();
@@ -318,7 +319,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		// console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, broadcasterInfo: ${cp.id}`);
 		// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterInfo?.id!, `${cp.rewardId}`, `${cp.id}`);
 		switch (cp.rewardTitle || cp.rewardId) {
-			case 'ShoutOut':
+			case 'Shoutout':
 				try {
 					if (broadcasterInfo) {
 						const stream = await userApiClient.streams.getStreamByUserName(broadcasterInfo.name);
@@ -1127,7 +1128,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const randomMessage = messages[randomIndex];
 
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
-			const subed = await userInfo.hasSubscriber(userInfo.id) ? 'yes' : 'no';
+			// const subed = await userInfo.hasSubscriber(userInfo.id) ? 'yes' : 'no';
 			// const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
 			const followEmbed = new EmbedBuilder()
 				.setTitle('FOLLOW EVENT')
@@ -1145,11 +1146,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						value: `${e.followDate}`,
 						inline: true
 					},
-					{
-						name: 'Subscribed: ',
-						value: `${subed}`,// needs testing
-						inline: true
-					}
+					// {
+					// 	name: 'Subscribed: ',
+					// 	value: `${subed}`,// needs testing
+					// 	inline: true
+					// }
 				])
 				.setThumbnail(userInfo.profilePictureUrl)
 				.setFooter({ text: 'Click Title to check out their channel', iconURL: userInfo.profilePictureUrl })
