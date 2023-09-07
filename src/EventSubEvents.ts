@@ -1095,6 +1095,18 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					]
 				},
 				{
+					name: 'Starfield',
+					gameId: '506438',
+					followerMessages: [
+						`In the vastness of the cosmos, we follow you, ${e.userDisplayName}, just like in Starfield.`,
+						`Our journey through the stars continues, ${e.userDisplayName}, just like in the game Starfield.`,
+						`Exploring the unknown, together with you, ${e.userDisplayName}, inspired by Starfield.`,
+						`To infinity and beyond, with you as our guide, ${e.userDisplayName}, much like in Starfield.`,
+						`Navigating the cosmic mysteries with you, ${e.userDisplayName}, echoing the spirit of Starfield`,
+						`Welcome to the cosmic crew, ${e.userDisplayName}! Together, we explore the stars like true adventurers in Starfield.`
+					]
+				},
+				{
 					name: 'default',// if no coded messages for a specific game it will default to this array of follow messages
 					followerMessages: [
 						`@${e.userDisplayName} has followed the channel`,
