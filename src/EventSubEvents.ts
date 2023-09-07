@@ -1128,8 +1128,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const randomMessage = messages[randomIndex];
 
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
-			// const subed = await userInfo.hasSubscriber(userInfo.id) ? 'yes' : 'no';
-			// const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
+			const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
 			const followEmbed = new EmbedBuilder()
 				.setTitle('FOLLOW EVENT')
 				.setAuthor({ name: e.userDisplayName, iconURL: userInfo.profilePictureUrl })
@@ -1146,11 +1145,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						value: `${e.followDate}`,
 						inline: true
 					},
-					// {
-					// 	name: 'Subscribed: ',
-					// 	value: `${subed}`,// needs testing
-					// 	inline: true
-					// }
+					{
+						name: 'Subscribed: ',
+						value: `${subed}`,// needs testing
+						inline: true
+					}
 				])
 				.setThumbnail(userInfo.profilePictureUrl)
 				.setFooter({ text: 'Click Title to check out their channel', iconURL: userInfo.profilePictureUrl })
