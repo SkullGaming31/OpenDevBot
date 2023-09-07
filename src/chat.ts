@@ -33,8 +33,8 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		}
 
 		if (
-			(!module.endsWith('.ts') && process.env.NODE_ENV !== 'prod') ||
-			(!module.endsWith('.js') && process.env.NODE_ENV === 'prod') ||
+			(!module.endsWith('.ts') && process.env.Enviroment !== 'prod') ||
+			(!module.endsWith('.js') && process.env.Enviroment === 'prod') ||
 			module === 'index.ts' ||
 			module === 'index.js'
 		) {

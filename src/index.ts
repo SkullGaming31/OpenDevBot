@@ -31,7 +31,7 @@ class OpenDevBot {
 
 			// Initialize Twitch EventSub event listeners
 			if (process.env.ENABLE_EVENTSUB) {
-				if (process.env.NODE_ENV === 'dev') {
+				if (process.env.Enviroment === 'dev') {
 					console.time('Event Sub Initialized');
 					await initializeTwitchEventSub();
 					console.timeEnd('Event Sub Initialized');
@@ -43,7 +43,7 @@ class OpenDevBot {
 
 			// Initialize chat client for Twitch IRC
 			if (process.env.ENABLE_CHAT) {
-				if (process.env.NODE_ENV === 'dev') {
+				if (process.env.Enviroment === 'dev') {
 					console.time('Chat now Initialized');
 					await initializeChat();
 					console.timeEnd('Chat now Initialized');

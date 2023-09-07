@@ -19,7 +19,7 @@ function errorHandler(error: Error, req: Request, res: Response, next: NextFunct
 		status: statusCode,
 		name: error.name,
 		message: error.message,
-		stack: process.env.NODE_ENV === 'prod' ? '🥞' : error.stack
+		stack: process.env.Enviroment === 'prod' ? '🥞' : error.stack
 	});
 }
 

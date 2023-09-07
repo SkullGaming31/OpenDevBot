@@ -24,7 +24,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	//#endregion
 
-	const isDevEnvironment = process.env.NODE_ENV === 'dev';
+	const isDevEnvironment = process.env.Enviroment === 'dev';
 
 	if (isDevEnvironment) {
 		try {
