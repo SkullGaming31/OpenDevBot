@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const purge: Command = {
 	name: 'purge',
@@ -16,7 +16,7 @@ const purge: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
-		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${purge.usage}`);
 		if (!args[2]) return chatClient.say(channel, `${display}, please specify a duration in seconds to purge texts`);
@@ -56,7 +56,7 @@ const purge: Command = {
 				.setTimestamp();
 			try {
 
-				await twitchActivity.send({ embeds: [purgeEmbed] });
+				await commandUsage.send({ embeds: [purgeEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const mod: Command = {
 	name: 'mod',
@@ -13,7 +13,7 @@ const mod: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		const display = msg.userInfo.displayName;
 		try {
 			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${mod.usage}`);
@@ -59,7 +59,7 @@ const mod: Command = {
 				} else {
 					await chatClient.say(channel, 'You must be a channel editor to use this command');
 				}
-				await twitchActivity.send({ embeds: [moderatorEmbed] });
+				await commandUsage.send({ embeds: [moderatorEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

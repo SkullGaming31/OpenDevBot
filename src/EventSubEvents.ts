@@ -1140,7 +1140,8 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const randomMessage = messages[randomIndex];
 
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
-			const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
+			const subed = await userInfo.hasSubscriber(userInfo.id as UserIdResolvable) ? 'yes' : 'no';
+			// const subed = await userInfo.isSubscribedTo(broadcasterInfo?.id) ? 'yes' : 'no';
 			const followEmbed = new EmbedBuilder()
 				.setTitle('FOLLOW EVENT')
 				.setAuthor({ name: e.userDisplayName, iconURL: userInfo.profilePictureUrl })

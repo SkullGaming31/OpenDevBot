@@ -10,53 +10,50 @@ const counter: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 
-		if (args.length < 2 || !['set', 'inc', 'reset'].includes(args[0])) {
-			await chatClient.say(channel, `Usage: ${counter.usage}`);
-			return;
-		}
+		if (args.length < 2 || !['set', 'inc', 'reset'].includes(args[0])) return chatClient.say(channel, `Usage: ${counter.usage}`);
 
 		const option = args[0];
 		const counterName = args[1];
 		let value;
 
 		switch (option) {
-		case 'set':
-			// Set the counter to the specified value
-			if (args.length < 3) {
-				await chatClient.say(channel, 'Invalid value. Usage: !counter set <counterName> <value>');
-				return;
-			}
-			value = parseInt(args[2], 10);
-			if (isNaN(value)) {
-				await chatClient.say(channel, 'Invalid value. Usage: !counter set <counterName> <value>');
-				return;
-			}
-			await setCounterValue(counterName, value);
-			await chatClient.say(channel, `Counter "${counterName}" set to ${value}.`);
-			break;
-		case 'inc':
-			// Increment the counter by the specified value
-			if (args.length < 3) {
-				await chatClient.say(channel, 'Invalid value. Usage: !counter inc <counterName> <value>');
-				return;
-			}
-			value = parseInt(args[2], 10);
-			if (isNaN(value)) {
-				await chatClient.say(channel, 'Invalid value. Usage: !counter inc <counterName> <value>');
-				return;
-			}
-			await incrementCounterValue(counterName, value);
-			const updatedValue = await getCounterValue(counterName);
-			await chatClient.say(channel, `Counter "${counterName}" incremented by ${value}. New value: ${updatedValue}.`);
-			break;
-		case 'reset':
-			// Reset the counter to 0
-			await resetCounterValue(counterName);
-			await chatClient.say(channel, `Counter "${counterName}" reset to 0.`);
-			break;
-		default:
-			await chatClient.say(channel, `Invalid command option: ${option}`);
-			break;
+			case 'set':
+				// Set the counter to the specified value
+				if (args.length < 3) {
+					await chatClient.say(channel, 'Invalid value. Usage: !counter set <counterName> <value>');
+					return;
+				}
+				value = parseInt(args[2], 10);
+				if (isNaN(value)) {
+					await chatClient.say(channel, 'Invalid value. Usage: !counter set <counterName> <value>');
+					return;
+				}
+				await setCounterValue(counterName, value);
+				await chatClient.say(channel, `Counter "${counterName}" set to ${value}.`);
+				break;
+			case 'inc':
+				// Increment the counter by the specified value
+				if (args.length < 3) {
+					await chatClient.say(channel, 'Invalid value. Usage: !counter inc <counterName> <value>');
+					return;
+				}
+				value = parseInt(args[2], 10);
+				if (isNaN(value)) {
+					await chatClient.say(channel, 'Invalid value. Usage: !counter inc <counterName> <value>');
+					return;
+				}
+				await incrementCounterValue(counterName, value);
+				const updatedValue = await getCounterValue(counterName);
+				await chatClient.say(channel, `Counter "${counterName}" incremented by ${value}. New value: ${updatedValue}.`);
+				break;
+			case 'reset':
+				// Reset the counter to 0
+				await resetCounterValue(counterName);
+				await chatClient.say(channel, `Counter "${counterName}" reset to 0.`);
+				break;
+			default:
+				await chatClient.say(channel, `Invalid command option: ${option}`);
+				break;
 		}
 	}
 };

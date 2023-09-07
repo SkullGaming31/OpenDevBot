@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const unvip: Command = {
 	name: 'unvip',
@@ -15,7 +15,7 @@ const unvip: Command = {
 		const userApiClient = await getUserApi();
 
 		const display = msg.userInfo.displayName;
-		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
 
 		try {
@@ -56,7 +56,7 @@ const unvip: Command = {
 				} else {
 					console.error('Something happened while searching for user');
 				}
-				await twitchActivity.send({ embeds: [unVIPEmbed] });
+				await commandUsage.send({ embeds: [unVIPEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

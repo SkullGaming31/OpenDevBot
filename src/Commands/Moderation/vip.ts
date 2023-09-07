@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID, userID } from '../../util/constants';
 
 const vip: Command = {
 	name: 'vip',
@@ -13,7 +13,7 @@ const vip: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
 
@@ -57,7 +57,7 @@ const vip: Command = {
 			try {
 				await userApiClient.channels.addVip(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
 				await chatClient.say(channel, `@${args[1]} has been added as VIP by ${msg.userInfo.displayName}`);
-				await twitchActivity.send({ embeds: [vipEmbed] });
+				await commandUsage.send({ embeds: [vipEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

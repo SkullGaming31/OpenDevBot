@@ -4,7 +4,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/apiInterfaces';
-import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const unmod: Command = {
 	name: 'unmod',
@@ -14,7 +14,7 @@ const unmod: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;
-		const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
@@ -51,7 +51,7 @@ const unmod: Command = {
 				if (isEditor || msg.userInfo.isBroadcaster) {
 					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
 					await chatClient.say(channel, `${args[1]} has had there moderator powers removed by ${msg.userInfo.displayName}`);
-					await twitchActivity.send({ embeds: [unModeratorEmbed] });
+					await commandUsage.send({ embeds: [unModeratorEmbed] });
 				} else {
 					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');
 				}
