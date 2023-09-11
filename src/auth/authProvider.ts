@@ -1,7 +1,7 @@
 import { UserIdResolvable } from '@twurple/api';
 import { AccessToken, RefreshingAuthProvider } from '@twurple/auth';
 import { config } from 'dotenv';
-import { IToken, TokenModel } from '../database/models/tokenModel';
+import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 config();
 
 const clientId = process.env.TWITCH_CLIENT_ID as string;
@@ -9,7 +9,7 @@ const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 
 
 export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
-	const tokenDataList: (IToken & { user_id: string })[] = await TokenModel.find();
+	const tokenDataList: (ITwitchToken & { user_id: string })[] = await TokenModel.find();
 
 	const authProvider = new RefreshingAuthProvider({ clientId, clientSecret });
 

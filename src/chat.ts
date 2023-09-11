@@ -9,6 +9,7 @@ import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
+import { ITwitchToken, TokenModel } from './database/models/tokenModel';
 import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/apiInterfaces';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
@@ -343,16 +344,50 @@ export async function getChatClient(): Promise<ChatClient> {
 	if (!chatClientInstance) {
 		const authProvider = await getAuthProvider();
 
+		// Fetch usernames from the database
+		const usernames = await getUsernamesFromDatabase();
+
 		chatClientInstance = new ChatClient({
 			authProvider,
-			channels: ['canadiendragon'],
+			channels: [], // Initialize with an empty array
 			logger: { minLevel: 'ERROR' },
 			authIntents: ['chat'],
 			botLevel: 'none',
 			isAlwaysMod: false,
 			requestMembershipEvents: true,
 		});
+
 		chatClientInstance.connect();
+
+		// Delay between joining channels
+		for (const username of usernames) {
+			// Skip joining the "opendevbot" channel
+			if (username.toLowerCase() === 'opendevbot') {
+				continue;
+			}
+			setTimeout(() => {
+				chatClientInstance.join(username);
+				if (process.env.Enviroment === 'dev') {
+					console.log(`Joined channel: ${username}`);
+				} else { return; }
+			}, 2000); // 2000 milliseconds (2 seconds) delay
+		}
 	}
 	return chatClientInstance;
+}
+// Define a function to retrieve usernames from MongoDB
+export async function getUsernamesFromDatabase(): Promise<string[]> {
+	try {
+		// Use Mongoose to query the database and fetch user documents
+		const tokens: ITwitchToken[] = await TokenModel.find({}, 'login'); // Assuming 'login' field contains usernames
+
+		// Extract usernames from the fetched documents
+		const usernames: string[] = tokens.map((token) => token.login);
+
+		return usernames;
+	} catch (error) {
+		// Handle any potential errors here
+		console.error('Error fetching usernames from MongoDB:', error);
+		throw error;
+	}
 }
