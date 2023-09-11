@@ -9,7 +9,7 @@ const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 
 
 export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
-	const tokenDataList: (IToken & { twitchId: string })[] = await TokenModel.find();
+	const tokenDataList: (IToken & { user_id: string })[] = await TokenModel.find();
 
 	const authProvider = new RefreshingAuthProvider({ clientId, clientSecret });
 
@@ -17,7 +17,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 		// console.log('Refreshing tokens for user', userId);
 		// console.log('New token data:', newTokenData);
 		const tbd = await TokenModel.findOneAndUpdate(
-			{ twitchId: userId },
+			{ user_id: userId },
 			{
 				access_token: newTokenData.accessToken,
 				refresh_token: newTokenData.refreshToken,
@@ -30,7 +30,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 		// console.log('Tokens updated in the database', tbd);
 	});
 	for (const tokenData of tokenDataList) {
-		const { twitchId, access_token, refresh_token, scope, expires_in, obtainmentTimestamp } = tokenData;
+		const { user_id, access_token, refresh_token, scope, expires_in, obtainmentTimestamp } = tokenData;
 		const newTokenData: AccessToken = {
 			accessToken: access_token,
 			refreshToken: refresh_token ?? null,
@@ -39,8 +39,8 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 			obtainmentTimestamp: obtainmentTimestamp ?? null,
 		};
 		await authProvider.addUserForToken(newTokenData);
-		if (twitchId === '659523613') {
-			authProvider.addUser(twitchId as UserIdResolvable, newTokenData, ['chat']);
+		if (user_id === '659523613') {
+			authProvider.addUser(user_id as UserIdResolvable, newTokenData, ['chat']);
 		}
 	}
 	return authProvider;

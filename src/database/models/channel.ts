@@ -1,12 +1,12 @@
 import { model, Schema } from 'mongoose';
 interface IChannel extends Document {
-    twitchId: string;
-    name: string;
-    enabled: boolean;
+	user_id: string;
+	name: string;
+	enabled: boolean;
 }
 
 const channelSchema = new Schema<IChannel>({
-	twitchId: {
+	user_id: {
 		type: String,
 		unique: true
 	},

@@ -49,7 +49,7 @@ const settitle: Command = {
 							inline: true
 						}
 					])
-					.setFooter({ text: `Channel: ${channel}, TwitchID: ${msg.userInfo.userId}` })
+					.setFooter({ text: `Channel: ${channel}, user_id: ${msg.userInfo.userId}` })
 					.setTimestamp();
 				try {
 					await chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${title}`);

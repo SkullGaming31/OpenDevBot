@@ -6,7 +6,6 @@ import { initializeTwitchEventSub } from './EventSubEvents';
 import { initializeErrorHandling } from './Handlers/errorHandler';
 import { initializeChat } from './chat';
 import { initializeDatabase } from './database';
-import { createApp } from './util/createApp';
 
 class OpenDevBot {
 	webhookClient: WebhookClient;
@@ -25,9 +24,6 @@ class OpenDevBot {
 
 			// Initialize database connection
 			await initializeDatabase();
-
-			// Start Express Server (not used for anything right now other than to get an access_token/refresh_token)
-			const app = createApp(process.env.PORT || '8001');
 
 			// Initialize Twitch EventSub event listeners
 			if (process.env.ENABLE_EVENTSUB) {

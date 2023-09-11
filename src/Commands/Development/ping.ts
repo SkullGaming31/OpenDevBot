@@ -54,7 +54,7 @@ async function checkTwitchApiPing() {
 	const start = Date.now();
 
 	try {
-		const tbd = await TokenModel.findOne({ twitchId: '31124455' });
+		const tbd = await TokenModel.findOne({ user_id: '31124455' });
 		await axios.get(apiEndpoint, {
 			headers: {
 				Authorization: `Bearer ${tbd?.access_token}`,

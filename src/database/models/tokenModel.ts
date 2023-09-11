@@ -1,7 +1,7 @@
 import { Document, Schema, model } from 'mongoose';
 
 export interface IToken extends Document {
-	twitchId: string;
+	user_id: string;
 	login: string;
 	access_token: string;
 	refresh_token: string;
@@ -11,7 +11,7 @@ export interface IToken extends Document {
 }
 
 const tokenSchema = new Schema<IToken>({
-	twitchId: {
+	user_id: {
 		type: String,
 		unique: true,
 		required: true
@@ -43,4 +43,4 @@ const tokenSchema = new Schema<IToken>({
 });
 // obtainmentTimestamp is saved in seconds same with expires_in
 
-export const TokenModel = model<IToken>('token', tokenSchema);
+export const TokenModel = model<IToken>('usertokens', tokenSchema);
