@@ -20,7 +20,7 @@
     "@twurple/auth": "^7.0.1",
     "@twurple/chat": "^7.0.1",
     "@twurple/eventsub-ws": "^7.0.1",
-    "axios": "^1.4.0",
+    "axios": "^1.6.0",
     "countdown": "^2.6.0",
     "discord.js": "^14.11.0",
     "dotenv": "^10.0.0",
