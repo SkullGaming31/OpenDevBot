@@ -11,7 +11,7 @@ import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { ITwitchToken, TokenModel } from './database/models/tokenModel';
 import { User, UserModel } from './database/models/userModel';
-import { Command } from './interfaces/apiInterfaces';
+import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
 
@@ -293,30 +293,35 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 		// TODO: send chat message every 10 minutes consistently in typescript.
-		// const initialDelay = 600000; // Delay before the first execution in milliseconds (10 minutes)
-		// const repeatDelay = 600000; // Delay between each execution in milliseconds (10 minutes)
-		// const postMessage = async () => {
-		// 	try {
-		// 		await chatClient.say('#canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
-		// 	} catch (error) {
-		// 		console.error(error);
-		// 	}
+		// Define a function to send a chat message
+		const sendChatMessage = async () => {// needs testing
+			try {
+				await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+			} catch (error) {
+				console.error(error);
+			} finally {
+				// Schedule the next call
+				setTimeout(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
+			}
+		};
 
-		// 	setTimeout(postMessage, repeatDelay); // Schedule the next execution
-		// };
-
-		// setTimeout(postMessage, initialDelay); // Schedule the first execution
+		// Schedule subsequent calls every 10 minutes
+		setInterval(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
 	};
 	chatClient.onMessage(commandHandler);
 
 	chatClient.onJoin(async (channel: string, user: string) => {
 		try {
 			if (chatClient.isConnected) {
-				const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo?.id!, openDevBotID);
-				if (!isMod) {
-					await chatClient.say(channel, 'Hello, I\'m now connected to your chat, dont forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
-					await sleep(1000);
-					await chatClient.action(channel, '/mod opendevbot');
+				if (broadcasterInfo && broadcasterInfo.id) {
+					const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo.id as UserIdResolvable, openDevBotID as UserIdResolvable);
+					if (!isMod) {
+						await chatClient.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
+						await sleep(1000);
+						await chatClient.action(channel, '/mod opendevbot');
+					}
+				} else {
+					console.info('broadcasterInfo or broadcasterInfo.id is undefined');
 				}
 			} else {
 				console.info('The chatClient is not connected');

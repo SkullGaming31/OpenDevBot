@@ -1,10 +1,10 @@
-import { HelixModerator, UserIdResolvable } from '@twurple/api';
+import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { TokenModel } from '../../database/models/tokenModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { userID } from '../../util/constants';
 
 axios.defaults;
@@ -32,17 +32,18 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		// Accessing and logging specific properties of each moderator
-		moderatorsData.forEach((moderator: HelixModerator) => {
-			console.log(
-				'Moderator ID:', moderator.userId,
-				'Moderator Display Name:', moderator.userDisplayName,
-				'Moderator User Login:', moderator.userName);
-		});
+		// moderatorsData.forEach((moderator: HelixModerator) => {
+		// 	console.log(
+		// 		'Moderator ID:', moderator.userId,
+		// 		'Moderator Display Name:', moderator.userDisplayName,
+		// 		'Moderator User Login:', moderator.userName);
+		// });
 
 		try {
-			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Channel {Broadcaster or Moderator}');
+			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			const pingValue = await checkTwitchApiPing();
-			await chatClient.say(channel, `Im online and working correctly, Twitch API Ping: ${pingValue}ms`);
+			const uptime = getBotUptime(); // Get the bot uptime
+			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 		} catch (error) {
 			console.error(error);
 		}
@@ -70,6 +71,18 @@ async function checkTwitchApiPing() {
 		console.error('Error:', error);
 		throw error; // Rethrow the error to be caught in the calling function
 	}
+}
+
+function getBotUptime() {
+	const uptimeMilliseconds = process.uptime() * 1000;
+	const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
+	const days = Math.floor(uptimeSeconds / (3600 * 24));
+	const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+	const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+	const seconds = uptimeSeconds % 60;
+
+	const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+	return formattedUptime;
 }
 
 export default ping;

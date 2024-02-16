@@ -4,7 +4,7 @@ import countdown from 'countdown';
 import { UserIdResolvable } from '@twurple/api';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
 const followage: Command = {

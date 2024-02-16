@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { LurkMessageModel } from '../../database/models/LurkModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 
 export const lurkingUsers: string[] = [];
@@ -48,7 +48,7 @@ const lurk: Command = {
 					await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
 				}
 				if (savedLurkMessage) {
-					await savedLurkMessage.remove();
+					await savedLurkMessage.deleteOne();
 				}
 				break;
 		}

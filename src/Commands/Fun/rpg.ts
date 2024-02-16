@@ -1,6 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 /**
  * steps to create a Twitch chat-based RPG game:

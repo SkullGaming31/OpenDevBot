@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 
 const duel: Command = {

@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const mod: Command = {
@@ -35,16 +35,12 @@ const mod: Command = {
 						value: `${msg.userInfo.displayName}`,
 						inline: true
 					},
-					{
-						name: 'Mod',
-						value: `${msg.userInfo.isMod}`,
-						inline: true
-					},
-					{
-						name: 'broadcaster',
-						value: `${msg.userInfo.isBroadcaster}`,
-						inline: true
-					}
+					...(msg.userInfo.isMod
+						? [{ name: 'Mod', value: 'Yes', inline: true }]
+						: msg.userInfo.isBroadcaster
+							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
+							: []
+					)
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just modded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();

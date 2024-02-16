@@ -2,7 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 const dig: Command = {
 	name: 'dig',
@@ -20,7 +20,7 @@ const dig: Command = {
 
 		//check if the user is not the broadcaster
 		if (!msg.userInfo.isBroadcaster) {
-		// Check if the user has enough balance
+			// Check if the user has enough balance
 			const userDoc = await UserModel.findOne<User>({ username });
 			if (userDoc?.balance === undefined) return;
 			if (!userDoc || userDoc.balance < digAmount) { return chatClient.say(channel, 'You don\'t have enough balance to dig.'); }

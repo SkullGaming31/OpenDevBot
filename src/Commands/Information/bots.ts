@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import knownBotsModel, { Bots } from '../../database/models/knownBotsModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
 const bots: Command = {

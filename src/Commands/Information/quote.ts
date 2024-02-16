@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import QuoteModel, { IQuote } from '../../database/models/Quote';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 const quoteCommand: Command = {
 	name: 'quote',
@@ -14,20 +14,20 @@ const quoteCommand: Command = {
 				if (!args[1]) return chatClient.say(channel, '!quote add [quote]');
 				const content = args.slice(1).join(' '); // extract the quote content from the arguments
 				const quote = new QuoteModel({ content }); // create a new Quote document with the content
-				quote.save(async (err: any, savedQuote: IQuote) => {
-					if (err) {
-						console.error(err.message);
-						// handle error
-					} else {
-						console.log(`Quote added: "${savedQuote.content}"`);
-						await chatClient.say(channel, 'Quote Added to database');
-						// handle success
-					}
-				});
+				try {
+					const savedQuote = await quote.save();
+					console.log(`Quote added: "${savedQuote.content}"`);
+					await chatClient.say(channel, 'Quote Added to database');
+					// handle success
+				} catch (error) {
+					console.error(error);
+					// handle error
+				}
+
 				break;
 			case 'remove':
 				const quoteId = args[1]; // extract the quote ID from the arguments
-				QuoteModel.findByIdAndRemove(quoteId, async (err: any, removedQuote: IQuote | null) => {
+				QuoteModel.findByIdAndDelete(quoteId, async (err: any, removedQuote: IQuote | null) => {
 					if (err) {
 						console.error(err);
 						await chatClient.say(channel, 'An Error has Occured');
@@ -61,26 +61,19 @@ const quoteCommand: Command = {
 					});
 				} else {
 					// list a random quote
-					QuoteModel.countDocuments().exec((err: any, count: number) => {
-						if (err) {
-							console.error(err);
-							// handle error
-						} else {
-							const randomIndex = Math.floor(Math.random() * count);
-							QuoteModel.findOne().skip(randomIndex).exec(async (err: any, quote: IQuote | null) => {
-								if (err) {
-									console.error(err);
-									// handle error
-								} else if (!quote) {
-									await chatClient.say(channel, 'No quotes found');
-									// handle no quotes
-								} else {
-									await chatClient.say(channel, `QuoteID:${quote._id}: "${quote.content}"`);
-									// handle success
-								}
-							});
-						}
-					});
+					QuoteModel.countDocuments().exec().then((count: number) => {
+						const randomIndex = Math.floor(Math.random() * count);
+
+						QuoteModel.findOne().skip(randomIndex).exec().then(async (quote: IQuote | null) => {
+							if (!quote) {
+								await chatClient.say(channel, 'No quotes found');
+								// handle no quotes
+							} else {
+								await chatClient.say(channel, `QuoteID:${quote._id}: "${quote.content}"`);
+								// handle success
+							}
+						}).catch((err) => { console.error(err); });
+					}); // <-- Add a closing parenthesis here
 				}
 				break;
 			default:

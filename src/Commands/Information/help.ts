@@ -1,6 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { commands, getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 const command: Command = {
 	name: 'help',

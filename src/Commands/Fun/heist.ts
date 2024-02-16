@@ -2,11 +2,11 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 
 type LootValue = {
-  [itemName: string]: number | Gems | Antique | Artwork | Cash;
+	[itemName: string]: number | Gems | Antique | Artwork | Cash;
 };
 
 const lootValues: LootValue = {
@@ -99,8 +99,8 @@ interface Gems {
 }
 
 interface LootResult {
-  totalAmount: number;
-  items: string[];
+	totalAmount: number;
+	items: string[];
 }
 
 // Store an array to keep track of participants
@@ -229,16 +229,16 @@ function calculateSuccessRate() {
 	const maxSuccessRate = 0.9; // Maximum success rate (90%)
 	const maxParticipants = 10; // Maximum number of participants that influence the success rate
 	const participantFactor = participants.length / maxParticipants; // Calculate the factor based on the number of participants
-  
+
 	// Calculate the rate of increase per participant
 	const rateOfIncrease = maxSuccessRate / maxParticipants;
-  
+
 	// Calculate the adjusted success rate based on the factor and rate of increase
 	const adjustedRate = participantFactor * rateOfIncrease;
-  
+
 	// Limit the success rate to the maximum
 	const successRate = Math.min(adjustedRate, maxSuccessRate);
-  
+
 	return successRate;
 }
 function calculateLoot(amount: number): LootResult {
@@ -281,7 +281,7 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 
 		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {
 			const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
-		
+
 			if (!userBalance) {
 				throw new Error('User not found');
 			}
@@ -290,10 +290,10 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 				await chatClient.say(channel, 'Insufficient balance to join the heist.');
 				return;
 			}
-		
+
 			userBalance.balance -= betAmount;
 			await userBalance.save();
-		
+
 			participants.push(user);
 			await chatClient.say(channel, `${user} has joined the heist!`);
 		}

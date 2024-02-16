@@ -2,7 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 const houseItems = {
 	tv: 1000,
@@ -22,7 +22,7 @@ const cashRegisterMin = 200;
 const cashRegisterMax = 5000;
 
 interface StoreItems {
-  [key: string]: number;
+	[key: string]: number;
 }
 
 const storeItems: StoreItems = {
@@ -60,88 +60,88 @@ const robber: Command = {
 		let stolenItems: string[] = [];
 
 		switch (robberyTarget) {
-		case 'house':
-			// Calculate the total value of items in the house
-			const houseValue = Object.values(houseItems).reduce((total, value) => total + value, 0);
-			robberyAmount = houseValue;
-			robberySuccessful = true;
-			stolenItems = Object.keys(houseItems);
-			break;
-		case 'person':
-			// Retrieve all user models with the Bot role
-			const botUsers: User[] = await UserModel.find({ roles: 'Bot' });
-		
-			// Select a random bot user from the list
-			const randomBotUser = botUsers[randomInt(0, botUsers.length - 1)];
-		
-			if (!randomBotUser) {
-				return chatClient.say(channel, 'An error occurred while attempting to rob a bot user.');
-			}
-		
-			// Get the username or identifier of the random bot user
-			const botUserName = randomBotUser.username; // Replace 'username' with the actual property name of the username or identifier in your user model
-		
-			// Calculate the percentage to take from the random bot user (random number from 1 to 15)
-			const percentageToTake = randomInt(1, 15);
-		
-			// Calculate the robbery amount based on the percentage to take
-			const botUserBalance = randomBotUser.balance || 0;
-			robberyAmount = Math.floor((botUserBalance * percentageToTake) / 100);
-		
-			if (robberyAmount === 0) {
-				return chatClient.say(channel, 'There are no eligible bot users to rob at the moment.');
-			}
-		
-			// Update the bot user's balance by deducting the robbery amount
-			randomBotUser.balance = botUserBalance - robberyAmount;
-			await randomBotUser.save();
-		
-			robberySuccessful = true;
-			stolenItems = Object.keys(personItems);
-		
-			// Send the message with the bot user and stolen items information
-			chatClient.say(channel, `You successfully robbed ${botUserName} and gained ${robberyAmount} coins. You stole the following items: ${stolenItems.join(', ')}`);
-			break;
-		case 'store':
-			// Select random items from the store if no specific items are chosen
-			if (chosenItems.length === 0) {
-				const itemsToSteal = Object.keys(storeItems);
-				const numItemsToSteal = randomInt(1, Math.min(3, itemsToSteal.length)); // Random number of items to steal, up to a maximum of 3
-				stolenItems = [];
+			case 'house':
+				// Calculate the total value of items in the house
+				const houseValue = Object.values(houseItems).reduce((total, value) => total + value, 0);
+				robberyAmount = houseValue;
+				robberySuccessful = true;
+				stolenItems = Object.keys(houseItems);
+				break;
+			case 'person':
+				// Retrieve all user models with the Bot role
+				const botUsers: User[] = await UserModel.find({ roles: 'Bot' });
 
-				for (let i = 0; i < numItemsToSteal; i++) {
-					const randomItemIndex = randomInt(0, itemsToSteal.length - 1);
-					const randomItem = itemsToSteal.splice(randomItemIndex, 1)[0]; // Remove the selected item from the array
-					stolenItems.push(randomItem);
+				// Select a random bot user from the list
+				const randomBotUser = botUsers[randomInt(0, botUsers.length - 1)];
+
+				if (!randomBotUser) {
+					return chatClient.say(channel, 'An error occurred while attempting to rob a bot user.');
 				}
-			} else {
-				stolenItems = chosenItems.filter(item => storeItems[item]); // Filter out invalid items
-			}
 
-			// Check if chosen items exist in the inventory
-			const missingItems = chosenItems.filter(item => !storeItems[item]);
-			if (missingItems.length > 0) {
-				return chatClient.say(channel, `You don't have the following items in your inventory: ${missingItems.join(', ')}`);
-			}
+				// Get the username or identifier of the random bot user
+				const botUserName = randomBotUser.username; // Replace 'username' with the actual property name of the username or identifier in your user model
 
-			// Calculate the total value of stolen items
-			const stolenValue = stolenItems.reduce((total, item) => total + (storeItems[item] || 0), 0);
-			if (stolenValue === 0) {
-				return chatClient.say(channel, 'You were unable to steal any valid items.');
-			}
-			robberySuccessful = true;
-			robberyAmount = stolenValue;
+				// Calculate the percentage to take from the random bot user (random number from 1 to 15)
+				const percentageToTake = randomInt(1, 15);
 
-			// Check if cash register is among the stolen items
-			if (stolenItems.includes('cashRegister')) {
-				const cashRegisterAmount = storeItems['cashRegister'];
-				stolenItems = stolenItems.filter(item => item !== 'cashRegister'); // Remove 'cashRegister' from the stolen items list
-				stolenItems.push(`cashRegister (${cashRegisterAmount} coins)`); // Add 'cashRegister' with amount to the stolen items list
-			}
+				// Calculate the robbery amount based on the percentage to take
+				const botUserBalance = randomBotUser.balance || 0;
+				robberyAmount = Math.floor((botUserBalance * percentageToTake) / 100);
 
-			break;
-		default:
-			return chatClient.say(channel, `Invalid robbery target. ${robber.usage}`);
+				if (robberyAmount === 0) {
+					return chatClient.say(channel, 'There are no eligible bot users to rob at the moment.');
+				}
+
+				// Update the bot user's balance by deducting the robbery amount
+				randomBotUser.balance = botUserBalance - robberyAmount;
+				await randomBotUser.save();
+
+				robberySuccessful = true;
+				stolenItems = Object.keys(personItems);
+
+				// Send the message with the bot user and stolen items information
+				chatClient.say(channel, `You successfully robbed ${botUserName} and gained ${robberyAmount} coins. You stole the following items: ${stolenItems.join(', ')}`);
+				break;
+			case 'store':
+				// Select random items from the store if no specific items are chosen
+				if (chosenItems.length === 0) {
+					const itemsToSteal = Object.keys(storeItems);
+					const numItemsToSteal = randomInt(1, Math.min(3, itemsToSteal.length)); // Random number of items to steal, up to a maximum of 3
+					stolenItems = [];
+
+					for (let i = 0; i < numItemsToSteal; i++) {
+						const randomItemIndex = randomInt(0, itemsToSteal.length - 1);
+						const randomItem = itemsToSteal.splice(randomItemIndex, 1)[0]; // Remove the selected item from the array
+						stolenItems.push(randomItem);
+					}
+				} else {
+					stolenItems = chosenItems.filter(item => storeItems[item]); // Filter out invalid items
+				}
+
+				// Check if chosen items exist in the inventory
+				const missingItems = chosenItems.filter(item => !storeItems[item]);
+				if (missingItems.length > 0) {
+					return chatClient.say(channel, `You don't have the following items in your inventory: ${missingItems.join(', ')}`);
+				}
+
+				// Calculate the total value of stolen items
+				const stolenValue = stolenItems.reduce((total, item) => total + (storeItems[item] || 0), 0);
+				if (stolenValue === 0) {
+					return chatClient.say(channel, 'You were unable to steal any valid items.');
+				}
+				robberySuccessful = true;
+				robberyAmount = stolenValue;
+
+				// Check if cash register is among the stolen items
+				if (stolenItems.includes('cashRegister')) {
+					const cashRegisterAmount = storeItems['cashRegister'];
+					stolenItems = stolenItems.filter(item => item !== 'cashRegister'); // Remove 'cashRegister' from the stolen items list
+					stolenItems.push(`cashRegister (${cashRegisterAmount} coins)`); // Add 'cashRegister' with amount to the stolen items list
+				}
+
+				break;
+			default:
+				return chatClient.say(channel, `Invalid robbery target. ${robber.usage}`);
 		}
 
 		if (robberySuccessful) {

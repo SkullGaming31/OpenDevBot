@@ -1,11 +1,5 @@
 import { ChatMessage } from '@twurple/chat/lib';
 
-export interface IDadJoke {
-  id: string;
-  joke: string;
-  status: number;
-}
-
 export interface Command {
   name: string;
   description: string;

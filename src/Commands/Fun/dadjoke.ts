@@ -1,7 +1,8 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getChatClient } from '../../chat';
-import { Command, IDadJoke } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
+import { IDadJoke } from '../../interfaces/IDadJoke';
 
 const dadjoke: Command = {
 	name: 'dadjoke',

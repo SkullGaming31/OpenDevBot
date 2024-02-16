@@ -1,27 +1,25 @@
-import mongoose, { ConnectOptions, MongooseError } from 'mongoose';
+import mongoose, { Mongoose } from 'mongoose';
 
 export async function initializeDatabase() {
 	try {
 		mongoose.set('strictQuery', true);
-		const database = await mongoose.connect(process.env.MONGO_URI as string, {
-			useNewUrlParser: true,
-			useUnifiedTopology: true,
+		const database: Mongoose = await mongoose.connect(process.env.MONGO_URI as string, {
 			user: process.env.MONGO_USER as string,
 			pass: process.env.MONGO_PASS as string,
-			dbName: process.env.MONGO_DB as string
-		} as ConnectOptions);
+			dbName: process.env.MONGO_DB as string,
+		});
 		console.log('Twitch Database Connected');
 
 		mongoose.connection.on('disconnected', async () => {
 			console.log('Twitch Database Disconnected');
-			// connection.removeAllListeners();
-			await mongoose.disconnect();
 			try {
-				if (mongoose.connection.readyState === 0) {
-					await database.connect(process.env.MONGO_URI as string);
-				} else { console.log('error connecting to the database'); }
+				await mongoose.connect(process.env.MONGO_URI as string, {
+					user: process.env.MONGO_USER as string,
+					pass: process.env.MONGO_PASS as string,
+					dbName: process.env.MONGO_DB as string,
+				});
 			} catch (error) {
-				console.error(error);
+				console.error('Error reconnecting to the database:', error);
 			}
 		});
 
@@ -30,16 +28,14 @@ export async function initializeDatabase() {
 		});
 
 		mongoose.connection.on('reconnected', () => {
-			console.log('Twitch Database re-Connected');
+			console.log('Twitch Database Reconnected');
 		});
-		// mongoose.connection.on('')
 
-		mongoose.connection.on('error', (err: MongooseError) => {
+		mongoose.connection.on('error', (err) => {
 			console.error('Twitch Database Error:', err);
 		});
 
-	} catch (error: any) {
-		console.error('Twitch Database Error:', error);
-		mongoose.disconnect();
+	} catch (error) {
+		console.error('Error initializing Twitch Database:', error);
 	}
 }

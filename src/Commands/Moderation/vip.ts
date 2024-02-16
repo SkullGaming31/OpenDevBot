@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID, userID } from '../../util/constants';
 
 const vip: Command = {
@@ -32,7 +32,7 @@ const vip: Command = {
 			if (!args[1]) return await chatClient.say(channel, `${msg.userInfo.displayName}, Usage: ${vip.usage}`);
 
 			const vipEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel Purge Event')
+				.setTitle('Twitch Channel Event[VIP]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Green')
 				.addFields([
@@ -41,16 +41,12 @@ const vip: Command = {
 						value: `${msg.userInfo.displayName}`,
 						inline: true
 					},
-					{
-						name: 'Mod',
-						value: `${msg.userInfo.isMod}`,
-						inline: true
-					},
-					{
-						name: 'broadcaster',
-						value: `${msg.userInfo.isBroadcaster}`,
-						inline: true
-					}
+					...(msg.userInfo.isMod
+						? [{ name: 'Mod', value: 'Yes', inline: true }]
+						: msg.userInfo.isBroadcaster
+							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
+							: []
+					)
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just viped ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();

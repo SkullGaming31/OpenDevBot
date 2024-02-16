@@ -1,9 +1,9 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 
 interface Actions {
-  [key: string]: string;
+	[key: string]: string;
 }
 
 const me: Command = {

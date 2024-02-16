@@ -1,7 +1,5 @@
 import { WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
-import { generateRandomPirateName } from './util/randomFunctions';
-
 import { initializeTwitchEventSub } from './EventSubEvents';
 import { initializeErrorHandling } from './Handlers/errorHandler';
 import { initializeChat } from './chat';
@@ -9,51 +7,77 @@ import { initializeDatabase } from './database';
 
 class OpenDevBot {
 	webhookClient: WebhookClient;
-	constructor() {
-		this.webhookClient = new WebhookClient({ url: process.env.DEV_DISCORD_ERROR_WEBHOOK as string });
+	startTime: number;
+
+	constructor(webhookUrl: string) {
+		this.webhookClient = new WebhookClient({ url: webhookUrl });
+		this.startTime = Date.now(); // Record the start time
+	}
+
+	getUptime(): number {
+		return Date.now() - this.startTime;
+	}
+	setTerminalTitle(title: string): void {
+		process.stdout.write(`\x1b]2;${title}\x1b\x5c`);
 	}
 
 	async start() {
 		try {
-			const pirateName = generateRandomPirateName();
-			console.log(`We shall begin the fun, ${pirateName.role} ${pirateName.name}`);
-
-			// Initialize Discord webhook client for error handling
-			await initializeErrorHandling(this.webhookClient);
-			console.log('Error Handler Initialized');
-
 			// Initialize database connection
 			await initializeDatabase();
 
+			// Initialize error handling
+			await initializeErrorHandling(this.webhookClient);
+
 			// Initialize Twitch EventSub event listeners
 			if (process.env.ENABLE_EVENTSUB) {
-				if (process.env.Enviroment === 'dev') {
-					console.time('Event Sub Initialized');
-					await initializeTwitchEventSub();
-					console.timeEnd('Event Sub Initialized');
-				} else {
-					await initializeTwitchEventSub();
-					console.info('Event Sub Started');
-				}
+				const message = process.env.Enviroment === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
+				console.time(message);
+				await initializeTwitchEventSub();
+				console.timeEnd(message);
 			}
 
 			// Initialize chat client for Twitch IRC
 			if (process.env.ENABLE_CHAT) {
-				if (process.env.Enviroment === 'dev') {
-					console.time('Chat now Initialized');
-					await initializeChat();
-					console.timeEnd('Chat now Initialized');
-				} else {
-					await initializeChat();
-					console.info('Chat now Initialized');
-				}
+				const message = process.env.Enviroment === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
+				console.time(message);
+				await initializeChat();
+				console.timeEnd(message);
 			}
+			// Update terminal title with uptime every 30 seconds
+			// setInterval((): void => {
+			// 	const uptime = this.getFormattedUptime();
+			// 	this.setTerminalTitle(`Uptime: ${uptime}`);
+			// 	process.title = `Uptime: ${uptime}`;
+			// }, 30000);
+
+			// Set initial terminal title based on the terminal type
+			const terminalTitle = process.platform === 'win32' ? 'OpenDevBot[Twitch]' : 'Uptime: ';
+			process.stdout.write(`\x1b]2;${terminalTitle}\x1b\x5c`);
+
 		} catch (error) {
-			console.error(error);
+			console.error('Error during bot startup:', error);
+			throw error;
 		}
 	}
+
+	// getFormattedUptime(): string {
+	// 	const uptimeMilliseconds = this.getUptime();
+	// 	const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
+	// 	const days = Math.floor(uptimeSeconds / (3600 * 24));
+	// 	const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+	// 	const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+	// 	const seconds = uptimeSeconds % 60;
+
+	// 	const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+	// 	return formattedUptime;
+	// }
 }
 
 config();
-const client = new OpenDevBot();
-client.start().then(() => { console.log('Bot started successfully'); }).catch(error => { console.error('Failed to start bot:', error); });
+const webhookUrl = process.env.DEV_DISCORD_ERROR_WEBHOOK as string;
+const client = new OpenDevBot(webhookUrl);
+
+client.start()
+	.then(() => console.log('Bot started successfully'))
+	.catch(error => console.error('Failed to start bot:', error));

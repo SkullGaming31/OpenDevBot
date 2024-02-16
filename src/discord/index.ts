@@ -1,10 +1,10 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 
-export const client = new Client({ 
+export const client = new Client({
 	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.MessageContent, 
+		GatewayIntentBits.MessageContent,
 		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.GuildWebhooks
 	],
@@ -16,7 +16,5 @@ export const client = new Client({
 		Partials.Reaction,
 		Partials.ThreadMember,
 		Partials.User
-	],
-	presence: { status: 'online' },
-	allowedMentions: { parse: ['everyone', 'roles', 'users'], repliedUser: true }
+	]
 });

@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
 const setcategory: Command = {
@@ -59,7 +59,13 @@ const setcategory: Command = {
 						name: 'Old Category:',
 						value: `\`Gamename: ${channelInfo?.gameName}\`, \n||\`GameID: ${channelInfo?.gameId}\`||`,
 						inline: true
-					}
+					},
+					...(msg.userInfo.isMod
+						? [{ name: 'Mod', value: 'Yes', inline: true }]
+						: msg.userInfo.isBroadcaster
+							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
+							: []
+					)
 				])
 				.setFooter({ text: `Channel: ${channel}` })
 				.setTimestamp();
@@ -67,6 +73,7 @@ const setcategory: Command = {
 			try {
 				await chatClient.say(channel, `${msg.userInfo.displayName}, has changed the channel category to ${newGame?.name}`);
 				await commandUsageWebhook.send({ embeds: [commandEmbed] });
+				// console.log(`GameName: ${channelInfo?.gameName}, GameID: ${channelInfo?.gameId}`);
 			} catch (error) {
 				console.error(error);
 			}

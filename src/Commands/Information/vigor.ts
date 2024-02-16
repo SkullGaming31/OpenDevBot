@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import * as fs from 'fs';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { broadcasterInfo, moderatorID } from '../../util/constants';
 import { sleep } from '../../util/util';
 

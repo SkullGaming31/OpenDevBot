@@ -1,4 +1,5 @@
 {
+  "Version": "17.1.0.75186",
   "weapon": [
     {
       "name": "SW-SH 629",
@@ -10,8 +11,13 @@
       "muzzleSpeed": 445,
       "magsize": 6,
       "weight": 1.6,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "b93 raffica",
@@ -23,8 +29,14 @@
       "muzzleSpeed": 380,
       "magsize": 21,
       "weight": 1.2,
-      "firemode": ["Semi-Auto", "Burst"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Burst"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "PSS",
@@ -36,8 +48,13 @@
       "muzzleSpeed": 200,
       "magsize": 7,
       "weight": 0.85,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Supressed"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Supressed"
+      ]
     },
     {
       "name": "Combat Magnum",
@@ -49,8 +66,13 @@
       "muzzleSpeed": 427,
       "magsize": 6,
       "weight": 1.1,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "M1911",
@@ -62,8 +84,13 @@
       "muzzleSpeed": 250,
       "magsize": 9,
       "weight": 1.0,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "Luger",
@@ -75,8 +102,13 @@
       "muzzleSpeed": 350,
       "magsize": 9,
       "weight": 0.77,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "PM",
@@ -88,8 +120,13 @@
       "muzzleSpeed": 315,
       "magsize": 9,
       "weight": 0.75,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "thompson",
@@ -101,8 +138,14 @@
       "muzzleSpeed": 285,
       "magsize": 31,
       "weight": 5.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "berry m12",
@@ -114,8 +157,14 @@
       "muzzleSpeed": 550,
       "magsize": 33,
       "weight": 3.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "ADR-97",
@@ -127,8 +176,14 @@
       "muzzleSpeed": 715,
       "magsize": 51,
       "weight": 3.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "MP5-k SD3",
@@ -140,8 +195,14 @@
       "muzzleSpeed": 285,
       "magsize": 31,
       "weight": 2.88,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Supressed"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Supressed"
+      ]
     },
     {
       "name": "AUR Para",
@@ -153,8 +214,14 @@
       "muzzleSpeed": 400,
       "magsize": 33,
       "weight": 3.6,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "Gal",
@@ -166,8 +233,14 @@
       "muzzleSpeed": 400,
       "magsize": 33,
       "weight": 3.1,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "PPSH-41",
@@ -179,8 +252,14 @@
       "muzzleSpeed": 488,
       "magsize": 71,
       "weight": 3.6,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "MGV-176",
@@ -192,8 +271,14 @@
       "muzzleSpeed": 400,
       "magsize": 161,
       "weight": 3.1,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "Skorpion",
@@ -205,11 +290,17 @@
       "muzzleSpeed": 320,
       "magsize": 21,
       "weight": 1.3,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
-      "name": "Suomi KP/-31",
+      "name": "Suomi KP-31",
       "type": "Sub-Machine Gun",
       "slot": "Primary",
       "quality": "Uncommon",
@@ -218,8 +309,14 @@
       "muzzleSpeed": 396,
       "magsize": 71,
       "weight": 7.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "Grease Gun",
@@ -231,8 +328,14 @@
       "muzzleSpeed": 280,
       "magsize": 31,
       "weight": 3.7,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "PM-63 RAK",
@@ -244,8 +347,14 @@
       "muzzleSpeed": 400,
       "magsize": 26,
       "weight": 2.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "l85a1",
@@ -257,8 +366,14 @@
       "muzzleSpeed": 940,
       "magsize": 31,
       "weight": 5.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "m4a1",
@@ -270,8 +385,14 @@
       "muzzleSpeed": 905,
       "magsize": 31,
       "weight": 4.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "AUR A1",
@@ -283,8 +404,14 @@
       "muzzleSpeed": 950,
       "magsize": 31,
       "weight": 4.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "bugle f1",
@@ -296,8 +423,15 @@
       "muzzleSpeed": 930,
       "magsize": 31,
       "weight": 4.0,
-      "firemode": ["Semi-Auto", "Burst", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Burst",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "gewehr 3",
@@ -309,8 +443,14 @@
       "muzzleSpeed": 800,
       "magsize": 21,
       "weight": 4.5,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "pa md. 86",
@@ -322,8 +462,15 @@
       "muzzleSpeed": 880,
       "magsize": 31,
       "weight": 4.5,
-      "firemode": ["Semi-Auto", "Burst", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Burst",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "a74-k",
@@ -335,8 +482,14 @@
       "muzzleSpeed": 880,
       "magsize": 31,
       "weight": 3.5,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "a74-ksu",
@@ -348,8 +501,14 @@
       "muzzleSpeed": 735,
       "magsize": 31,
       "weight": 3.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "a-km",
@@ -361,8 +520,14 @@
       "muzzleSpeed": 715,
       "magsize": 31,
       "weight": 3.4,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "es16a2",
@@ -374,8 +539,14 @@
       "muzzleSpeed": 930,
       "magsize": 31,
       "weight": 4.0,
-      "firemode": ["Semi-Auto", "Burst"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Burst"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "vz. 58 p",
@@ -387,8 +558,33 @@
       "muzzleSpeed": 705,
       "magsize": 31,
       "weight": 3.6,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
+    },
+    {
+      "name": "FG 42",
+      "type": "Machine Gun",
+      "slot": "Primary",
+      "quality": "Special Issue",
+      "basedamage": 38,
+      "rateoffire": 480,
+      "muzzleSpeed": 740,
+      "magsize": 21,
+      "weight": 4.95,
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "l86a1 lsw",
@@ -400,8 +596,14 @@
       "muzzleSpeed": 970,
       "magsize": 31,
       "weight": 7.7,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "m60e3",
@@ -413,8 +615,13 @@
       "muzzleSpeed": 853,
       "magsize": 101,
       "weight": 11.0,
-      "firemode": ["Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "m249",
@@ -424,10 +631,15 @@
       "basedamage": 32,
       "rateoffire": 850,
       "muzzleSpeed": 925,
-      "magsize": 101,
+      "magsize": 201,
       "weight": 7.1,
-      "firemode": ["Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "rpk-74",
@@ -439,8 +651,14 @@
       "muzzleSpeed": 960,
       "magsize": 46,
       "weight": 5.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "uk vz. 59",
@@ -452,8 +670,13 @@
       "muzzleSpeed": 830,
       "magsize": 51,
       "weight": 9.5,
-      "firemode": ["Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "kk 62",
@@ -465,8 +688,14 @@
       "muzzleSpeed": 730,
       "magsize": 101,
       "weight": 10.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "pkm",
@@ -478,8 +707,13 @@
       "muzzleSpeed": 825,
       "magsize": 101,
       "weight": 10.0,
-      "firemode": ["Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "rpk",
@@ -491,8 +725,14 @@
       "muzzleSpeed": 745,
       "magsize": 76,
       "weight": 7.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "za m72",
@@ -504,8 +744,14 @@
       "muzzleSpeed": 745,
       "magsize": 41,
       "weight": 7.7,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "maschinen-gewehr 3",
@@ -517,8 +763,13 @@
       "muzzleSpeed": 820,
       "magsize": 101,
       "weight": 13.0,
-      "firemode": ["Auto"],
-      "Misc": ["Heavy"]
+      "folder": "Guns",
+      "firemode": [
+        "Auto"
+      ],
+      "Misc": [
+        "Heavy"
+      ]
     },
     {
       "name": "l96",
@@ -530,8 +781,14 @@
       "muzzleSpeed": 1000,
       "magsize": 5,
       "weight": 6.7,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope", "Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope",
+        "Staggers"
+      ]
     },
     {
       "name": "ph m82",
@@ -543,8 +800,14 @@
       "muzzleSpeed": 840,
       "magsize": 5,
       "weight": 5.1,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope", "Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope",
+        "Staggers"
+      ]
     },
     {
       "name": "svd",
@@ -556,8 +819,13 @@
       "muzzleSpeed": 830,
       "magsize": 11,
       "weight": 4.3,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "svu",
@@ -569,8 +837,15 @@
       "muzzleSpeed": 830,
       "magsize": 11,
       "weight": 3.8,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope", "Suppressed"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope",
+        "Suppressed"
+      ]
     },
     {
       "name": "aur hbar-t",
@@ -582,8 +857,14 @@
       "muzzleSpeed": 970,
       "magsize": 31,
       "weight": 4.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "gewehr 3 sg1",
@@ -595,8 +876,14 @@
       "muzzleSpeed": 800,
       "magsize": 21,
       "weight": 6.0,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "vss vintorez",
@@ -608,8 +895,15 @@
       "muzzleSpeed": 390,
       "magsize": 11,
       "weight": 2.8,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["Scope", "Suppressed"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "Scope",
+        "Suppressed"
+      ]
     },
     {
       "name": "za m76",
@@ -621,8 +915,13 @@
       "muzzleSpeed": 700,
       "magsize": 11,
       "weight": 5.0,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "m21",
@@ -634,8 +933,13 @@
       "muzzleSpeed": 830,
       "magsize": 11,
       "weight": 7.1,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope"
+      ]
     },
     {
       "name": "scharfschützen-gewehr 82",
@@ -647,8 +951,14 @@
       "muzzleSpeed": 980,
       "magsize": 5,
       "weight": 4.7,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Scope", "Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Scope",
+        "Staggers"
+      ]
     },
     {
       "name": "sks",
@@ -660,8 +970,13 @@
       "muzzleSpeed": 735,
       "magsize": 11,
       "weight": 3.85,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "vz.52 rifle",
@@ -673,8 +988,13 @@
       "muzzleSpeed": 760,
       "magsize": 11,
       "weight": 4.4,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "m2 carbine",
@@ -686,8 +1006,14 @@
       "muzzleSpeed": 607,
       "magsize": 31,
       "weight": 2.6,
-      "firemode": ["Semi-Auto", "Auto"],
-      "Misc": ["None"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "mosin nagant",
@@ -699,8 +1025,33 @@
       "muzzleSpeed": 800,
       "magsize": 5,
       "weight": 3.4,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers", "Bolt-Action"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers",
+        "Bolt-Action"
+      ]
+    },
+    {
+      "name": "Taiga 21",
+      "type": "Shotgun",
+      "slot": "Primary",
+      "quality": "Special Issue",
+      "basedamage": 13,
+      "rateoffire": 340,
+      "muzzleSpeed": 375,
+      "magsize": 12,
+      "weight": 3.5,
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "remy m870",
@@ -712,8 +1063,13 @@
       "muzzleSpeed": 450,
       "magsize": 8,
       "weight": 3.6,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "la chiave 12",
@@ -725,8 +1081,13 @@
       "muzzleSpeed": 450,
       "magsize": 9,
       "weight": 4.4,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "ks-23",
@@ -738,8 +1099,13 @@
       "muzzleSpeed": 450,
       "magsize": 4,
       "weight": 4.1,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "sawed-off shotgun",
@@ -751,8 +1117,13 @@
       "muzzleSpeed": 450,
       "magsize": 2,
       "weight": 2.7,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "izh43",
@@ -764,8 +1135,13 @@
       "muzzleSpeed": 450,
       "magsize": 2,
       "weight": 3.6,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "silver pigeon",
@@ -777,8 +1153,13 @@
       "muzzleSpeed": 450,
       "magsize": 2,
       "weight": 3.4,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Staggers"
+      ]
     },
     {
       "name": "crossbow",
@@ -790,8 +1171,14 @@
       "muzzleSpeed": 100,
       "magsize": 1,
       "weight": 5.0,
-      "firemode": ["Semi-Auto"],
-      "Misc": ["Suppressed", "Staggers"]
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto"
+      ],
+      "Misc": [
+        "Suppressed",
+        "Staggers"
+      ]
     }
   ],
   "melee": [
@@ -802,8 +1189,13 @@
       "quality": "Special Issue",
       "basedamage": 35,
       "weight": 3.0,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "Fällkniven A1",
@@ -812,8 +1204,13 @@
       "quality": "Rare",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "rm14",
@@ -822,8 +1219,13 @@
       "quality": "Rare",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "a-km bayonet",
@@ -832,8 +1234,13 @@
       "quality": "Uncommon",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "gfk",
@@ -842,8 +1249,13 @@
       "quality": "Uncommon",
       "basedamage": 30,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "kdv-1",
@@ -852,8 +1264,13 @@
       "quality": "Uncommon",
       "basedamage": 30,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "m3",
@@ -862,8 +1279,13 @@
       "quality": "Uncommon",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "puukko",
@@ -872,8 +1294,13 @@
       "quality": "Common",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "uton vz. 75",
@@ -882,8 +1309,13 @@
       "quality": "Common",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     },
     {
       "name": "Vz. 58 Bayonet",
@@ -892,8 +1324,13 @@
       "quality": "Common",
       "basedamage": 25,
       "weight": 1,
-      "firemode": ["None"],
-      "Misc": ["None"]
+      "folder": "Melee",
+      "firemode": [
+        "None"
+      ],
+      "Misc": [
+        "None"
+      ]
     }
   ],
   "consumables": [
@@ -902,103 +1339,119 @@
       "description": "Restores Half of lost health",
       "quality": "Common",
       "health": 0.5,
-      "carry": 6
+      "carry": 6,
+      "folder": "Consumables"
     },
     {
-      "name": "Disinfectant",
+      "name": "disinfectant",
       "description": "Heals minor injuries",
       "quality": "Common",
       "health": 20,
-      "carry": 6
+      "carry": 6,
+      "folder": "Consumables"
     },
     {
-      "name": "Antibiotics",
+      "name": "antibiotics",
       "description": "Restores Health over time",
       "quality": "Rare",
       "health": 80,
-      "carry": 4
+      "carry": 4,
+      "folder": "Consumables"
     },
     {
       "name": "painkiller",
       "description": "Temporarily restores all health",
       "quality": "Uncommon",
       "health": 100,
-      "carry": 5
+      "carry": 5,
+      "folder": "Consumables"
     },
     {
-      "name": "Caffeine",
+      "name": "caffeine",
       "description": "Replenishes stamina and temporarily stops its depletion",
       "quality": "Rare",
       "stamina": 100,
-      "carry": 4
+      "carry": 4,
+      "folder": "Consumables"
     },
     {
-      "name": "Iodine",
+      "name": "iodine",
       "description": "Temporarily stops maximum health reduction caused by radiation",
       "quality": "Military",
-      "carry": 3
+      "carry": 3,
+      "folder": "Consumables"
     },
     {
-      "name": "Adrenaline Shot",
+      "name": "adrenaline shot",
       "description": "Boosts Movement speed and lowers weight debuffs",
       "quality": "Military",
-      "carry": 3
+      "carry": 3,
+      "folder": "Consumables"
     }
   ],
   "Tools": [
     {
-      "name": "Armor Plate",
+      "name": "armor plate",
       "description": "Protects your torso from damage, until it gets destroyed",
       "quality": "Special Issue",
-      "carry": 2
+      "carry": 2,
+      "folder": "Tools"
     },
     {
-      "name": "Portable Signals Detector",
+      "name": "portable signals detector",
       "description": "A consumable tool that will locate the nearest radio signal it detects",
       "quality": "Special Issue",
-      "carry": 2
+      "carry": 2,
+      "folder": "Tools"
     },
     {
-      "name": "Improvised Mine",
+      "name": "improvised mine",
       "description": "Probably wont kill you, but the shockwave is enough to throw anybody off balance",
       "quality": "Special Issue",
-      "carry": 3
+      "carry": 3,
+      "folder": "Tools"
     },
     {
-      "name": "Fireworks",
+      "name": "fireworks",
       "description": "Launch a volley of colorful fireworks into the sky",
       "quality": "Common",
-      "carry": 6
+      "carry": 6,
+      "folder": "Tools"
     },
     {
-      "name": "Mortar Strike",
+      "name": "mortar strike",
       "description": "Use it to call in a mortar strike on a targeted area",
       "quality": "Special Issue",
-      "carry": 2
+      "carry": 2,
+      "folder": "Tools"
     },
     {
-      "name": "Jammer",
+      "name": "jammer",
       "description": "Disrupts the signals of outlanders in its proximity",
       "quality": "Rare",
-      "carry": 4
+      "carry": 4,
+      "folder": "Tools"
     },
     {
-      "name": "Transmitter",
+      "name": "transmitter",
       "description": "A placeable tool that sends out radio signals indistinguishable from actual outlanders",
       "quality": "Rare",
-      "carry": 4
+      "carry": 4,
+      "folder": "Tools"
     },
     {
-      "name": "Decoy",
+      "name": "decoy",
       "description": "Confuses your enemies with fake gun shots",
       "quality": "Uncommon",
-      "carry": 5
+      "carry": 5,
+      "folder": "Tools"
     },
     {
-      "name": "Fake Glint",
+      "name": "fake glint",
       "description": "A placeable tool with mirrors attached, producing glints",
       "quality": "Common",
-      "carry": 6
+      "carry": 6,
+      "folder": "Tools"
     }
   ],
   "throwables": [
@@ -1006,20 +1459,22 @@
       "name": "M67 Frag Grenade",
       "description": "A Fragmentation Hand Gernade, which has seen active service across the globe",
       "quality": "Special Issue",
-      "carry": 2
+      "carry": 2,
+      "folder": "Thrown"
     },
     {
       "name": "M84 Flash Grenade",
       "description": "Blind and deafen your enemies for a considerable tatical advantage",
       "quality": "Military",
       "carry": 3,
-      "notes": "4 seconds of no vision directly looking at it"
+      "folder": "Thrown"
     },
     {
       "name": "Radiation Grenade",
       "description": "Explosively Spreads radioactive dust in a large area, decreasing the maximum health of anyone irradiated",
       "quality": "Special Issue",
-      "carry": 2
+      "carry": 2,
+      "folder": "Thrown"
     }
   ],
   "traps": [
@@ -1028,27 +1483,28 @@
       "description": "A placeable trap that damages and slows outlanders down",
       "quality": "Uncommon",
       "carry": 5,
-      "notes": ["lose 10% health and stamina"]
+      "folder": "Traps"
     },
     {
-      "name": "Booby Trap",
+      "name": "booby trap",
       "description": "Upon usage, booby traps a lootable container that its aimed at",
       "quality": "Military",
       "carry": 3,
-      "notes": ["30hp gone if failed"]
+      "folder": "Traps"
     },
     {
-      "name": "Contact Bomb",
+      "name": "contact bomb",
       "description": "A placeable proximity-activated explosive",
       "quality": "Military",
       "carry": 3,
-      "notes": ["45-50 hp gone 1 bomb"]
+      "folder": "Traps"
     },
     {
       "name": "Alarm Trap",
       "description": "A placable trap that produces a loud noise when something is within its proximity",
       "quality": "Uncommon",
-      "carry": 5
+      "carry": 5,
+      "folder": "Traps"
     }
   ]
 }

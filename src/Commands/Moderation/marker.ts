@@ -4,7 +4,7 @@ import axios from 'axios';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { Command } from '../../interfaces/apiInterfaces';
+import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
 
 axios.defaults;
@@ -20,7 +20,7 @@ function formatStreamTime(seconds: number) {
 const marker: Command = {
 	name: 'marker',
 	description: 'Creates a marker at the current location in the broadcaster\'s stream',
-	usage: '!marker [description] description is optional',
+	usage: '!marker [description] (description is optional)',
 	moderator: true,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
@@ -32,15 +32,18 @@ const marker: Command = {
 
 		const EditorResponse = await userApiClient.channels.getChannelEditors(broadcasterInfo.id as UserIdResolvable);
 
-		const isEditor = EditorResponse.map((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId).join(', ');
+		const isEditor = EditorResponse.some((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
 		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
 
-		const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+		const userSearch = await userApiClient.users.getUserByName(msg.userInfo.userName);
 		if (userSearch?.id === undefined) return;
 
+		const description = args.slice(1).join(' ').trim(); // Join all args starting from index 1 into a single description
+		const sanitizedDescription = description.replace(/[^\w\s]/gi, ''); // Remove non-alphanumeric characters
+
 		const markerEmbed = new EmbedBuilder()
-			.setTitle('Twitch Channel Unmod Event')
+			.setTitle('Twitch Channel marker Event')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Red')
 			.addFields([
@@ -49,44 +52,33 @@ const marker: Command = {
 					value: `${msg.userInfo.displayName}`,
 					inline: true
 				},
-				{
-					name: 'Mod',
-					value: `${msg.userInfo.isMod}`,
-					inline: true
-				},
-				{
-					name: 'broadcaster',
-					value: `${msg.userInfo.isBroadcaster}`,
-					inline: true
-				}
+				...(msg.userInfo.isMod
+					? [{ name: 'Mod', value: 'Yes', inline: true }]
+					: msg.userInfo.isBroadcaster
+						? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
+						: []
+				)
 			])
-			.setFooter({ text: `${msg.userInfo.displayName} just unmodded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+			.setFooter({ text: `${msg.userInfo.displayName} just created a stream marker with description: ${sanitizedDescription} in ${channel}'s twitch channel` })
 			.setTimestamp();
 
-		// Check if args have the description
+		// Check if user is authorized to use the command
 		if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Channel {Broadcaster or Moderator}');
 
 		try {
 			if (stream !== null) {
-				const tbd = userApiClient.streams.createStreamMarker(broadcasterInfo.id, args.length > 0 ? args.join(' ') : undefined);
+				const createdSegment = await userApiClient.streams.createStreamMarker(broadcasterInfo.id, sanitizedDescription || undefined);
+				const positionInSeconds = createdSegment.positionInSeconds;
+				const streamTime = formatStreamTime(positionInSeconds);
 
-				tbd.then(async (createdSegment) => {
-					const positionInSeconds = createdSegment.positionInSeconds;
-
-					// Use positionInSeconds to format and display the stream time
-					const streamTime = formatStreamTime(positionInSeconds); // Replace with your formatting function
-
-					await chatClient.say(channel, `Stream Marker Created Successfully at ${streamTime}`);
-					await commandUsage.send({ embeds: [markerEmbed] });
-				}).catch((err) => { console.error('Something went wrong creating a stream marker', err); });
+				await chatClient.say(channel, `Stream Marker Created Successfully at ${streamTime}`);
+				await commandUsage.send({ embeds: [markerEmbed] });
 			} else {
 				await chatClient.say(channel, 'The stream must be live to use this command');
 			}
-
 		} catch (error) {
-			console.error(error);
+			console.error('Something went wrong creating a stream marker', error);
 		}
 	},
 };
-
 export default marker;
