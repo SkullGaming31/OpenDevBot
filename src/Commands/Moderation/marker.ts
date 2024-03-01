@@ -33,7 +33,7 @@ const marker: Command = {
 		const EditorResponse = await userApiClient.channels.getChannelEditors(broadcasterInfo.id as UserIdResolvable);
 
 		const isEditor = EditorResponse.some((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId);
-		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
+		const isStaff = msg.userInfo.isBroadcaster || isEditor;
 		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
 
 		const userSearch = await userApiClient.users.getUserByName(msg.userInfo.userName);
@@ -43,7 +43,7 @@ const marker: Command = {
 		const sanitizedDescription = description.replace(/[^\w\s]/gi, ''); // Remove non-alphanumeric characters
 
 		const markerEmbed = new EmbedBuilder()
-			.setTitle('Twitch Channel marker Event')
+			.setTitle('Twitch Event[Channel Marker Added]')
 			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 			.setColor('Red')
 			.addFields([
