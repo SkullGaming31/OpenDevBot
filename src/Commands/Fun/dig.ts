@@ -51,13 +51,13 @@ const dig: Command = {
 		// Check if the user dug up a bomb
 		if (holes[0] === 'bomb') {
 			await UserModel.updateOne({ username }, { $inc: { balance: -digAmount } });
-			return chatClient.say(channel, `You dug up a bomb and lost ${digAmount} gold. Better luck next time!`);
+			return chatClient.say(channel, `You dug up a bomb  and lost ${digAmount} gold. There were ${numBombs} bombs in play. Better luck next time!`);
 		}
 
 		// If the user didn't dig up a bomb, award them with a prize
 		const prizeAmount = Math.floor(Math.random() * (digAmount * 2)) + digAmount;
 		await UserModel.updateOne({ username }, { $inc: { balance: prizeAmount } });
-		return chatClient.say(channel, `You dug up the cache and won ${prizeAmount} gold!`);
+		return chatClient.say(channel, `You dug up the cache  and won ${prizeAmount} gold! You managed to avoid ${numBombs} bombs.`);
 	}
 };
 
