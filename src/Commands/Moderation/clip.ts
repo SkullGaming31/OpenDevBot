@@ -18,7 +18,7 @@ const clipCommand: Command = {
 		console.log('Initialized chat client, user API client, and command usage webhook.');
 
 		const clipEmbed = new EmbedBuilder()
-			.setTitle('Twitch Channel clip Event')
+			.setTitle('Twitch Event[Twitch Clip Created]')
 			.setColor('Red')
 			.addFields([
 				{
@@ -35,20 +35,20 @@ const clipCommand: Command = {
 			])
 			.setFooter({ text: `${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel` })
 			.setTimestamp();
-		console.log('Clip embed created:', clipEmbed);
+		// console.log('Clip embed created:', clipEmbed);
 
 		if (broadcasterInfo) {
 			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
-			console.log('Stream info:', stream);
+			// console.log('Stream info:', stream);
 
 			if (stream !== null) {
 				if (msg.userInfo.isBroadcaster || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip) {
 					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo.id as UserIdResolvable, createAfterDelay: true });
-					console.log('Clip ID:', clipId);
+					// console.log('Clip ID:', clipId);
 
 					const clipUrl = `https://clips.twitch.tv/${clipId}`;
 					await chatClient.say(channel, `Clip Created: ${clipUrl}`);
-					console.log('Clip URL sent to chat.', clipUrl);
+					// console.log('Clip URL sent to chat.', clipUrl);
 
 					await commandUsage.send({ embeds: [clipEmbed] });
 					// console.log('Command usage webhook sent.');
@@ -61,7 +61,7 @@ const clipCommand: Command = {
 				// console.log('Stream is not live.');
 			}
 		} else {
-			console.error('Broadcaster info is undefined.');
+			console.error('broadcasterInfo is undefined.');
 		}
 	}
 };
