@@ -4,7 +4,7 @@ import { config } from 'dotenv';
 import { randomInt } from 'node:crypto';
 config();
 
-import { UserIdResolvable } from '@twurple/api/lib';
+import { ApiClient, UserIdResolvable } from '@twurple/api/lib';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
@@ -23,16 +23,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	//#endregion
 
-	const isDevEnvironment = process.env.Enviroment === 'dev';
-
-	if (isDevEnvironment) {
-		try {
-			await userApiClient.eventSub.deleteAllSubscriptions();
-			console.log('All Subscriptions Deleted!');
-		} catch (error) {
-			console.error(error);
-		}
-	}
 	await createChannelPointsRewards(false);
 
 	// eventSub Stuff
@@ -109,7 +99,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		isEnabled: true,
 		maxRedemptionsPerUserPerStream: null,
 		maxRedemptionsPerStream: null,
-		prompt: 'Mute Headset Sounds for 5 minutes!',
+		prompt: 'Mute Headset Sounds untel you tell me i can put them back on or encounter ends!',
 		userInputRequired: false
 	});
 	const twitterUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '90693245-492f-48ea-8cae-1b13c699ffc9', {
@@ -248,14 +238,13 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 
 	//#region EventSub
-
 	const online = eventSubListener.onStreamOnline(broadcasterInfo.id, async (o) => {
 		// const chatClient = await getChatClient();
 		const stream = await o.getStream();
 		const userInfo = await o.getBroadcaster();
 
 		const liveEmbed = new EmbedBuilder()
-			.setTitle('GONE LIVE')
+			.setTitle('Twitch Event[GONE LIVE]')
 			.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}` })
 			.addFields([
 				{
@@ -283,10 +272,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			if (userInfo.profilePictureUrl) { liveEmbed.setThumbnail(userInfo.profilePictureUrl); }
 
 			await sleep(60000);
-			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName} with ${stream?.viewers} viewers.` });
-			// await chatClient.say(broadcasterInfo.name, `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName} with ${stream?.viewers} viewers.`);
+			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName}- (${stream?.title})` });
 			await sleep(60000);
-			await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
+			await LIVE.send({ content: '<@&1209703060859916399>', embeds: [liveEmbed] });
 		} catch (err: any) {
 			console.error(err);
 		}
@@ -570,7 +558,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			case 'Discord':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 				const discordEmbed = new EmbedBuilder()
-					.setTitle('REDEEM EVENT')
+					.setTitle('Twitch Event[REDEEM EVENT]')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setColor('Random')
 					.addFields([
@@ -955,7 +943,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterInfo.id, async (s) => {
 		const userInfo = await s.getUser();
 		const resubEmbed = new EmbedBuilder()
-			.setTitle('RESUB EVENT')
+			.setTitle('Twitch Event[RESUB]')
 			.setAuthor({ name: `${s.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
 			.addFields([
 				{
@@ -1119,13 +1107,29 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			} else {
 				messages = followerRandomMessages.find((obj) => obj.name === 'default')!.followerMessages;
 			}
-			// const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 			const randomIndex = randomInt(0, messages.length);
 			const randomMessage = messages[randomIndex];
+
+			const followEmbed = new EmbedBuilder()
+				.setTitle('Twitch Event[Follow]')
+				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setDescription(`${randomMessage}`)
+				.addFields([
+					{
+						name: 'Twitch User: ',
+						value: `${userInfo.displayName} just Followed the channel`,
+						inline: true
+					},
+				])
+				.setThumbnail(`${userInfo.profilePictureUrl}`)
+				.setColor('Green')
+				.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+				.setTimestamp();
 
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
 
 			await chatClient.say(broadcasterInfo.name, `${randomMessage}`);
+			await twitchActivity.send({ embeds: [followEmbed] });
 		} catch (error) {
 			console.error('An error occurred in the follower event handler:', error);
 		}
@@ -1167,7 +1171,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const userInfo = await cheer.getUser();
 		if (cheer.bits >= 100) {
 			const cheerEmbed = new EmbedBuilder()
-				.setTitle('CHEER EVENT')
+				.setTitle('Twitch Event[CHEER]')
 				.setAuthor({ name: `${userInfo?.displayName}`, iconURL: `${userInfo?.profilePictureUrl}` })
 				.addFields([
 					{
@@ -1198,46 +1202,55 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			}
 		}
 	});
-	const raidTo = eventSubListener.onChannelRaidTo(broadcasterInfo.id, async (rdto) => {// needs work
-		const tbd = await rdto.getRaidingBroadcaster();
-		const tbd1 = await rdto.getRaidedBroadcaster();
+	const raidToListener = eventSubListener.onChannelRaidTo(broadcasterInfo.id, async (raidToEvent) => {
 		try {
-			await chatClient.say(broadcasterInfo?.id!, `${rdto.raidingBroadcasterDisplayName} has raided the channel with ${rdto.viewers} viewers!`);
-			// await twitchActivity.send({ embeds: [raidEmbed] });
-			await sleep(1000);
+			console.log('Raid To Event:', raidToEvent);
+			const raidedBroadcaster = await raidToEvent.getRaidedBroadcaster();
+			const raidingBroadcaster = await raidToEvent.getRaidingBroadcaster();
+
+			const raidEmbed = new EmbedBuilder()
+				.setTitle('Raid Initiated!')
+				.setColor('Purple') // Adjust color as needed
+				.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl })
+				.addFields([
+					{ name: 'Raided Channel:', value: `[${raidedBroadcaster.displayName}](https://twitch.tv/${raidedBroadcaster.displayName.toLowerCase()})`, inline: false },
+					{ name: 'Viewers:', value: `${raidToEvent.viewers} viewers`, inline: false },
+				])
+				.setTimestamp();
+
+			await twitchActivity.send({ embeds: [raidEmbed] });
 		} catch (error) {
-			console.error(error);
+			console.error('Error sending raid notification to Discord:', error);
 		}
 	});
-	const raidFrom = eventSubListener.onChannelRaidFrom(broadcasterInfo.id, async (raid) => {
-		const raidFrom = await raid.getRaidedBroadcaster();
-		const userInfo = await raid.getRaidingBroadcaster();
-
-		const raidEmbed = new EmbedBuilder()
-			.setTitle('CHANNEL RAID EVENT')
-			.setColor('Random')
-			.setAuthor({ name: raidFrom.displayName, iconURL: raidFrom.profilePictureUrl })
-			.addFields([
-				{
-					name: 'Raiding: ',
-					value: raidFrom.displayName,
-					inline: true,
-				},
-				{
-					name: 'Viewer Count: ',
-					value: `${raid.viewers} Viewers`,
-					inline: true,
-				},
-			])
-			.setURL(`https://twitch.tv/${raidFrom.displayName.toLowerCase()}`)
-			.setThumbnail(raidFrom.profilePictureUrl)
-			.setFooter({ text: 'CanadienDragon', iconURL: raidFrom.offlinePlaceholderUrl })
-			.setTimestamp();
-
+	const raidFromListener = eventSubListener.onChannelRaidFrom(broadcasterInfo.id, async (raidEvent) => {
 		try {
-			await chatClient.say(broadcasterInfo?.id!, `${raid.raidedBroadcasterDisplayName} has raided the channel with ${raid.viewers} viewers!`);
+			console.log('Raid Data: ', raidEvent);
+
+			const raidedBroadcaster = await raidEvent.getRaidedBroadcaster(); // You (the broadcaster)
+			const raidingBroadcaster = await raidEvent.getRaidingBroadcaster(); // User raiding you
+
+			const raidEmbed = new EmbedBuilder()
+				.setTitle('Twitch Event [RAID]')
+				.setColor('Green')
+				.setAuthor({ name: raidingBroadcaster.displayName, iconURL: raidingBroadcaster.profilePictureUrl })
+				.addFields([
+					{ name: 'Raided By: ', value: raidingBroadcaster.displayName, inline: true },
+					{ name: 'Viewer Count: ', value: `${raidEvent.viewers} Viewers`, inline: true },
+				])
+				.setURL(`https://twitch.tv/${raidingBroadcaster.displayName.toLowerCase()}`)
+				.setThumbnail(raidedBroadcaster.profilePictureUrl) // You (the broadcaster)
+				.setFooter({ text: 'CanadienDragon', iconURL: raidingBroadcaster.offlinePlaceholderUrl })
+				.setTimestamp();
+
+			const raidMessage = `${raidEvent.raidedBroadcasterDisplayName} has raided the channel with ${raidEvent.viewers} viewers!`;
+			await chatClient.say(broadcasterInfo?.id!, raidMessage);
+
 			await twitchActivity.send({ embeds: [raidEmbed] });
-			await sleep(1000);
+
+			await sleep(3000); // Consider adjusting delay based on needs
+
+			await userApiClient.chat.shoutoutUser(broadcasterInfo?.id!, raidingBroadcaster.name);
 		} catch (error) {
 			console.error(error);
 		}
@@ -1310,10 +1323,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	//#endregion
 }
 
+let eventSubListenerPromise: Promise<EventSubWsListener> | null = null;
 export async function getEventSubs(): Promise<EventSubWsListener> {
-	const userApiClient = await getUserApi();
+	if (!eventSubListenerPromise) {
+		eventSubListenerPromise = createEventSubListener();
+	}
+	return eventSubListenerPromise;
+}
+async function createEventSubListener(): Promise<EventSubWsListener> {
+	const userApiClient: ApiClient = await getUserApi();
 	const eventSubListener = new EventSubWsListener({ apiClient: userApiClient, logger: { minLevel: 'ERROR' } });
 	eventSubListener.start();
-
 	return eventSubListener;
 }
