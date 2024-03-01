@@ -91,27 +91,22 @@ export async function initializeChat(): Promise<void> {
 					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
 
 					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
+						const updatedBalance = (user?.balance || 0) + 100;
 						if (!user) {
 							const newUser = new UserModel({
 								id: chatter.userId,
 								username: chatter.userName,
 								roles: 'Bot',
-								balance: 100,
+								balance: updatedBalance,
 							});
-							// console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 							await newUser.save();
 						} else {
-							const updatedBalance = (user.balance || 0) + 100;
 							await UserModel.updateOne(
 								{ id: chatter.userId },
-								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } },
-								{ upsert: true }
+								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } }
 							);
-							// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
-							// console.log('User:', user);
-							// console.log('Known Bots:', knownBots);
 						}
-						continue; // Skip the remaining checks since the user is a known bot
+						continue;
 					}
 					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
 						continue; // Skip giving coins to specific usernames
@@ -218,7 +213,7 @@ export async function initializeChat(): Promise<void> {
 					}
 
 					// If the command is marked as devOnly and the user is not a moderator or broadcaster in the specific channel, restrict access
-					if (command.devOnly && msg.channelId !== '31124455') {
+					if (command.devOnly && msg.channelId !== '31124455' && msg.userInfo.isBroadcaster || msg.userInfo.isMod) {
 						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragons Channel');
 					}
 
@@ -255,58 +250,64 @@ export async function initializeChat(): Promise<void> {
 			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
 		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
-			const isMods = msg.userInfo.isMod;
-			const isBroadcaster = msg.userInfo.isBroadcaster;
-			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
-			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
 
-			const isStaff = isMods || isBroadcaster || isEditor;
-			if (isStaff) return;
+			// Check if user is staff (moderator, broadcaster, or editor)
+			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster ||
+				(await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable))
+					.some(editor => editor.userId === msg.userInfo.userId);
 
+			// Don't ban staff members
+			if (isStaff) {
+				return;
+			}
+
+			// Create embed for ban message
 			const banEmbed = new EmbedBuilder()
-				.setTitle('Automated Ban')
+				.setTitle('TwitchBan[Automated Ban]')
 				.setAuthor({ name: `${msg.userInfo.displayName}` })
 				.setColor('Red')
 				.addFields([
-					{
-						name: 'User: ',
-						value: `${msg.userInfo.displayName}`,
-						inline: true
-					},
-					{
-						name: 'Reason',
-						value: 'Promoting of selling followers to a broadcaster for twitch breaking TwitchTOS',
-						inline: true
-					}
+					{ name: 'User:', value: `${msg.userInfo.displayName}`, inline: true },
+					{ name: 'Reason:', value: 'Promoting selling followers (violates Twitch TOS)', inline: true },
 				])
 				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
 				.setTimestamp();
+
 			try {
+				// Perform moderation actions:
+				// - Delete user's message
 				await userApiClient.moderation.deleteChatMessages(broadcasterInfo?.id as UserIdResolvable, msg.id);
+				// - Sleep for 1 second (optional delay)
 				await sleep(1000);
-				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch breaking TwitchTOS' });
+				// - Ban user
+				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+					user: msg.userInfo.userId,
+					reason: 'Promoting selling followers (violates Twitch TOS)',
+				});
+				// - Sleep for 1 second (optional delay)
 				await sleep(1000);
+				// - Send chat message notifying ban
 				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
+				// - Send embed to activity feed
 				await twitchActivity.send({ embeds: [banEmbed] });
 			} catch (error) {
 				console.error(error);
 			}
 		}
 		// TODO: send chat message every 10 minutes consistently in typescript.
-		// Define a function to send a chat message
-		const sendChatMessage = async () => {// needs testing
-			try {
-				await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
-			} catch (error) {
-				console.error(error);
-			} finally {
-				// Schedule the next call
-				setTimeout(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
-			}
-		};
+		// const sendMessageEvery10Minutes = async () => {
+		// 	try {
+		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+		// 	} catch (error) {
+		// 		console.error(error);
+		// 	} finally {
+		// Schedule the next call 10 minutes from now
+		// 		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
+		// 	}
+		// };
 
-		// Schedule subsequent calls every 10 minutes
-		setInterval(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
+		// Initiate the first call
+		// sendMessageEvery10Minutes();
 	};
 	chatClient.onMessage(commandHandler);
 
