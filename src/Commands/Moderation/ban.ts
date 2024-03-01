@@ -19,8 +19,8 @@ const ban: Command = {
 		try {
 			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${ban.usage}`);
 
-			const reason = args[2] || 'No Reason Provided';
-			const username = args[1].replace('@', '');
+			const reason = args[1] || 'No Reason Provided';
+			const username = args[0].replace('@', '');
 			const userSearch = await userApiClient.users.getUserByName(username);
 
 			if (!userSearch?.id) return;
