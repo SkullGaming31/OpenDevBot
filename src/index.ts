@@ -54,7 +54,6 @@ class OpenDevBot {
 			throw error;
 		}
 	}
-
 	getFormattedUptime(): string {
 		const uptimeMilliseconds = this.getUptime();
 		const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
@@ -72,6 +71,7 @@ config();
 const webhookUrl = process.env.DEV_DISCORD_ERROR_WEBHOOK as string;
 const client = new OpenDevBot(webhookUrl);
 
+console.log('Start Called: ', client.start.length + 1 + ' times');
 client.start()
 	.then(() => console.log('Bot started successfully'))
 	.catch(error => console.error('Failed to start bot:', error));
