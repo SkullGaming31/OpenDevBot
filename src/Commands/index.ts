@@ -32,4 +32,5 @@ export default {
 	duel: './duel',
 	dig: './dig',
 	marker: './marker',
+	loot: './loot'
 };
