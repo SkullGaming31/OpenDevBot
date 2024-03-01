@@ -14,39 +14,40 @@ const unmod: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;
+
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
-		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
+		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
 
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 		try {
-			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 
 			const unModeratorEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel Unmod Event')
+				.setTitle('Command Usage[Unmod]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
 						name: 'Executer',
-						value: `${msg.userInfo.displayName}`,
+						value: `${display}`,
 						inline: true
 					},
-					...(msg.userInfo.isMod
-						? [{ name: 'Mod', value: 'Yes', inline: true }]
+					...(isEditor
+						? [{ name: 'Channel Editor', value: 'Yes', inline: true }]
 						: msg.userInfo.isBroadcaster
 							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just unmodded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter({ text: `${display} just unmodded ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 			try {
 				if (isEditor || msg.userInfo.isBroadcaster) {
-					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
-					await chatClient.say(channel, `${args[1]} has had there moderator powers removed by ${msg.userInfo.displayName}`);
+					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id as UserIdResolvable);
+					await chatClient.say(channel, `${args[0]} has had there moderator powers removed by ${display}`);
 					await commandUsage.send({ embeds: [unModeratorEmbed] });
 				} else {
 					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');

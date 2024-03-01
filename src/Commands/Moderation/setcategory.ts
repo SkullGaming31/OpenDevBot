@@ -80,7 +80,6 @@ const setcategory: Command = {
 		} else {
 			await chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster, you do not have access to this command`);
 		}
-
 	}
 };
 export default setcategory;

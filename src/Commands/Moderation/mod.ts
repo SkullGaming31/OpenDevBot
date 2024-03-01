@@ -16,8 +16,8 @@ const mod: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		const display = msg.userInfo.displayName;
 		try {
-			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${mod.usage}`);
-			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+			if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${mod.usage}`);
+			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 			// Get the array of channel editors
 			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
@@ -26,7 +26,7 @@ const mod: Command = {
 			const isChannelEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 
 			const moderatorEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel MOD Event')
+				.setTitle('Twitch Event[Channel Mod Added]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Blue')
 				.addFields([
@@ -42,13 +42,13 @@ const mod: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just modded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter({ text: `${display} just modded ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			try {
 				if (isChannelEditor) {
 					await userApiClient.moderation.addModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id).then(async () => {
-						await chatClient.say(channel, `${args[1]} has been givin the Moderator Powers by ${msg.userInfo.displayName}`);
+						await chatClient.say(channel, `${args[0]} has been givin the Moderator Powers by ${display}`);
 					});
 				} else if (msg.userInfo.isBroadcaster) {
 					await chatClient.say(channel, 'use /mod <username>');

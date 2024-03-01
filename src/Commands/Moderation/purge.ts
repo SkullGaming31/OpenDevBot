@@ -18,21 +18,21 @@ const purge: Command = {
 
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
-		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${purge.usage}`);
-		if (!args[2]) return chatClient.say(channel, `${display}, please specify a duration in seconds to purge texts`);
-		if (!args[3]) args[3] = 'No Reason Provided';
+		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${purge.usage}`);
+		if (!args[1]) return chatClient.say(channel, `${display}, please specify a duration in seconds to purge texts`);
+		if (!args[2]) args[2] = 'No Reason Provided';
 		if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
 		try {
-			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined || null) return;
 			if (userSearch.id === broadcasterInfo?.id as UserIdResolvable) return chatClient.say(channel, 'You can\'t ban/purge this user');
 			await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
 				user: userSearch.id,
-				duration: Number(args[2]),
-				reason: args[3],
+				duration: Number(args[1]),
+				reason: args[2],
 			});
 			const purgeEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel Purge Event')
+				.setTitle('Twitch Event[Channel Purge(user)]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
@@ -48,7 +48,7 @@ const purge: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just purged ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter({ text: `${msg.userInfo.displayName} just purged ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 			try {
 

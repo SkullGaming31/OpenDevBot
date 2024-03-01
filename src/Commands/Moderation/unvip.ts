@@ -16,24 +16,24 @@ const unvip: Command = {
 
 		const display = msg.userInfo.displayName;
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
-		if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
+		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
 
 		try {
 			const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
 			if (broadcasterResponse?.id === undefined) return;
-			const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
+			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo?.id as UserIdResolvable, { limit: 20 });
 			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is already a vip');
 
 			const unVIPEmbed = new EmbedBuilder()
-				.setTitle('Twitch Channel Purge Event')
+				.setTitle('Twitch Event[VIP Removed]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
 						name: 'Executer',
-						value: `${msg.userInfo.displayName}`,
+						value: `${display}`,
 						inline: true
 					},
 					...(msg.userInfo.isMod
@@ -43,12 +43,12 @@ const unvip: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just Unviped ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter({ text: `${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 			try {
 				if (userSearch) {
 					await userApiClient.channels.removeVip(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
-					await chatClient.say(channel, `@${args[1].replace('@', '')} has been removed from VIP status`);
+					await chatClient.say(channel, `@${args[0].replace('@', '')} has been removed from VIP status`);
 				} else {
 					console.error('Something happened while searching for user');
 				}
