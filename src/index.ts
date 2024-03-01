@@ -44,12 +44,6 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-			// Update terminal title with uptime every 30 seconds
-			// setInterval((): void => {
-			// 	const uptime = this.getFormattedUptime();
-			// 	this.setTerminalTitle(`Uptime: ${uptime}`);
-			// 	process.title = `Uptime: ${uptime}`;
-			// }, 30000);
 
 			// Set initial terminal title based on the terminal type
 			const terminalTitle = process.platform === 'win32' ? 'OpenDevBot[Twitch]' : 'Uptime: ';
@@ -61,17 +55,17 @@ class OpenDevBot {
 		}
 	}
 
-	// getFormattedUptime(): string {
-	// 	const uptimeMilliseconds = this.getUptime();
-	// 	const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
-	// 	const days = Math.floor(uptimeSeconds / (3600 * 24));
-	// 	const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
-	// 	const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-	// 	const seconds = uptimeSeconds % 60;
+	getFormattedUptime(): string {
+		const uptimeMilliseconds = this.getUptime();
+		const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
+		const days = Math.floor(uptimeSeconds / (3600 * 24));
+		const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+		const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+		const seconds = uptimeSeconds % 60;
 
-	// 	const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-	// 	return formattedUptime;
-	// }
+		const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+		return formattedUptime;
+	}
 }
 
 config();
