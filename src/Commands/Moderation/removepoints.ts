@@ -26,25 +26,26 @@ const removepoints: Command = {
 		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
 		const isEditor = ChannelEditor.map(editor => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
-		const userSearch = await userApiClient.users.getUserByName(args[1].replace('@', ''));
-
-		console.log(`Is Staff: ${isStaff}, User Search: ${userSearch}`); // Debugging line
-
-		if (userSearch?.id === undefined) return;
-
-		if (isNaN(amountToRemove)) { return chatClient.say(channel, 'Invalid amount. Please provide a valid number.'); }
 
 		if (!isStaff) { return chatClient.say(channel, `${msg.userInfo.displayName}, You are not authorized to use this command.`); }
 
+		if (!args[0]) return chatClient.say(channel, `${removepoints.usage}`);
+
+		if (isNaN(amountToRemove)) { return chatClient.say(channel, 'Invalid amount. Please provide a valid number.'); }
+
+		const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
+		console.log(`Is Staff: ${isStaff}, User Search: ${userSearch}`); // Debugging line
+		if (userSearch?.id === undefined) return;
+
 		if (targetUser.startsWith('@')) { targetUser = targetUser.substring(1); }
 
-		const existingUser = await UserModel.findOne<User>({ username: targetUser });
+		const existingUser = await UserModel.findOne<User>({ username: targetUser.toLowerCase() });
 
 		console.log(`Existing User: ${existingUser}`); // Debugging line
 
 		if (existingUser) {
 			const removePointsEmbed = new EmbedBuilder()
-				.setTitle('Twitch points removal Event')
+				.setTitle('Twitch Event[Points Removal]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
@@ -60,7 +61,7 @@ const removepoints: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just unmodded ${args[1].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter({ text: `${msg.userInfo.displayName} just removed ${amountToRemove} points from ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			const currentBalance = existingUser.balance ?? 0;
