@@ -27,7 +27,7 @@ class OpenDevBot {
 			await initializeDatabase();
 
 			// Initialize error handling
-			await initializeErrorHandling(this.webhookClient);
+			await initializeErrorHandling().then(() => console.log('Error Handler initialized')).catch((err) => { console.error('Failed to start Error Handler', err); });
 
 			// Initialize Twitch EventSub event listeners
 			if (process.env.ENABLE_EVENTSUB) {
@@ -71,7 +71,6 @@ config();
 const webhookUrl = process.env.DEV_DISCORD_ERROR_WEBHOOK as string;
 const client = new OpenDevBot(webhookUrl);
 
-console.log('Start Called: ', client.start.length + 1 + ' times');
 client.start()
 	.then(() => console.log('Bot started successfully'))
 	.catch(error => console.error('Failed to start bot:', error));

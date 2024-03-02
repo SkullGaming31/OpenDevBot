@@ -2,7 +2,7 @@ import fs from 'fs';
 import { Error } from 'mongoose';
 import { client } from '../discord';
 
-export async function initializeErrorHandling(logFile = '../dev logs/logs.log') {
+export async function initializeErrorHandling(logFile = 'C:/Development/OpenDevBot/src/dev logs/logs.log') {
 	if (!fs.existsSync(logFile)) {
 		try {
 			fs.writeFileSync(logFile, '');
