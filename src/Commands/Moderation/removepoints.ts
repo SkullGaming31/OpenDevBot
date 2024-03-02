@@ -21,7 +21,7 @@ const removepoints: Command = {
 		let targetUser = args[0];
 		const amountToRemove = parseInt(args[1]);
 
-		console.log(`Target User: ${targetUser}, Amount to Remove: ${amountToRemove}`); // Debugging line
+		// console.log(`Target User: ${targetUser}, Amount to Remove: ${amountToRemove}`); // Debugging line
 
 		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
 		const isEditor = ChannelEditor.map(editor => editor.userId === msg.userInfo.userId);
@@ -34,14 +34,14 @@ const removepoints: Command = {
 		if (isNaN(amountToRemove)) { return chatClient.say(channel, 'Invalid amount. Please provide a valid number.'); }
 
 		const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
-		console.log(`Is Staff: ${isStaff}, User Search: ${userSearch}`); // Debugging line
+		// console.log(`Is Staff: ${isStaff}, User Search: ${userSearch}`); // Debugging line
 		if (userSearch?.id === undefined) return;
 
 		if (targetUser.startsWith('@')) { targetUser = targetUser.substring(1); }
 
 		const existingUser = await UserModel.findOne<User>({ username: targetUser.toLowerCase() });
 
-		console.log(`Existing User: ${existingUser}`); // Debugging line
+		// console.log(`Existing User: ${existingUser}`); // Debugging line
 
 		if (existingUser) {
 			const removePointsEmbed = new EmbedBuilder()
@@ -67,7 +67,7 @@ const removepoints: Command = {
 			const currentBalance = existingUser.balance ?? 0;
 			const newBalance = currentBalance - amountToRemove;
 
-			console.log(`Current Balance: ${currentBalance}, New Balance: ${newBalance}`); // Debugging line
+			// console.log(`Current Balance: ${currentBalance}, New Balance: ${newBalance}`); // Debugging line
 
 			if (newBalance < 0) { return chatClient.say(channel, `Cannot remove more points than the user has. ${targetUser} only has ${currentBalance} points.`); }
 
@@ -75,7 +75,7 @@ const removepoints: Command = {
 
 			const savedUser = await existingUser.save();
 
-			console.log(`Saved User: ${savedUser}`); // Debugging line
+			// console.log(`Saved User: ${savedUser}`); // Debugging line
 
 			await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${savedUser.balance}`);
 			await commandUsage.send({ embeds: [removePointsEmbed] });
