@@ -1,37 +1,39 @@
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import fs from 'fs';
 import { Error } from 'mongoose';
 import { client } from '../discord';
 
-export async function initializeErrorHandling(webhookClient: WebhookClient) {
-	if (!webhookClient) {
-		console.warn('No webhook client provided for error handling.');
-		return;
+export async function initializeErrorHandling(logFile = '../dev logs/logs.log') {
+	if (!fs.existsSync(logFile)) {
+		try {
+			fs.writeFileSync(logFile, '');
+		} catch (err) {
+			console.error(`Error creating log file: ${err}`);
+			return;
+		}
 	}
 
-	const errorEmbed = new EmbedBuilder()
-		.setColor('Red')
-		.setTitle('⚠ | Error Encountered')
-		.setFooter({ text: 'Development Error' })
-		.setTimestamp();
+	const writeError = async (error: Error | string, title: string) => {
+		const description = typeof error === 'string' ? error : error.message;
+		const message = `\n${title}: ${description}`;
+		fs.appendFileSync(logFile, message);
+	};
 
 	client.on('error', async (err: Error) => {
 		console.error(err);
-		await sendErrorToWebhook(err, 'Discord Error', webhookClient, errorEmbed);
+		await writeError(err, 'Discord Error');
 	});
 
 	client.on('warn', async (info: string) => {
 		console.warn('Discord Warning:', info);
-		errorEmbed.setColor('Yellow');
-		await sendErrorToWebhook(info, 'Discord Warning', webhookClient, errorEmbed);
+		await writeError(info, 'Discord Warning');
 	});
 
 	process.on('unhandledRejection', async (reason: unknown, p: Promise<unknown>) => {
 		console.error(reason, p);
 		if (typeof reason === 'string') {
-			await sendErrorToWebhook(reason, 'Unhandled Rejection/Catch', webhookClient, errorEmbed);
-
+			await writeError(reason, 'Unhandled Rejection/Catch');
 		} else if (reason instanceof Error) {
-			await sendErrorToWebhook(reason, 'Unhandled Rejection/Catch', webhookClient, errorEmbed);
+			await writeError(reason, 'Unhandled Rejection/Catch');
 		} else {
 			console.error('Unhandled rejection with unknown reason:', reason);
 		}
@@ -39,14 +41,8 @@ export async function initializeErrorHandling(webhookClient: WebhookClient) {
 
 	process.on('uncaughtException', async (err: Error) => {
 		console.error(err);
-		await sendErrorToWebhook(err, 'Uncaught Exception', webhookClient, errorEmbed);
+		await writeError(err, 'Uncaught Exception');
 	});
 
 	// Other error handlers...
-
-	async function sendErrorToWebhook(error: Error | string, title: string, client: WebhookClient, embed: EmbedBuilder) {
-		const description = typeof error === 'string' ? error : error.message;
-		const errorEmbed = embed.setDescription(`**Error**:\n\`\`\`\n${description}\n\`\`\``);
-		await webhookClient.send({ embeds: [errorEmbed] });
-	}
 }
