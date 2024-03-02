@@ -35,7 +35,7 @@ const gamble: Command = {
 
 			if (args[0] === 'all') {
 				// Gamble all balance
-				amount = userModel?.balance ?? 0;
+				amount = Math.max(0, userModel?.balance ?? 0); // Ensure amount is positive, even if balance is undefined
 			} else if (args[0].endsWith('%')) {
 				// Gamble a percentage of the balance
 				const percentage = parseInt(args[0].slice(0, -1));
@@ -59,12 +59,14 @@ const gamble: Command = {
 			if (isWin) {
 				const winnings = amount * 2;
 				const newBalance = userModel.balance + winnings - amount; // Calculate the new balance
-				userModel.balance = newBalance; // Update the balance in the userModel
+				// Enforce non-negative balance (optional)
+				userModel.balance = Math.min(0, newBalance); // Set balance to 0 if negative
 				await chatClient.say(channel, `Congratulations ${user}! You won ${winnings} coins.`);
 			} else {
 				await chatClient.say(channel, `${user}, better luck next time! You lost ${amount} coins.`);
 				const newBalance = userModel.balance - amount; // Calculate the new balance
-				userModel.balance = newBalance; // Update the balance in the userModel
+				// Enforce non-negative balance (optional)
+				userModel.balance = Math.min(0, newBalance); // Set balance to 0 if negative
 			}
 
 			// Save the updated user information back to the database
