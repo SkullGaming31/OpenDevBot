@@ -9,8 +9,6 @@ const FEATURE_REQUEST_ID = process.env.DEV_DISCORD_FEATURE_REQUEST_ID as string;
 
 const featureWebhook = new WebhookClient({ id: FEATURE_REQUEST_ID, token: FEATURE_REQUEST_TOKEN });
 
-console.log('Feature Request Token: ', FEATURE_REQUEST_TOKEN, 'Feature Request ID: ', FEATURE_REQUEST_ID);
-
 const feature: Command = {
 	name: 'feature',
 	cooldown: 10000,
@@ -20,6 +18,7 @@ const feature: Command = {
 		try {
 			const chatClient = await getChatClient();
 			const userApiClient = await getUserApi();
+			console.log('Feature Request Token: ', FEATURE_REQUEST_TOKEN, 'Feature Request ID: ', FEATURE_REQUEST_ID);
 
 			// await chatClient.say(channel, 'Currently needs fixing');
 
