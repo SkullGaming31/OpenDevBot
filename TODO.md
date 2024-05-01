@@ -19,7 +19,3 @@
   * [x] Heist
   * [x] Gamble
 * [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
-
-<!-- 
-fixed redeem for hydrate. Had an ! at the end of the name
- -->

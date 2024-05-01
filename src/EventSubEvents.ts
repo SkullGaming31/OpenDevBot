@@ -1,5 +1,5 @@
 import { EventSubWsListener } from '@twurple/eventsub-ws';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { config } from 'dotenv';
 import { randomInt } from 'node:crypto';
 config();
@@ -138,16 +138,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		prompt: 'Click for a link to my Tik-Tok profile',
 		userInputRequired: false
 	});
-	const discordUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '3d9e67e4-85fa-4c50-9e7f-8a78afd1bf67', {
-		title: 'Discord',
+	const guildedUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '3d9e67e4-85fa-4c50-9e7f-8a78afd1bf67', {
+		title: 'Guilded',
 		cost: 1,
 		autoFulfill: true,
 		backgroundColor: '#d0080a',
-		globalCooldown: 30,
+		globalCooldown: 300,
 		isEnabled: true,
 		maxRedemptionsPerUserPerStream: null,
 		maxRedemptionsPerStream: null,
-		prompt: 'click for a link to my discord server',
+		prompt: 'click for a link to my Guilded Server',
 		userInputRequired: false
 	});
 	const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
@@ -243,9 +243,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const stream = await o.getStream();
 		const userInfo = await o.getBroadcaster();
 
-		const liveEmbed = new EmbedBuilder()
+		const liveEmbed = new Embed()
 			.setTitle('Twitch Event[GONE LIVE]')
-			.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}` })
+			.setAuthor(`${o.broadcasterName}`, `${userInfo.profilePictureUrl}`)
 			.addFields([
 				{
 					name: 'Stream Title',
@@ -264,7 +264,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				},
 			])
 			.setURL(`https://twitch.tv/${userInfo.name}`)
-			.setColor('Green')
+			// .setColor('Green')
 			.setTimestamp();
 
 		try {
@@ -274,7 +274,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await sleep(60000);
 			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName}- (${stream?.title})` });
 			await sleep(60000);
-			await LIVE.send({ content: '<@&1209703060859916399>', embeds: [liveEmbed] });
+			// await LIVE.send({ content: '<@&1209703060859916399>', embeds: [liveEmbed] }); // needs to send to guilded instead of discord.
 		} catch (err: any) {
 			console.error(err);
 		}
@@ -282,20 +282,20 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const offline = eventSubListener.onStreamOffline(broadcasterInfo.id, async (stream) => {
 		const userInfo = await stream.getBroadcaster();
 
-		const offlineEmbed = new EmbedBuilder()
-			.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+		const offlineEmbed = new Embed()
+			.setAuthor(`${userInfo.displayName}`, `${userInfo.profilePictureUrl}`)
 			.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
-			.setColor('Red')
-			.setFooter({ text: 'Ended Stream at ' })
+			// .setColor('Red')
+			.setFooter('Ended Stream at ')
 			.setTimestamp();
 
 		try {
 			await sleep(2000);
 			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'primary', message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!` });
 			await sleep(2000);
-			await LIVE.send({ embeds: [offlineEmbed] });
+			// await LIVE.send({ embeds: [offlineEmbed] }); // needs to send to guilded instead of discord.
 			await sleep(2000);
-			if (broadcasterInfo?.name) { chatClient.say(broadcasterInfo.name, 'dont forget you can join the discord too, https://discord.com/invite/N7uMaDDSkj'); }
+			if (broadcasterInfo?.name) { chatClient.say(broadcasterInfo.name, 'dont forget you can join the Guilded Server too, https://guilded.gg/canadiendragon'); }
 			lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
 			await LurkMessageModel.deleteMany({});// Clear all messages from the MongoDB collection
 		} catch (error) {
@@ -322,10 +322,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 				break;
 			case 'Tip':
-				const tipEmbed = new EmbedBuilder()
+				const tipEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -345,21 +345,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('Click the event name to go to the Redeemers Twitch Channel', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/canadiendragon`); }
-					twitchActivity.send({ embeds: [tipEmbed] });
+					await twitchActivity.send({ embeds: [tipEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Twitter':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}`);
-				const twitterEmbed = new EmbedBuilder()
+				const twitterEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					// .setDescription(`**${userInfo.displayName}** has redeemed \n**${cp.rewardTitle}** \nfor **${cp.rewardCost} Skulls**`)
 					.addFields([
 						{
@@ -380,21 +380,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('Click the event name to go to the Redeemers Twitch Channel', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/canadiendragon`); }
-					await twitchActivity.send({ embeds: [twitterEmbed] });
+					// await twitchActivity.send({ embeds: [twitterEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Instagram':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const instagramEmbed = new EmbedBuilder()
+				const instagramEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
 					.addFields([
 						{
@@ -414,21 +414,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Instagram: https://instagram.com/canadiendragon`); }
 				} catch (error) {
 					console.error(error);
 				}
-				await twitchActivity.send({ embeds: [instagramEmbed] });
+				// await twitchActivity.send({ embeds: [instagramEmbed] });
 				break;
 			case 'YouTube':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const youtubeEmbed = new EmbedBuilder()
+				const youtubeEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -447,21 +447,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCUHnQESlc-cPkp_0KvbVK6g`); }
-					await twitchActivity.send({ embeds: [youtubeEmbed] });
+					// await twitchActivity.send({ embeds: [youtubeEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'TikTok':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const tiktokEmbed = new EmbedBuilder()
+				const tiktokEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -480,21 +480,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Tic-Tok: https://tiktok.com/@canadiendragon`); }
-					await twitchActivity.send({ embeds: [tiktokEmbed] });
+					await twitchActivity.send({ embeds: [tiktokEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Snapchat':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const snapchatEmbed = new EmbedBuilder()
+				const snapchatEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -513,21 +513,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/canadiendragon`); }
-					await twitchActivity.send({ embeds: [snapchatEmbed] });
+					await twitchActivity.send({ embeds: [snapchatEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Facebook':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const facebookEmbed = new EmbedBuilder()
+				const facebookEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -546,21 +546,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('SkulledArmy', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`); }
-					await twitchActivity.send({ embeds: [facebookEmbed] });
+					await twitchActivity.send({ embeds: [facebookEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
-			case 'Discord':
+			case 'Guilded':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const discordEmbed = new EmbedBuilder()
-					.setTitle('Twitch Event[REDEEM EVENT]')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+				const guildedEmbed = new Embed()
+					.setTitle('Twitch Event[REDEEM (Guilded)]')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -573,28 +573,28 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							inline: true
 						},
 						{
-							name: 'Skulls',
+							name: 'Coins',
 							value: `${cp.rewardCost}`,
 							inline: true
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('Click the event name to go to the Redeemers Twitch Channel', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
-					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Discord: https://discord.com/invite/N7uMaDDSkj`); }
+					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Guilded Server: https://guilded.gg/canadiendragon`); }
 				} catch (error) {
 					console.error(error);
 				}
-				await twitchActivity.send({ embeds: [discordEmbed] });
+				await twitchActivity.send({ embeds: [guildedEmbed.toJSON()] });
 				break;
 			case 'Merch':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const merchEmbed = new EmbedBuilder()
+				const merchEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
 					.addFields([
 						{
@@ -615,21 +615,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setURL(`https://twitch.tv/${userInfo.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('Click the event name to go to the Redeemers Twitch Channel', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Merch: https://canadiendragon-merch.creator-spring.com`); }
-					await twitchActivity.send({ embeds: [merchEmbed] });
+					await twitchActivity.send({ embeds: [merchEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Hydrate':
 				// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const hydrateEmbed = new EmbedBuilder()
+				const hydrateEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					// .setDescription(`${userInfo.displayName} has redeemed ${cp.rewardTitle} for ${cp.rewardCost} Skulls`)
 					.addFields([
 						{
@@ -649,21 +649,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'LevelUp Legends Lounge', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter(`${cp.broadcasterDisplayName}`, `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s, you must stay hydrated, take a sip of whatever your drinking.`); }
-					await twitchActivity.send({ embeds: [hydrateEmbed] });
+					await twitchActivity.send({ embeds: [hydrateEmbed.toJSON()] });
 				} catch (error) {
 					console.log(error);
 				}
 				break;
 			case 'DropController':
 				// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const dropcontrollerEmbed = new EmbedBuilder()
+				const dropcontrollerEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -682,21 +682,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter(`${cp.broadcasterDisplayName}`, `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName} Put down that controller for 30 seconds`); }
-					await twitchActivity.send({ embeds: [dropcontrollerEmbed] });
+					await twitchActivity.send({ embeds: [dropcontrollerEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'MUTEHeadset':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const muteheadsetEmbed = new EmbedBuilder()
+				const muteheadsetEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -715,22 +715,22 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `${cp.broadcasterDisplayName} you should not be listening to game sounds right now`); }
-					await twitchActivity.send({ embeds: [muteheadsetEmbed] });
+					await twitchActivity.send({ embeds: [muteheadsetEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'IRLWordBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const irlwordbanEmbed = new EmbedBuilder()
+				const irlwordbanEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -749,11 +749,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`); }
-					await twitchActivity.send({ embeds: [irlwordbanEmbed] });
+					await twitchActivity.send({ embeds: [irlwordbanEmbed.toJSON()] });
 				} catch (error) {
 					console.log(error);
 				}
@@ -761,10 +761,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			case 'IRLVoiceBan':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 
-				const irlvoicebanEmbed = new EmbedBuilder()
+				const irlvoicebanEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -783,20 +783,20 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('SkulledArmy', `${userInfo.profilePictureUrl}`)
 					.setTimestamp();
 				try {
 					if (broadcasterInfo) { chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName} SHHHHHH why are you still talking right now`); }
-					await twitchActivity.send({ embeds: [irlvoicebanEmbed] });
+					await twitchActivity.send({ embeds: [irlvoicebanEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'Ban an in-game action':
-				const baningameactionEmbed = new EmbedBuilder()
+				const baningameactionEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -820,20 +820,20 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp(cp.redemptionDate);
 				try {
 					if (broadcasterInfo) { chatClient.say(broadcasterInfo.name, `${cp.userDisplayName} has redeemed Ban an In-Game Action, Action:${cp.input}`); }
-					await twitchActivity.send({ embeds: [baningameactionEmbed] });
+					await twitchActivity.send({ embeds: [baningameactionEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
 				break;
 			case 'No Bullet Jumping':
-				const nbjEmbed = new EmbedBuilder()
+				const nbjEmbed = new Embed()
 					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-					.setColor('Random')
+					.setAuthor(`${cp.userDisplayName}`, `${userInfo.profilePictureUrl}`)
+					// .setColor('Random')
 					.addFields([
 						{
 							name: 'User',
@@ -852,11 +852,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setFooter({ text: 'LegendsLounge', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 					.setTimestamp(cp.redemptionDate);
 				try {
 					if (broadcasterInfo) { chatClient.say(broadcasterInfo?.name, 'No Bullet Jumping for you'); }
-					await twitchActivity.send({ embeds: [nbjEmbed] });
+					await twitchActivity.send({ embeds: [nbjEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}
@@ -878,10 +878,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		console.log(`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`);
 		chatClient.say(userInfo.name, `${hte.topContributors} have contributed to the HypeTrain`);
 
-		const hypeeventendEmbed = new EmbedBuilder()
-			.setTitle('REDEEM EVENT')
-			.setAuthor({ name: `${userInfo.displayName}`, iconURL: `${userInfo.profilePictureUrl}` })
-			.setColor('Random')
+		const hypeeventendEmbed = new Embed()
+			.setTitle('Twitch Event[HypeTrainEND]')
+			.setAuthor(`${userInfo.displayName}`, `${userInfo.profilePictureUrl}`)
+			// .setColor('Random')
 			.addFields([
 				{
 					name: 'Broadcaster Name',
@@ -900,9 +900,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			])
 			.setThumbnail(`${userInfo.profilePictureUrl}`)
-			.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+			.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 			.setTimestamp();
-		await twitchActivity.send({ embeds: [hypeeventendEmbed] });
+		await twitchActivity.send({ embeds: [hypeeventendEmbed.toJSON()] });
 	});
 	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(broadcasterInfo.id, async (htp) => {
 		const userInfo = await htp.getBroadcaster();
@@ -913,10 +913,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const userInfo = await gift.getGifter();
 		chatClient.say(userInfo.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 
-		const giftedSubs = new EmbedBuilder()
-			.setTitle('GIFTED SUB EVENT')
+		const giftedSubs = new Embed()
+			.setTitle('Twitch Event[GIFTED SUB]')
 			.setDescription(`gifted to ${gift.broadcasterDisplayName}`)
-			.setAuthor({ name: `${gift.gifterDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+			.setAuthor(`${gift.gifterDisplayName}`, `${userInfo.profilePictureUrl}`)
 			.addFields([
 				{
 					name: 'Username: ',
@@ -935,16 +935,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				},
 			])
 			.setThumbnail(`${userInfo.profilePictureUrl}`)
-			.setColor('Random')
-			.setFooter({ text: 'SkulledArmy', iconURL: `${userInfo.profilePictureUrl}` })
+			// .setColor('Random')
+			.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 			.setTimestamp();
-		await twitchActivity.send({ embeds: [giftedSubs] });
+		await twitchActivity.send({ embeds: [giftedSubs.toJSON()] });
 	});
 	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterInfo.id, async (s) => {
 		const userInfo = await s.getUser();
-		const resubEmbed = new EmbedBuilder()
+		const resubEmbed = new Embed()
 			.setTitle('Twitch Event[RESUB]')
-			.setAuthor({ name: `${s.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+			.setAuthor(`${s.userDisplayName}`, `${userInfo.profilePictureUrl}`)
 			.addFields([
 				{
 					name: 'Twitch User: ',
@@ -963,11 +963,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				},
 			])
 			.setThumbnail(`${userInfo.profilePictureUrl}`)
-			.setColor('Random')
-			.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+			// .setColor('Random')
+			.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 			.setTimestamp();
 		try {
-			await twitchActivity.send({ embeds: [resubEmbed] });
+			// await twitchActivity.send({ embeds: [resubEmbed] });
 			await chatClient.say(userInfo.name, `${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`);
 		} catch (error) {
 			console.error(error);
@@ -1110,9 +1110,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const randomIndex = randomInt(0, messages.length);
 			const randomMessage = messages[randomIndex];
 
-			const followEmbed = new EmbedBuilder()
+			const followEmbed = new Embed()
 				.setTitle('Twitch Event[Follow]')
-				.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
+				.setAuthor(`${e.userDisplayName}`, `${userInfo.profilePictureUrl}`)
 				.setDescription(`${randomMessage}`)
 				.addFields([
 					{
@@ -1122,14 +1122,14 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					},
 				])
 				.setThumbnail(`${userInfo.profilePictureUrl}`)
-				.setColor('Green')
-				.setFooter({ text: 'CanadienDragon', iconURL: `${userInfo.profilePictureUrl}` })
+				// .setColor('Green')
+				.setFooter('DragonSpire', `${userInfo.profilePictureUrl}`)
 				.setTimestamp();
 
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
 
 			await chatClient.say(broadcasterInfo.name, `${randomMessage}`);
-			await twitchActivity.send({ embeds: [followEmbed] });
+			await twitchActivity.send({ embeds: [followEmbed.toJSON()] });
 		} catch (error) {
 			console.error('An error occurred in the follower event handler:', error);
 		}
@@ -1151,9 +1151,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				subTier = 'Unknown';
 				break;
 		}
-		const subEmbed = new EmbedBuilder()
-			.setTitle('NEW SUB')
-			.setAuthor({ name: userInfo.name, iconURL: userInfo.profilePictureUrl })
+		const subEmbed = new Embed()
+			.setTitle('Twitch Event[NEW SUB]')
+			.setAuthor(userInfo.name, userInfo.profilePictureUrl)
 			.addFields([
 				{ name: 'Sub Tier ', value: s.tier },
 				{ name: 'Gifted ', value: `${s.isGift}` }
@@ -1162,7 +1162,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			.setTimestamp();
 		try {
 			await chatClient.say(broadcasterInfo?.id!, `${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`);
-			await twitchActivity.send({ embeds: [subEmbed] });
+			// await twitchActivity.send({ embeds: [subEmbed] });
 		} catch (error) {
 			console.error(error);
 		}
@@ -1170,9 +1170,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const cheer = eventSubListener.onChannelCheer(broadcasterInfo.id, async (cheer) => {
 		const userInfo = await cheer.getUser();
 		if (cheer.bits >= 100) {
-			const cheerEmbed = new EmbedBuilder()
+			const cheerEmbed = new Embed()
 				.setTitle('Twitch Event[CHEER]')
-				.setAuthor({ name: `${userInfo?.displayName}`, iconURL: `${userInfo?.profilePictureUrl}` })
+				.setAuthor(`${userInfo?.displayName}`, `${userInfo?.profilePictureUrl}`)
 				.addFields([
 					{
 						name: 'Username: ',
@@ -1191,12 +1191,12 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					},
 				])
 				.setThumbnail(`${userInfo?.profilePictureUrl}`)
-				.setColor('Random')
-				.setFooter({ text: 'Legends Lounge', iconURL: `${userInfo?.profilePictureUrl}` })
+				// .setColor('Random')
+				.setFooter('DragonSpire', `${userInfo?.profilePictureUrl}`)
 				.setTimestamp();
 			try {
-				await twitchActivity.send({ embeds: [cheerEmbed] });
 				await chatClient.say(broadcasterInfo?.id!, `${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
+				await twitchActivity.send({ embeds: [cheerEmbed.toJSON()] });
 			} catch (error) {
 				console.error(error);
 			}
@@ -1208,17 +1208,17 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const raidedBroadcaster = await raidToEvent.getRaidedBroadcaster();
 			const raidingBroadcaster = await raidToEvent.getRaidingBroadcaster();
 
-			const raidEmbed = new EmbedBuilder()
+			const raidEmbed = new Embed()
 				.setTitle('Raid Initiated!')
-				.setColor('Purple') // Adjust color as needed
-				.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl })
+				// .setColor('Purple') // Adjust color as needed
+				.setAuthor(`You (as ${raidingBroadcaster.displayName})`, raidingBroadcaster.profilePictureUrl)
 				.addFields([
 					{ name: 'Raided Channel:', value: `[${raidedBroadcaster.displayName}](https://twitch.tv/${raidedBroadcaster.displayName.toLowerCase()})`, inline: false },
 					{ name: 'Viewers:', value: `${raidToEvent.viewers} viewers`, inline: false },
 				])
 				.setTimestamp();
 
-			await twitchActivity.send({ embeds: [raidEmbed] });
+			await twitchActivity.send({ embeds: [raidEmbed.toJSON()] });
 		} catch (error) {
 			console.error('Error sending raid notification to Discord:', error);
 		}
@@ -1230,23 +1230,23 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const raidedBroadcaster = await raidEvent.getRaidedBroadcaster(); // You (the broadcaster)
 			const raidingBroadcaster = await raidEvent.getRaidingBroadcaster(); // User raiding you
 
-			const raidEmbed = new EmbedBuilder()
+			const raidEmbed = new Embed()
 				.setTitle('Twitch Event [RAID]')
-				.setColor('Green')
-				.setAuthor({ name: raidingBroadcaster.displayName, iconURL: raidingBroadcaster.profilePictureUrl })
+				// .setColor('Green')
+				.setAuthor(raidingBroadcaster.displayName, raidingBroadcaster.profilePictureUrl)
 				.addFields([
 					{ name: 'Raided By: ', value: raidingBroadcaster.displayName, inline: true },
 					{ name: 'Viewer Count: ', value: `${raidEvent.viewers} Viewers`, inline: true },
 				])
 				.setURL(`https://twitch.tv/${raidingBroadcaster.displayName.toLowerCase()}`)
 				.setThumbnail(raidedBroadcaster.profilePictureUrl) // You (the broadcaster)
-				.setFooter({ text: 'CanadienDragon', iconURL: raidingBroadcaster.offlinePlaceholderUrl })
+				.setFooter('DragonSpire', raidingBroadcaster.offlinePlaceholderUrl)
 				.setTimestamp();
 
 			const raidMessage = `${raidEvent.raidedBroadcasterDisplayName} has raided the channel with ${raidEvent.viewers} viewers!`;
 			await chatClient.say(broadcasterInfo?.id!, raidMessage);
 
-			await twitchActivity.send({ embeds: [raidEmbed] });
+			await twitchActivity.send({ embeds: [raidEmbed.toJSON()] });
 
 			await sleep(3000); // Consider adjusting delay based on needs
 
@@ -1297,6 +1297,18 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		if (broadcasterInfo) { await chatClient.say(broadcasterInfo?.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
 	});
+	const subscriptionCreateSuccess = eventSubListener.onSubscriptionCreateSuccess((subscription) => {
+		console.log(`(CS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+	});
+	const subscriptionCreateFailure = eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
+		console.log(`(CF)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+	});
+	const subscriptionDeleteSuccess = eventSubListener.onSubscriptionDeleteSuccess((subscription) => {
+		console.log(`(DS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+	});
+	const subscriptionDeleteFailure = eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
+		console.log(`(DF)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+	});
 	let previousTitle: string = '';
 	let previousCategory: string = '';
 
@@ -1327,6 +1339,7 @@ let eventSubListenerPromise: Promise<EventSubWsListener> | null = null;
 export async function getEventSubs(): Promise<EventSubWsListener> {
 	if (!eventSubListenerPromise) {
 		eventSubListenerPromise = createEventSubListener();
+		// (await eventSubListenerPromise).on('', () => {});
 	}
 	return eventSubListenerPromise;
 }

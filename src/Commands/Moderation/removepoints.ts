@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
@@ -44,25 +44,6 @@ const removepoints: Command = {
 		// console.log(`Existing User: ${existingUser}`); // Debugging line
 
 		if (existingUser) {
-			const removePointsEmbed = new EmbedBuilder()
-				.setTitle('Twitch Event[Points Removal]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
-				.setColor('Red')
-				.addFields([
-					{
-						name: 'Executer',
-						value: `${msg.userInfo.displayName}`,
-						inline: true
-					},
-					...(msg.userInfo.isMod
-						? [{ name: 'Mod', value: 'Yes', inline: true }]
-						: msg.userInfo.isBroadcaster
-							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
-							: []
-					)
-				])
-				.setFooter({ text: `${msg.userInfo.displayName} just removed ${amountToRemove} points from ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
-				.setTimestamp();
 
 			const currentBalance = existingUser.balance ?? 0;
 			const newBalance = currentBalance - amountToRemove;
@@ -77,8 +58,30 @@ const removepoints: Command = {
 
 			// console.log(`Saved User: ${savedUser}`); // Debugging line
 
+			const removePointsEmbed = new Embed()
+				.setTitle('Twitch Event[Points Removal]')
+				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setColor('Red')
+				.addFields([
+					{
+						name: 'Executer',
+						value: `${msg.userInfo.displayName}`,
+						inline: true
+					},
+					...(msg.userInfo.isMod
+						? [{ name: 'Mod', value: 'Yes', inline: true }]
+						: msg.userInfo.isBroadcaster
+							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
+							: []
+					),
+					{ name: 'Balance', value: `${amountToRemove}`, inline: false },
+					{ name: 'New Balance', value: `${savedUser.balance}`, inline: true },
+				])
+				.setFooter(`${msg.userInfo.displayName} just removed ${amountToRemove} points from ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setTimestamp();
+
 			await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${savedUser.balance}`);
-			await commandUsage.send({ embeds: [removePointsEmbed] });
+			await commandUsage.send({ embeds: [removePointsEmbed.toJSON()] });
 		} else {
 			await chatClient.say(channel, `User ${targetUser} not found.`);
 		}

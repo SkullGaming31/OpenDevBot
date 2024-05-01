@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -25,9 +25,9 @@ const mod: Command = {
 			// Check if the user invoking the command is a channel editor
 			const isChannelEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 
-			const moderatorEmbed = new EmbedBuilder()
+			const moderatorEmbed = new Embed()
 				.setTitle('Twitch Event[Channel Mod Added]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
 				.setColor('Blue')
 				.addFields([
 					{
@@ -42,7 +42,7 @@ const mod: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${display} just modded ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter(`${display} just modded ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
 				.setTimestamp();
 
 			try {
@@ -55,7 +55,7 @@ const mod: Command = {
 				} else {
 					await chatClient.say(channel, 'You must be a channel editor to use this command');
 				}
-				await commandUsage.send({ embeds: [moderatorEmbed] });
+				await commandUsage.send({ embeds: [moderatorEmbed.toJSON()] });
 			} catch (error) {
 				console.error(error);
 			}

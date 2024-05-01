@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api/lib';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -17,7 +17,7 @@ const clipCommand: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		console.log('Initialized chat client, user API client, and command usage webhook.');
 
-		const clipEmbed = new EmbedBuilder()
+		const clipEmbed = new Embed()
 			.setTitle('Twitch Event[Twitch Clip Created]')
 			.setColor('Red')
 			.addFields([
@@ -33,7 +33,7 @@ const clipCommand: Command = {
 						: []
 				)
 			])
-			.setFooter({ text: `${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel` })
+			.setFooter(`${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel`)
 			.setTimestamp();
 		// console.log('Clip embed created:', clipEmbed);
 
@@ -50,7 +50,7 @@ const clipCommand: Command = {
 					await chatClient.say(channel, `Clip Created: ${clipUrl}`);
 					// console.log('Clip URL sent to chat.', clipUrl);
 
-					await commandUsage.send({ embeds: [clipEmbed] });
+					await commandUsage.send({ embeds: [clipEmbed.toJSON()] });
 					// console.log('Command usage webhook sent.');
 				} else {
 					await chatClient.say(channel, 'You must be the broadcaster, mod, sub, or a VIP to use this command.');

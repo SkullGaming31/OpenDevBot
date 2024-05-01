@@ -1,36 +1,36 @@
-import { WebhookClient } from 'discord.js';
 import { config } from 'dotenv';
 import { initializeTwitchEventSub } from './EventSubEvents';
-import { initializeErrorHandling } from './Handlers/errorHandler';
+import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
-import { initializeDatabase } from './database';
+import Database from './database';
+import createApp from './util/createApp';
+import { CustomGuildedClient } from './guilded';
 
 class OpenDevBot {
-	webhookClient: WebhookClient;
 	startTime: number;
 
-	constructor(webhookUrl: string) {
-		this.webhookClient = new WebhookClient({ url: webhookUrl });
+	constructor() {
 		this.startTime = Date.now(); // Record the start time
 	}
 
-	getUptime(): number {
-		return Date.now() - this.startTime;
-	}
-	setTerminalTitle(title: string): void {
-		process.stdout.write(`\x1b]2;${title}\x1b\x5c`);
-	}
+	getUptime(): number { return Date.now() - this.startTime; }
+	setTerminalTitle(title: string): void { process.stdout.write(`\x1b]2;${title}\x1b\x5c`); }
 
 	async start() {
 		try {
+			const EventSub = process.env.ENABLE_EVENTSUB;
+
 			// Initialize database connection
-			await initializeDatabase();
+			const database = new Database();
+			await database.initialize();
 
 			// Initialize error handling
-			await initializeErrorHandling().then(() => console.log('Error Handler initialized')).catch((err) => { console.error('Failed to start Error Handler', err); });
+			const errorHandler = new ErrorHandler();
+			await errorHandler.initialize().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
+			// await initializeErrorHandling().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
 
 			// Initialize Twitch EventSub event listeners
-			if (process.env.ENABLE_EVENTSUB) {
+			if (EventSub) {
 				const message = process.env.Enviroment === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
 				console.time(message);
 				await initializeTwitchEventSub();
@@ -38,12 +38,19 @@ class OpenDevBot {
 			}
 
 			// Initialize chat client for Twitch IRC
-			if (process.env.ENABLE_CHAT) {
+			if (EventSub) {
 				const message = process.env.Enviroment === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
 				console.time(message);
 				await initializeChat();
 				console.timeEnd(message);
 			}
+
+			const token = process.env.GUILDED_TOKEN as string; // Your Guilded Bot token here
+			const client = new CustomGuildedClient(token);
+
+			const app = createApp();
+			// Start the server with app.listen
+			app.listen(process.env.PORT || 3000, () => { console.log(`Server listening on http://localhost:${process.env.PORT || 3000}`); });
 
 			// Set initial terminal title based on the terminal type
 			const terminalTitle = process.platform === 'win32' ? 'OpenDevBot[Twitch]' : 'Uptime: ';
@@ -68,8 +75,7 @@ class OpenDevBot {
 }
 
 config();
-const webhookUrl = process.env.DEV_DISCORD_ERROR_WEBHOOK as string;
-const client = new OpenDevBot(webhookUrl);
+const client = new OpenDevBot();
 
 client.start()
 	.then(() => console.log('Bot started successfully'))

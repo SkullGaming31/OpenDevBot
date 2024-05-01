@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
@@ -42,9 +42,20 @@ const addpoints: Command = {
 		const existingUser = await UserModel.findOne<User>({ username: targetUser });
 
 		if (existingUser) {
-			const addPointsEmbed = new EmbedBuilder()
+			// Calculate the new balance
+			const currentBalance = existingUser.balance ?? 0; // Use 0 if balance is undefined
+			const newBalance = currentBalance + amountToAdd;
+
+			// Update the balance of the existing user
+			existingUser.balance = newBalance;
+
+			// Save the updated user document to the database
+			const savedUser = await existingUser.save();
+			// console.log('User: ', savedUser); // Debugging code for userModel
+
+			const addPointsEmbed = new Embed()
 				.setTitle('Twitch Event[Addpoints]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
 				.setColor('Green')
 				.addFields([
 					{
@@ -57,24 +68,16 @@ const addpoints: Command = {
 						: msg.userInfo.isBroadcaster
 							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
 							: []
-					)
+					),
+					{ name: 'Balance', value: `${amountToAdd}`, inline: false },
+					{ name: 'New Balance', value: `${savedUser.balance}`, inline: true },
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter(`${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
 				.setTimestamp();
-			// Calculate the new balance
-			const currentBalance = existingUser.balance ?? 0; // Use 0 if balance is undefined
-			const newBalance = currentBalance + amountToAdd;
-
-			// Update the balance of the existing user
-			existingUser.balance = newBalance;
-
-			// Save the updated user document to the database
-			const savedUser = await existingUser.save();
-			// console.log('User: ', savedUser); // Debugging code for userModel
 
 			// Send a message to the chat confirming the points added
 			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${savedUser.balance}`);
-			await commandUsage.send({ embeds: [addPointsEmbed] });
+			await commandUsage.send({ embeds: [addPointsEmbed.toJSON()] });
 		} else {
 			// User not found in the database
 			await chatClient.say(channel, `User ${targetUser} not found.`);

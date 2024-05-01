@@ -1,7 +1,7 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -40,12 +40,12 @@ const bug: Command = {
 			if (!args[0]) return chatClient.say(channel, `${bug.usage}`);
 			if (!bugDescription) return chatClient.say(channel, `${bug.usage}`);
 
-			const bugReportEmbed = new EmbedBuilder()
+			const bugReportEmbed = new Embed()
 				.setTitle(`${commandtitle}`)
-				.setAuthor({ name: `${bugReportUser?.displayName}`, iconURL: `${bugReportUser?.profilePictureUrl}` })
+				.setAuthor(`${bugReportUser?.displayName}`, `${bugReportUser?.profilePictureUrl}`)
 				.setDescription(bugDescription)
 				.setColor('Red')
-				.setFooter({ text: 'Provided by CanadienDragon' })
+				.setFooter('Provided by CanadienDragon')
 				.setTimestamp();
 
 			if (bugDescription) {
@@ -55,7 +55,7 @@ const bug: Command = {
 			if (bugDescription.length > 4096) return chatClient.say(channel, 'your description is to long if you can not reduce the description please join the discord and leave a bug report in opendevbot-twitch forum channel https://discord.com/invite/N7uMaDDSkj');
 
 			await chatClient.say(channel, 'Bug Report Submitted, Thank You');
-			await bugReport.send({ embeds: [bugReportEmbed] });
+			await bugReport.send({ embeds: [bugReportEmbed.toJSON()] });
 		} catch (error) {
 			console.error(error);
 		}

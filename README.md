@@ -198,7 +198,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <h3>📫 How to reach me:</h3>
 
-[CanadienDragon](https://twitter.com/canadiendragon)<br />
+[CanadienDragon](https://twitter.com/canadiendragon1)<br />
 [Email](skullgamingg31@gmail.com)
 
 Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)

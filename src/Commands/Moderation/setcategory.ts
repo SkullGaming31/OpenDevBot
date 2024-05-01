@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -40,9 +40,9 @@ const setcategory: Command = {
 			await userApiClient.channels.updateChannelInfo(broadcasterInfo?.id as UserIdResolvable, { gameId: `${newGame?.id}` });
 			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 
-			const commandEmbed = new EmbedBuilder()
+			const commandEmbed = new Embed()
 				.setTitle('Command Used [setcategory]')
-				.setAuthor({ name: `${helixUser?.displayName}`, iconURL: helixUser?.profilePictureUrl })
+				.setAuthor(`${helixUser?.displayName}`, helixUser?.profilePictureUrl)
 				.setColor('Red')
 				.addFields([
 					{
@@ -67,12 +67,12 @@ const setcategory: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `Channel: ${channel}` })
+				.setFooter(`Channel: ${channel}`)
 				.setTimestamp();
 
 			try {
 				await chatClient.say(channel, `${msg.userInfo.displayName}, has changed the channel category to ${newGame?.name}`);
-				await commandUsageWebhook.send({ embeds: [commandEmbed] });
+				await commandUsageWebhook.send({ embeds: [commandEmbed.toJSON()] });
 				// console.log(`GameName: ${channelInfo?.gameName}, GameID: ${channelInfo?.gameId}`);
 			} catch (error) {
 				console.error(error);

@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -31,9 +31,9 @@ const purge: Command = {
 				duration: Number(args[1]),
 				reason: args[2],
 			});
-			const purgeEmbed = new EmbedBuilder()
+			const purgeEmbed = new Embed()
 				.setTitle('Twitch Event[Channel Purge(user)]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
 				.setColor('Red')
 				.addFields([
 					{
@@ -48,11 +48,11 @@ const purge: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just purged ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
+				.setFooter(`${msg.userInfo.displayName} just purged ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
 				.setTimestamp();
 			try {
 
-				await commandUsage.send({ embeds: [purgeEmbed] });
+				await commandUsage.send({ embeds: [purgeEmbed.toJSON()] });
 			} catch (error) {
 				console.error(error);
 			}

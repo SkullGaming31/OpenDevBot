@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -51,9 +51,9 @@ const vip: Command = {
 			}
 
 			// Construct VIP embed message
-			const vipEmbed = new EmbedBuilder()
+			const vipEmbed = new Embed()
 				.setTitle('Command Usage[VIP]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
 				.setColor('Green')
 				.addFields([
 					{
@@ -68,13 +68,13 @@ const vip: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just viped ${args[0].replace('@', '')} in ${channel}'s Twitch channel` })
+				.setFooter(`${msg.userInfo.displayName} just viped ${args[0].replace('@', '')} in ${channel}'s Twitch channel`)
 				.setTimestamp();
 
 			// Add user as VIP
 			await userApiClient.channels.addVip(broadcasterInfo?.id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await chatClient.say(channel, `@${args[0]} has been added as VIP by ${msg.userInfo.displayName}`);
-			await commandUsage.send({ embeds: [vipEmbed] });
+			await commandUsage.send({ embeds: [vipEmbed.toJSON()] });
 		} catch (error) {
 			console.error(error);
 		}

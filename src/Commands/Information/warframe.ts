@@ -97,7 +97,7 @@ function formatTime(timeInSeconds: number) {
 const warframe: Command = {// needs more work
 	name: 'warframe',
 	description: 'get information about warframe the lore of warframe or my warframe MasteryRank(s)',
-	usage: '!warframe [about|lore|mr]',
+	usage: '!warframe [about|lore|mr|frames] <framename>',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -123,7 +123,7 @@ const warframe: Command = {// needs more work
 					return;
 				}
 
-				const warframeName = args.slice(1).join(' ');
+				const warframeName = args.slice(1).join(' ').toLowerCase();
 				const warframeUrl = `https://api.warframestat.us/warframes/search/${warframeName}`;
 
 				try {
@@ -133,8 +133,8 @@ const warframe: Command = {// needs more work
 						return chatClient.say(channel, `No Warframe found with the name "${warframeName}"`);
 					}
 					const warframeData: WarframeData = data[0];
-					console.log(warframeData.components[0]);
-					if (warframeName.endsWith('prime')) return chatClient.say(channel, 'I can not look up prime version of warframes yet');
+					// console.log(warframeData.components[0]);
+					if (warframeName.endsWith('Prime')) return chatClient.say(channel, 'I can not look up prime version of warframes yet');
 
 					let prompted = false;
 
@@ -161,13 +161,13 @@ const warframe: Command = {// needs more work
 						await chatClient.say(channel, message);
 
 						if (message.length > 500) {
-							await chatClient.say(channel, 'The message is too long to be sent in chat. Do you want me to send it to you via whisper? (yes|no)');
+							await chatClient.say(channel, 'The message is too long to be sent in chat. Do you want me to send it to you via twitch whisper? (yes|no)');
 							prompted = true;
 							await sleep(5000); // wait for 5 seconds for user response
 
 							if (prompted && text.toLowerCase() === 'yes') {
 								await userApiClient.whispers.sendWhisper(openDevBotID, msg.userInfo.userId, message);
-								await chatClient.say(channel, `${user} check your whispers.`);
+								await chatClient.say(channel, `${user} check your whispers for response`);
 							}
 							prompted = false;
 						} else {
