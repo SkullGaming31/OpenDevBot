@@ -90,7 +90,7 @@ a personal chat bot for my twitch channel, will make it usable on other channels
 
 * [Twurple](https://twurple.js.org/)
 * [Express.js](https://expressjs.com/)
-* [discord.js](https://discord.js.org/) Basics, just for discord Embeds for webhooks
+* [guilded.js](https://guilded.js.org/) Basics, just for discord Embeds for webhooks
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
