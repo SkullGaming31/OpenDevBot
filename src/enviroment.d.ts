@@ -23,6 +23,10 @@ declare global {
 			DEV_DISCORD_FEATURE_REQUEST: string;
 			DISCORD_COMMAND_USAGE_ID: string;
 			DISCORD_COMMAND_USAGE_TOKEN: string;
+			BUG_REPORT_WEBHOOK_ID: string;
+			BUG_REPORT_WEBHOOK_TOKEN: string;
+			DEV_DISCORD_FEATURE_REQUEST_TOKEN: string;
+			DEV_DISCORD_FEATURE_REQUEST_ID: string;
 			PORT: string;
 			MONGO_USER: string;
 			MONGO_PASS: string;
@@ -31,6 +35,7 @@ declare global {
 			Enviroment: Enviroment;
 			ENABLE_CHAT: boolean;
 			ENABLE_EVENTSUB: boolean;
+			GUILDED_TOKEN: string;
 		}
 	}
 }

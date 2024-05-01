@@ -357,6 +357,25 @@
       ]
     },
     {
+      "name": "M14",
+      "type": "Assult Rifle",
+      "slot": "Primary",
+      "quality": "Rare",
+      "basedamage": 43,
+      "rateoffire": 560,
+      "muzzleSpeed": 850,
+      "magsize": 21,
+      "weight": 4.1,
+      "folder": "Guns",
+      "firemode": [
+        "Semi-Auto",
+        "Auto"
+      ],
+      "Misc": [
+        "None"
+      ]
+    },
+    {
       "name": "l85a1",
       "type": "Assult Rifle",
       "slot": "Primary",
@@ -1472,6 +1491,13 @@
     {
       "name": "Radiation Grenade",
       "description": "Explosively Spreads radioactive dust in a large area, decreasing the maximum health of anyone irradiated",
+      "quality": "Special Issue",
+      "carry": 2,
+      "folder": "Thrown"
+    },
+    {
+      "name": "Smoke Grenade",
+      "description": "Covers a large area with a thick smoke which dissipates after a while",
       "quality": "Special Issue",
       "carry": 2,
       "folder": "Thrown"

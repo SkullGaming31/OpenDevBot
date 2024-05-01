@@ -14,7 +14,7 @@ const socials: Command = {
 			twitter: 'https://twitter.com/canadiendragon1',
 			instagram: 'https://instagram.com/canadiendragon',
 			tiktok: 'https://tiktok.com/@canadiendragon',
-			discord: 'https://discord.com/invite/dHpehkD6M3',
+			discord: 'https://discord.com/invite/N7uMaDDSkj',
 			facebook: 'https://facebook.com/canadiendragon',
 			youtube: 'https://www.youtube.com/channel/UCUHnQESlc-cPkp_0KvbVK6g',
 			merch: 'https://canadiendragon-merch.creator-spring.com/',

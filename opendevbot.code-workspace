@@ -1,0 +1,53 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build",
+        "command": "npm run build",
+        "type": "shell",
+        "args": [],
+        "problemMatcher": [
+          "$tsc"
+        ],
+        "presentation": {
+          "reveal": "always"
+        },
+        "group": "build"
+      },
+      {
+        "label": "typecheck",
+        "command": [
+          "npm run typecheck"
+        ],
+        "type": "shell",
+        "args": [],
+        "problemMatcher": [
+          "$tsc"
+        ],
+        "presentation": {
+          "reveal": "always"
+        },
+        "group": "none"
+      }
+    ]
+  },
+  "settings": {
+    "typescript.autoClosingTags": true,
+    "typescript.check.npmIsInstalled": true,
+    "typescript.format.indentSwitchCase": true,
+    "typescript.format.enable": true,
+    "typescript.format.semicolons": "insert",
+    "typescript.inlayHints.parameterTypes.enabled": true,
+    "typescript.preferences.quoteStyle": "single",
+    "typescript.validate.enable": true,
+    "[typescript]": {
+      "breadcrumbs.showClasses": true
+    }
+  }
+}

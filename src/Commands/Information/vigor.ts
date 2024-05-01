@@ -73,7 +73,7 @@ interface Item {
 const vigor: Command = {
 	name: 'vigor',
 	description: 'Show information about vigor items',
-	usage: '!vigor [about, lore, item <item name>]',
+	usage: '!vigor [about, lore, item <item name>, partner]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		try {
 			const chatClient = await getChatClient();
@@ -224,6 +224,9 @@ const vigor: Command = {
 					} else {
 						await chatClient.say(channel, `Sorry, I could not find an item named "${itemName}".`);
 					}
+					break;
+				case 'partner':
+					chatClient.say(channel, 'Meeting Requirements to becoming a Vigor Partner, i need 1000 followers and 15 CCV(Avg Viewers) within a 6 month period');
 					break;
 				default:
 					await chatClient.say(channel, `${user}, Usage: ${vigor.usage}`);

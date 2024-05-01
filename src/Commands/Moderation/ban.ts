@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -19,8 +19,8 @@ const ban: Command = {
 		try {
 			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${ban.usage}`);
 
-			const reason = args[2] || 'No Reason Provided';
-			const username = args[1].replace('@', '');
+			const reason = args[1] || 'No Reason Provided';
+			const username = args[0].replace('@', '');
 			const userSearch = await userApiClient.users.getUserByName(username);
 
 			if (!userSearch?.id) return;
@@ -34,9 +34,9 @@ const ban: Command = {
 			// Send chat message about the ban
 			await chatClient.say(channel, `@${username} has been banned for Reason: ${reason}`);
 
-			const commandUsageEmbed = new EmbedBuilder()
+			const commandUsageEmbed = new Embed()
 				.setTitle('CommandUsage[Ban]')
-				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl })
+				.setAuthor(msg.userInfo.displayName, userSearch.profilePictureUrl)
 				.setDescription(reason)
 				.setColor('Red')
 				.addFields([
@@ -49,11 +49,11 @@ const ban: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just banned out ${userSearch.displayName} in ${channel}'s twitch channel` })
+				.setFooter(`${msg.userInfo.displayName} just banned out ${userSearch.displayName} in ${channel}'s twitch channel`)
 				.setTimestamp();
 
 			// Send the embed
-			await commandUsage.send({ embeds: [commandUsageEmbed] });
+			await commandUsage.send({ embeds: [commandUsageEmbed.toJSON()] });
 
 		} catch (error) {
 			console.error(error);

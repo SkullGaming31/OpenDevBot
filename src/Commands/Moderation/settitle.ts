@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -28,9 +28,9 @@ const settitle: Command = {
 		const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 		try {
 			if (isStaff) {
-				const commandEmbed = new EmbedBuilder()
+				const commandEmbed = new Embed()
 					.setTitle('Command Used[settitle]')
-					.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
+					.setAuthor(msg.userInfo.displayName, helixUser?.profilePictureUrl)
 					.setColor('Green')
 					.addFields([
 						{
@@ -55,11 +55,11 @@ const settitle: Command = {
 								: []
 						)
 					])
-					.setFooter({ text: `Channel: ${channel}, user_id: ${msg.userInfo.userId}` })
+					.setFooter(`Channel: ${channel}, user_id: ${msg.userInfo.userId}`)
 					.setTimestamp();
 				try {
 					await chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${title}`);
-					await commandUsage.send({ embeds: [commandEmbed] });
+					await commandUsage.send({ embeds: [commandEmbed.toJSON()] });
 				} catch (error) {
 					console.error(error);
 				}

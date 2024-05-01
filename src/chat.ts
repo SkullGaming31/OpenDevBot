@@ -2,7 +2,7 @@ import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
 import { HelixChatChatter, UserIdResolvable } from '@twurple/api/lib';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { WebhookClient, Embed, EmbedPayload } from 'guilded.js';
 import fs from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
@@ -33,14 +33,7 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 			continue;
 		}
 
-		if (
-			(!module.endsWith('.ts') && process.env.Enviroment !== 'prod') ||
-			(!module.endsWith('.js') && process.env.Enviroment === 'prod') ||
-			module === 'index.ts' ||
-			module === 'index.js'
-		) {
-			continue;
-		}
+		if ((!isAllowedFileExtension(module) && isDevelopment()) || isIndexFile(module)) { continue; }
 
 		const { name } = path.parse(module);
 		const command = (await import(modulePath)).default;
@@ -48,6 +41,11 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		registerCommand(command);
 	}
 }
+function isAllowedFileExtension(module: string): boolean { return process.env.Enviroment === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
+
+function isDevelopment(): boolean { return process.env.Enviroment !== 'prod'; }
+
+function isIndexFile(module: string): boolean { return module === 'index.ts' || module === 'index.js'; }
 
 export async function initializeChat(): Promise<void> {
 	// Load commands
@@ -63,7 +61,9 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
-		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+		if (isDevelopment()) {
+			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+		}
 
 		try {
 			const cursor = ''; // Initialize the cursor value
@@ -91,27 +91,22 @@ export async function initializeChat(): Promise<void> {
 					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
 
 					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
+						const updatedBalance = (user?.balance || 0) + 100;
 						if (!user) {
 							const newUser = new UserModel({
 								id: chatter.userId,
 								username: chatter.userName,
 								roles: 'Bot',
-								balance: 100,
+								balance: updatedBalance,
 							});
-							// console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 							await newUser.save();
 						} else {
-							const updatedBalance = (user.balance || 0) + 100;
 							await UserModel.updateOne(
 								{ id: chatter.userId },
-								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } },
-								{ upsert: true }
+								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } }
 							);
-							// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
-							// console.log('User:', user);
-							// console.log('Known Bots:', knownBots);
 						}
-						continue; // Skip the remaining checks since the user is a known bot
+						continue;
 					}
 					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
 						continue; // Skip giving coins to specific usernames
@@ -178,6 +173,67 @@ export async function initializeChat(): Promise<void> {
 			console.error(error);
 		}
 
+		if (text.includes('overlay expert') && channel === '#canadiendragon') {
+			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
+		}
+		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
+		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
+			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+		}
+		if (text.includes('overlay designer') && channel === '#canadiendragon') {
+			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
+		}
+		if (text.includes('wl') && channel === '#canadiendragon') {
+			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
+			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
+		}
+		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
+
+			// Check if user is staff (moderator, broadcaster, or editor)
+			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster ||
+				(await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable))
+					.some(editor => editor.userId === msg.userInfo.userId);
+
+			// Don't ban staff members
+			if (isStaff) {
+				return;
+			}
+
+			// Create embed for ban message
+			const displayName = msg.userInfo.displayName;
+
+			const banEmbed: Embed = new Embed()
+				.setTitle('TwitchBan[Automated Ban]')
+				.setAuthor(displayName)
+				.setColor('Red')
+				.addFields([
+					{ name: 'User:', value: displayName, inline: true },
+					{ name: 'Reason:', value: 'Promoting selling followers (violates Twitch TOS)', inline: true },
+				])
+				.setFooter(`Someone just got BANNED from ${channel}'s channel`)
+				.setTimestamp();
+
+			try {
+				// Perform moderation actions:
+				// - Delete user's message
+				await userApiClient.moderation.deleteChatMessages(broadcasterInfo?.id as UserIdResolvable, msg.id);
+				// - Sleep for 1 second (optional delay)
+				await sleep(1000);
+				// - Ban user
+				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+					user: msg.userInfo.userId,
+					reason: 'Promoting selling followers (violates Twitch TOS)',
+				});
+				// - Sleep for 1 second (optional delay)
+				await sleep(1000);
+				// - Send chat message notifying ban
+				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
+				// - Send embed to activity feed
+				await twitchActivity.send({ embeds: [banEmbed.toJSON()] });
+			} catch (error) {
+				console.error(error);
+			}
+		}
 		if (text.startsWith('!')) {
 
 			const args = text.slice(1).split(' ');
@@ -217,9 +273,9 @@ export async function initializeChat(): Promise<void> {
 						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
 					}
 
-					// If the command is marked as devOnly and the user is not a moderator or broadcaster in the specific channel, restrict access
-					if (command.devOnly && msg.channelId !== '31124455') {
-						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragons Channel');
+					// If the command is marked as devOnly and the user is NOT a moderator or broadcaster in the specific channel, restrict access
+					if (command.devOnly && msg.channelId !== '31124455' && !(msg.userInfo.isBroadcaster || msg.userInfo.isMod)) {
+						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragon\'s Channel');
 					}
 
 					// If the command is restricted to the broadcaster and moderators, enforce the restriction
@@ -240,73 +296,21 @@ export async function initializeChat(): Promise<void> {
 				await chatClient.say(channel, 'Command not recognized, please try again');
 			}
 		}
-		if (text.includes('overlay expert') && channel === '#canadiendragon') {
-			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
-		}
-		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
-		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
-			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
-		}
-		if (text.includes('overlay designer') && channel === '#canadiendragon') {
-			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
-		}
-		if (text.includes('wl') && channel === '#canadiendragon') {
-			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
-			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
-		}
-		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
-			const isMods = msg.userInfo.isMod;
-			const isBroadcaster = msg.userInfo.isBroadcaster;
-			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
-			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
 
-			const isStaff = isMods || isBroadcaster || isEditor;
-			if (isStaff) return;
-
-			const banEmbed = new EmbedBuilder()
-				.setTitle('Automated Ban')
-				.setAuthor({ name: `${msg.userInfo.displayName}` })
-				.setColor('Red')
-				.addFields([
-					{
-						name: 'User: ',
-						value: `${msg.userInfo.displayName}`,
-						inline: true
-					},
-					{
-						name: 'Reason',
-						value: 'Promoting of selling followers to a broadcaster for twitch breaking TwitchTOS',
-						inline: true
-					}
-				])
-				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
-				.setTimestamp();
-			try {
-				await userApiClient.moderation.deleteChatMessages(broadcasterInfo?.id as UserIdResolvable, msg.id);
-				await sleep(1000);
-				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, { user: msg.userInfo.userId, reason: 'Promoting selling followers to a broadcaster for twitch breaking TwitchTOS' });
-				await sleep(1000);
-				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
-				await twitchActivity.send({ embeds: [banEmbed] });
-			} catch (error) {
-				console.error(error);
-			}
-		}
 		// TODO: send chat message every 10 minutes consistently in typescript.
-		// Define a function to send a chat message
-		const sendChatMessage = async () => {// needs testing
-			try {
-				await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
-			} catch (error) {
-				console.error(error);
-			} finally {
-				// Schedule the next call
-				setTimeout(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
-			}
-		};
+		// const sendMessageEvery10Minutes = async () => {
+		// 	try {
+		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+		// 	} catch (error) {
+		// 		console.error(error);
+		// 	} finally {
+		// Schedule the next call 10 minutes from now
+		// 		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
+		// 	}
+		// };
 
-		// Schedule subsequent calls every 10 minutes
-		setInterval(sendChatMessage, 600000); // 600000 milliseconds = 10 minutes
+		// Initiate the first call
+		// sendMessageEvery10Minutes();
 	};
 	chatClient.onMessage(commandHandler);
 

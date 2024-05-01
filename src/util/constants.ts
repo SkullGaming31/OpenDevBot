@@ -69,7 +69,7 @@ export async function initializeConstants() {
 }
 
 // Call the function to initialize the constants
-initializeConstants().catch(error => { console.error('Error initializing constants:', error); });
+initializeConstants().catch((error: Error) => { console.error('Error initializing constants:', error.name + error.message + error.stack); });
 
 // Export other constants
 export const TwitchActivityWebhookID = process.env.DEV_DISCORD_TWITCH_ACTIVITY_ID as string;

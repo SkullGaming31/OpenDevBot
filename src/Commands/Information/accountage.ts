@@ -8,14 +8,26 @@ const accountage: Command = {
 	description: 'Show how long ago you created your twitch account',
 	usage: '!accountage',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
-		const userApiClient = await getUserApi();
-		const chatClient = await getChatClient();
+		try {
+			const userApiClient = await getUserApi();
+			const chatClient = await getChatClient();
 
-		const account = await userApiClient.users.getUserByName(args[0].replace('@', '') || msg.userInfo.userName);
-		if (account) {
-			await chatClient.say(channel, `${account.creationDate}`);
-		} else {
-			await chatClient.say(channel, `${user}, that name could not be found`);
+			const targetUsername = args[0]?.replace('@', '') || msg.userInfo.userName;
+
+			if (!targetUsername) {
+				return chatClient.say(channel, `Usage: ${accountage.usage}`);
+			}
+
+			const account = await userApiClient.users.getUserByName(targetUsername);
+			if (account) {
+				await chatClient.say(channel, `${account.creationDate}`);
+			} else {
+				await chatClient.say(channel, `${user}, that name could not be found`);
+			}
+		} catch (error) {
+			const chatClient = await getChatClient();
+			console.error(error); // Log error for debugging
+			await chatClient.say(channel, `${user}, there was an error retrieving account information.`);
 		}
 	}
 };
