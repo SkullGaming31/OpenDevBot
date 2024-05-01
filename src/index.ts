@@ -5,6 +5,7 @@ import { initializeChat } from './chat';
 import Database from './database';
 import createApp from './util/createApp';
 import { CustomGuildedClient } from './guilded';
+import fs from 'fs';
 
 class OpenDevBot {
 	startTime: number;
@@ -16,8 +17,27 @@ class OpenDevBot {
 	getUptime(): number { return Date.now() - this.startTime; }
 	setTerminalTitle(title: string): void { process.stdout.write(`\x1b]2;${title}\x1b\x5c`); }
 
+	printEnvironmentVariables(): void {
+		console.log('Environment Variables from .env file:');
+		try {
+			const envFilePath = '.env';
+			const envFileContents = fs.readFileSync(envFilePath, 'utf8');
+			const envVariables = envFileContents.split('\n');
+
+			for (const envVariable of envVariables) {
+				const [name, value] = envVariable.split('=');
+				console.log(`${name}: ${value}`);
+			}
+		} catch (error) {
+			console.error('Failed to read .env file:', error);
+		}
+	}
+
+
 	async start() {
 		try {
+
+			this.printEnvironmentVariables();
 			const EventSub = process.env.ENABLE_EVENTSUB;
 
 			// Initialize database connection
