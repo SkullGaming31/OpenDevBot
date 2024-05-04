@@ -35,10 +35,16 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 
 		if ((!isAllowedFileExtension(module) && isDevelopment()) || isIndexFile(module)) { continue; }
 
+		// const { name } = path.parse(module);
+		// const command = (await import(modulePath)).default;
+		// commands[name] = command;
+		// registerCommand(command);
 		const { name } = path.parse(module);
 		const command = (await import(modulePath)).default;
-		commands[name] = command;
-		registerCommand(command);
+		// Set the name property within the command object if it's not already set
+		command.name = command.name || name;
+		commands[command.name] = command; // Register the command with its name
+		registerCommand(command, name);
 	}
 }
 function isAllowedFileExtension(module: string): boolean { return process.env.Enviroment === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
@@ -235,11 +241,9 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 		if (text.startsWith('!')) {
-
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
 			if (commandName === undefined) return;
-			// console.log(commandName);
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
 			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
 			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
@@ -251,6 +255,7 @@ export async function initializeChat(): Promise<void> {
 			const isStaff = isModerator || isBroadcaster || isEditor;
 
 			if (command) {
+				if (process.env.Enviroment === 'debug') { console.log(command); }
 				try {
 					const currentTimestamp = Date.now();
 
@@ -300,7 +305,7 @@ export async function initializeChat(): Promise<void> {
 		// TODO: send chat message every 10 minutes consistently in typescript.
 		// const sendMessageEvery10Minutes = async () => {
 		// 	try {
-		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !command command');
+		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
 		// 	} catch (error) {
 		// 		console.error(error);
 		// 	} finally {
@@ -337,12 +342,18 @@ export async function initializeChat(): Promise<void> {
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
-function registerCommand(newCommand: Command) {
-	commands.add(newCommand.name);
+function registerCommand(newCommand: Command, name: string) {
+	// Register the command with the provided name
+	commands.add(name);
+	if (process.env.Enviroment === 'debug') {
+		console.log(`Registered command: ${name}`);
+	}
 	if (newCommand.aliases) {
 		newCommand.aliases.forEach((alias) => {
 			commands.add(alias);
-			// console.log(alias);
+			if (process.env.Enviroment === 'debug') {
+				console.log(`Registered alias for ${name}: ${alias}`);
+			}
 		});
 	}
 }

@@ -32,14 +32,9 @@ class OpenDevBot {
 			console.error('Failed to read .env file:', error);
 		}
 	}
-
-
 	async start() {
 		try {
-
-			this.printEnvironmentVariables();
 			const EventSub = process.env.ENABLE_EVENTSUB;
-
 			// Initialize database connection
 			const database = new Database();
 			await database.initialize();
@@ -47,7 +42,6 @@ class OpenDevBot {
 			// Initialize error handling
 			const errorHandler = new ErrorHandler();
 			await errorHandler.initialize().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
-			// await initializeErrorHandling().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
 
 			// Initialize Twitch EventSub event listeners
 			if (EventSub) {

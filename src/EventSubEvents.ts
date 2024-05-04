@@ -1298,16 +1298,28 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		if (broadcasterInfo) { await chatClient.say(broadcasterInfo?.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
 	});
 	const subscriptionCreateSuccess = eventSubListener.onSubscriptionCreateSuccess((subscription) => {
-		console.log(`(CS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+		const Enviroment = process.env.Enviroment as string;
+		if (Enviroment === 'debug') {
+			console.log(`(CS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+		}
 	});
 	const subscriptionCreateFailure = eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
-		console.log(`(CF)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		const Enviroment = process.env.Enviroment as string;
+		if (Enviroment === 'debug') {
+			console.log(`(CF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		}
 	});
 	const subscriptionDeleteSuccess = eventSubListener.onSubscriptionDeleteSuccess((subscription) => {
-		console.log(`(DS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+		const Enviroment = process.env.Enviroment as string;
+		if (Enviroment === 'debug') {
+			console.log(`(DS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+		}
 	});
 	const subscriptionDeleteFailure = eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
-		console.log(`(DF)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		const Enviroment = process.env.Enviroment as string;
+		if (Enviroment === 'debug') {
+			console.log(`(DF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		}
 	});
 	let previousTitle: string = '';
 	let previousCategory: string = '';
