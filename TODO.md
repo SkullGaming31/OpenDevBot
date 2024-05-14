@@ -1,6 +1,6 @@
 * [x] Connected auth to account
 * [x] Connected ChatClient
-* [x] connected to PubSub(Dont Use Anymore)
+* [x] Removed PubSub
 * [x] connected to EventSub with websockets
 * [x] add commands
   * [x] commands load from there own .ts file
@@ -18,4 +18,4 @@
   * [x] dig
   * [x] Heist
   * [x] Gamble
-* [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
+* [x] change channelPoints Message to display only on the console when channelpoints rewardId is not found.

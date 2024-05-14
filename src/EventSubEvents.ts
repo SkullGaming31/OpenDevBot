@@ -239,12 +239,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 	//#region EventSub
 	const online = eventSubListener.onStreamOnline(broadcasterInfo.id, async (o) => {
-		// const chatClient = await getChatClient();
 		const stream = await o.getStream();
 		const userInfo = await o.getBroadcaster();
 
 		const liveEmbed = new Embed()
-			.setTitle('Twitch Event[GONE LIVE]')
+			.setTitle('Twitch Event[NOW LIVE]')
 			.setAuthor(`${o.broadcasterName}`, `${userInfo.profilePictureUrl}`)
 			.addFields([
 				{
@@ -274,9 +273,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await sleep(60000);
 			await userApiClient.chat.sendAnnouncement(broadcasterInfo?.id as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo?.gameName}- (${stream?.title})` });
 			await sleep(60000);
-			// await LIVE.send({ content: '<@&1209703060859916399>', embeds: [liveEmbed] }); // needs to send to guilded instead of discord.
-		} catch (err: any) {
-			console.error(err);
+			await LIVE.send({ content: '@everyone', embeds: [liveEmbed.toJSON()] });
+		} catch (err: unknown) {
+			console.error('Error sending going live post', err);
 		}
 	});
 	const offline = eventSubListener.onStreamOffline(broadcasterInfo.id, async (stream) => {
@@ -295,7 +294,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await sleep(2000);
 			// await LIVE.send({ embeds: [offlineEmbed] }); // needs to send to guilded instead of discord.
 			await sleep(2000);
-			if (broadcasterInfo?.name) { chatClient.say(broadcasterInfo.name, 'dont forget you can join the Guilded Server too, https://guilded.gg/canadiendragon'); }
+			if (broadcasterInfo?.name) { 
+				chatClient.say(broadcasterInfo.name, 'dont forget you can join the Guilded Server too, https://guilded.gg/canadiendragon');
+			}
 			lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
 			await LurkMessageModel.deleteMany({});// Clear all messages from the MongoDB collection
 		} catch (error) {
@@ -862,10 +863,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 				break;
 			default:
-				console.log(`${cp.userName} has attempted to redeem ${cp.rewardTitle} thats not coded in yet`);
+				console.log(`${cp.userName} has attempted to redeem ${cp.rewardTitle}, ID: ${cp.id} thats not coded in yet`);
 				if (broadcasterInfo)
-					await chatClient.say(broadcasterInfo?.name, `@${cp.userName} has activated a channel points item and it hasnt been coded in yet`);
-				break;
+					// await chatClient.say(broadcasterInfo?.name, `@${cp.userName} has activated a channel points item and it hasnt been coded in yet`);
+					break;
 		}
 	});
 	const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(broadcasterInfo.id, async (hts) => {
