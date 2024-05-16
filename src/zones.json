@@ -1,0 +1,26 @@
+{
+  "abandoned_military_outpost": {
+    "name": "Abandoned Military Outpost",
+    "difficulty": "high"
+  },
+  "crumbling_industrial_complex": {
+    "name": "Crumbling Industrial Complex",
+    "difficulty": "moderate"
+  },
+  "overgrown_amusement_park": {
+    "name": "Overgrown Amusement Park",
+    "difficulty": "low"
+  },
+  "flooded_supermarket": {
+    "name": "Flooded Supermarket",
+    "difficulty": "moderate"
+  },
+  "luxury_casino": {
+    "name": "Luxury Casino",
+    "difficulty": "high"
+  },
+  "abandoned_hospital": {
+    "name": "Abandoned Hospital",
+    "difficulty": "low"
+  }
+}

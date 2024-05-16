@@ -118,9 +118,9 @@ interface Zone {
 // Store an array to keep track of participants
 let participants: string[] = [];
 let isHeistInProgress: boolean = false;
-
-//not removing the balance when starting the heist
 let betAmount: number = 0;
+
+const participantData: { [participantName: string]: { injuries: Injury[] } } = {};
 
 const heist: Command = {
 	name: 'heist',
@@ -134,81 +134,52 @@ const heist: Command = {
 
 		function loadInjuryDataFromFile(filePath: string): { [participantName: string]: { injuries: Injury[] } } {
 			try {
-				const data = fs.readFileSync(filePath, 'utf-8');
-				return JSON.parse(data);
+				if (fs.existsSync(filePath)) { // Check if the file exists
+					const data = fs.readFileSync(filePath, 'utf-8');
+					if (data.trim() === '') { // Check if the file is empty
+						return {}; // Return an empty object if the file is empty
+					} else {
+						return JSON.parse(data); // Parse the JSON data if the file is not empty
+					}
+				} else {
+					console.log('File Does Not Exist');
+					return {}; // Return an empty object if the file does not exist
+				}
 			} catch (error) {
 				console.error('Error loading injury data:', error);
 				return {}; // Return an empty object if there's an error
 			}
 		}
-		const injuryData = loadInjuryDataFromFile('./src/injury_data.json');// need to test for injury loading
-		// Check if the user has an injury
-		if (injuryData[user] && injuryData[user].injuries.length > 0) {
+		const injuryData = loadInjuryDataFromFile('./src/injury_data.json');
+
+		// Check if the user initiating the heist has an injury
+		if (injuryData[user] && injuryData[user].injuries?.length > 0) {
+			console.log('User has an injury.');
 			const injury = injuryData[user].injuries[0]; // Get the first injury
-			const remainingInjuryDuration = Math.ceil((injury.duration - (Date.now() - injury.duration * 1000)) / (60 * 1000));
-			console.log('getting hit');
-			console.log('Injury Duration: ', remainingInjuryDuration);
+			const remainingInjuryDuration = Math.ceil((injury.duration - Date.now()) / (60 * 1000));
 			if (remainingInjuryDuration > 0) {
-				console.log('getting hit even though my duration is greater than 0');
+				console.log('User needs to wait for injury recovery.');
 				await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
+				isHeistInProgress = false;
 				return; // Exit the command if the user has an injury
 			}
+		} else {
+			console.log('User does not have an injury.');
 		}
 
-		// Check if the user has an injury
-		// if (participantData[user] && participantData[user].injuries.length > 0) {
-		// 	const injury = participantData[user].injuries[0]; // Get the first injury
-		// 	// const remainingInjuryDuration = Math.floor((Date.now() - injury.duration * 1000) / (1000 * 60));
-		// 	const remainingInjuryDuration = Math.ceil((injury.duration - (Date.now() - injury.duration * 1000)) / (60 * 1000));
-		// 	console.log('getting hit');
-		// 	console.log('Injury Duration: ', remainingInjuryDuration);
-		// 	if (remainingInjuryDuration > 0) {
-		// 		console.log('getting hit even though my duration is greater than 0');
-		// 		await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
-		// 		return; // Exit the command if the user has an injury
-		// 	}
-		// }
-		// Check if the user has an injury
-		// if (participantData[user] && participantData[user].injuries.length > 0) {
-		// 	const injury = participantData[user].injuries[0]; // Get the first injury
-		// 	// const remainingInjuryDuration = Math.floor((Date.now() - injury.duration * 1000) / (1000 * 60));
-		// 	const remainingInjuryDuration = Math.ceil((injury.duration - (Date.now() - injury.duration * 1000)) / (60 * 1000));
-		// 	console.log('getting hit');
-		// 	console.log('Injury Duration: ', remainingInjuryDuration);
-		// 	if (remainingInjuryDuration > 0) {
-		// 		console.log('getting hit even though my duration is greater than 0');
-		// 		await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
-		// 		return; // Exit the command if the user has an injury
-		// 	}
-		// }
+		console.log('injuryData(user): ', injuryData[user]);
+		console.log('User Injuries:', injuryData[user]?.injuries);
+		console.log('Number of Injuries:', injuryData[user]?.injuries?.length);
 
-		const zones: Record<string, Zone> = {
-			'abandoned_military_outpost': {
-				name: 'Abandoned Military Outpost',
-				difficulty: 'high',
-				// Add additional properties here, like loot pool, challenges, etc.
-			},
-			'crumbling_industrial_complex': {
-				name: 'Crumbling Industrial Complex',
-				difficulty: 'moderate',
-			},
-			'overgrown amusement park': {
-				name: 'Overgrown Amusement Park',
-				difficulty: 'low'
-			},
-			'flooded supermarket': {
-				name: 'Flooded Supermarket',
-				difficulty: 'moderate'
-			},
-			'luxury casino': {
-				name: 'Luxury Casino',
-				difficulty: 'high'
-			},
-			'abandoned hospital': {
-				name: 'Abandoned Hospital',
-				difficulty: 'low'
-			}
-		};
+		console.log('All injury data:', injuryData);
+
+		// Check if the user is present in the injuryData
+		if (user in injuryData) {
+			console.log(`User '${user}' is present in injuryData.`);
+		} else {
+			console.log(`User '${user}' is not present in injuryData.`);
+		}
+
 
 		// Perform validation and checks
 		if (isNaN(betAmount)) { return chatClient.say(channel, 'Please provide a valid amount for the heist.'); }
@@ -216,25 +187,54 @@ const heist: Command = {
 		// Check if the amount is within the allowed range
 		if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
 
+		const zonesFilePath = './src/zones.json';
+		const zonesJSON = fs.readFileSync(zonesFilePath, 'utf-8');
+		const zones: Record<string, Zone> = JSON.parse(zonesJSON);
+
 		const zoneNames = Object.values(zones).map(zone => zone.name).join(', ');
 		if (args.length < 2) return chatClient.say(channel, `You must choose a zone to start the heist: ${zoneNames}`);
 
 		// Check if there is a heist already in progress
 		if (isHeistInProgress) { return chatClient.say(channel, 'A heist is already in progress. Please wait for the current heist to finish.'); }
 
-		// Set heist in progress
-		isHeistInProgress = true;
-		const zoneName = args.slice(1).join(' ').toLowerCase();
-		// console.log('Zone Name: ', zoneName);
-		if (!(zoneName in zones)) {
+		// Create a new object with lowercase keys
+		const zonesLowercase: Record<string, Zone> = {};
+		Object.keys(zones).forEach(key => {
+			const zoneNameLowercase = key.split('_').join(' ').toLowerCase(); // Convert underscores to spaces
+			zonesLowercase[zoneNameLowercase] = zones[key];
+		});
+
+		const zoneName = args.slice(1).join(' ').trim().toLowerCase();
+		// Check if the lowercase zoneName exists in the zonesLowercase object
+		if (!(zoneName in zonesLowercase)) {
 			console.error('Specified zone does not exist');
+			console.log('zoneName:', zoneName);
+			console.log('zones:', zonesLowercase);
+			await chatClient.say(channel, `The specified zone "${zoneName}" does not exist. Available zones are: ${Object.values(zones).map(zone => zone.name).join(', ')}`);
 			return; // or handle the error appropriately
 		}
 
-		const zoneDifficulty = zones[zoneName].difficulty;
+		// Set heist in progress
+		isHeistInProgress = true;
+
+		const zoneDifficulty = zonesLowercase[zoneName].difficulty;
 
 		// Add user to the participant list
 		participants.push(user);
+
+		// Add the user who started the heist to the participantData object
+		if (!participantData[user]) {
+			participantData[user] = { injuries: [] };
+		}
+
+		console.log('User:', user);
+		console.log('Participant Data:', participantData);
+		if (participantData[user]) {
+			console.log('Participant Data for User:', participantData[user]);
+			console.log('Injuries:', participantData[user]?.injuries);
+		} else {
+			console.log('Participant Data for User:', participantData[user]);
+		}
 
 		const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
 		if (!userBalance) {
@@ -331,8 +331,21 @@ const heist: Command = {
 				// Check for 50/50 chance of injury
 				if (Math.random() <= 0.5) {
 					const injurySeverity = determineInjurySeverity();
-
+		
+					// Assign the injury and get the injury details
 					const injury = assignInjury(participant, injurySeverity);
+		
+					// Update participantData with the new injury
+					if (participantData[participant]) {
+						participantData[participant].injuries.push(injury);
+					} else {
+						participantData[participant] = { injuries: [injury] };
+					}
+		
+					// Log the updated participantData
+					console.log('Updated ParticipantData:', participantData);
+		
+					// Construct the result message with injury details
 					resultMessage += ` ${participant} received a ${injury.severity} injury and needs to recover for ${Math.floor(injury.duration / 60)} minutes. ${injury.description}`;
 				}
 			}
@@ -385,8 +398,6 @@ const severeInjuryDescriptions = [
 // Define a JSON object to store the injury data
 const injuryData: { [participantName: string]: Injury[] } = {};
 
-// Function to assign injuries to a participant
-const participantData: { [participantName: string]: { injuries: Injury[] } } = {};
 // function assignInjury(participant: string, severity: string): Injury {
 // 	const injury = {
 // 		severity: severity,
@@ -554,45 +565,9 @@ function calculateSuccessRate(zoneDifficulty: string, participants: string[]) {
 
 	return adjustedRate;
 }
-// function calculateLoot(amount: number, zoneDifficulty: string): LootResult {
-// 	const lootItems = Object.keys(lootValues);
-// 	const numItems = randomInt(1, 9);
-// 	let totalLootAmount = 0;
-// 	const chosenItems: string[] = [];
 
-// 	// Define the bonus multiplier based on difficulty
-// 	let bonusMultiplier = 1;
-// 	switch (zoneDifficulty) {
-// 		case 'high':
-// 			bonusMultiplier = 1.5; // High difficulty grants a 50% bonus
-// 			break;
-// 		case 'moderate':
-// 			bonusMultiplier = 1.2; // Moderate difficulty grants a 20% bonus
-// 			break;
-// 			// Low difficulty has no bonus multiplier
-// 		default:
-// 			break;
-// 	}
-
-// 	for (let i = 0; i < numItems; i++) {
-// 		const randomIndex = randomInt(0, lootItems.length);
-// 		const lootItem = lootItems[randomIndex];
-// 		const lootWorth = getValue(lootValues[lootItem]);
-
-// 		// Apply the bonus multiplier to the loot worth
-// 		const adjustedLootWorth = lootWorth * bonusMultiplier;
-
-// 		totalLootAmount += adjustedLootWorth;
-// 		chosenItems.push(lootItem);
-// 	}
-
-// 	return {
-// 		totalAmount: totalLootAmount,
-// 		items: chosenItems,
-// 	};
-// }
 function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: Injury): LootResult {
-	const lootItems = Object.keys(lootValues);
+	const lootItems = Object.entries(lootValues);
 	const numItems = randomInt(1, 9);
 	let totalLootAmount = 0;
 	const chosenItems: string[] = [];
@@ -632,9 +607,8 @@ function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: In
 	}
 
 	for (let i = 0; i < numItems; i++) {
-		const randomIndex = randomInt(0, lootItems.length);
-		const lootItem = lootItems[randomIndex];
-		const lootWorth = getValue(lootValues[lootItem]);
+		const [itemName, itemValue] = lootItems[randomInt(0, lootItems.length - 1)];
+		const lootWorth = getValue(itemValue);
 
 		// Apply the bonus multiplier to the loot worth
 		const adjustedLootWorth = lootWorth * bonusMultiplier;
@@ -645,7 +619,7 @@ function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: In
 			break; // Stop looting if the player would go into negative loot
 		} else {
 			totalLootAmount += adjustedLootWorth;
-			chosenItems.push(lootItem);
+			chosenItems.push(itemName);
 		}
 	}
 
@@ -679,15 +653,17 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 		const command = message.trim().toLowerCase();
 
 		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {
-			// Check for user's injury
+			// Check if the user has any recorded injuries
 			if (participantData[user] && participantData[user].injuries.length > 0) {
-				const injury = participantData[user].injuries[0]; // Get the first injury
-				const remainingInjuryDuration = Math.floor((injury.duration - Date.now()) / 60000);
+				const injury = participantData[user].injuries[0];
+				const remainingInjuryDuration = Math.ceil((injury.duration - Date.now()) / 60000);
 				if (remainingInjuryDuration > 0) {
 					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
 					return;
 				}
 			}
+
+			// Continue with the join process if the user is eligible
 			const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
 
 			if (!userBalance) {
@@ -703,6 +679,11 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 			await userBalance.save();
 
 			participants.push(user);
+
+			// Add the user to the participantData object
+			if (!participantData[user]) {
+				participantData[user] = { injuries: [] };
+			}
 			await chatClient.say(channel, `${user} has joined the heist!`);
 		}
 	});
