@@ -7,6 +7,17 @@ import createApp from './util/createApp';
 import { CustomGuildedClient } from './guilded';
 import DiscordBot from './Discord/index';
 import fs from 'fs';
+import { InjuryModel } from './database/models/injury';
+
+export async function deleteAllInjuries(): Promise<void> {
+	try {
+		const deleteResult = await InjuryModel.deleteMany({});
+		console.log(`Deleted ${deleteResult.deletedCount} entries from the injuries collection.`);
+	} catch (error) {
+		console.error('Error deleting all injuries:', error);
+		throw error;
+	}
+}
 
 class OpenDevBot {
 	startTime: number;
@@ -40,6 +51,9 @@ class OpenDevBot {
 			const database = new Database();
 			await database.initialize();
 
+			// Delete all entries in the injuries collection
+			await deleteAllInjuries();
+
 			// Initialize error handling
 			const errorHandler = new ErrorHandler();
 			await errorHandler.initialize().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
@@ -59,7 +73,7 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-
+		
 			const token = process.env.GUILDED_TOKEN as string;
 			const client = new CustomGuildedClient(token);
 

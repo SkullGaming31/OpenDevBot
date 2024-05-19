@@ -1,4 +1,4 @@
-import { ChatMessage } from '@twurple/chat/lib';
+import { ChatClient, ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import fs from 'fs';
 import { getChatClient } from '../../chat';
@@ -147,7 +147,7 @@ const heist: Command = {
 			
 				// Convert the retrieved data to the desired format
 				const formattedData: InjuryData = {};
-				injuryData.forEach((entry: any) => {
+				injuryData.forEach((entry) => {
 					const participantName = entry.participantName;
 					const injuries = entry.injuries.map((injury: any) => ({
 						severity: injury.severity,
@@ -166,26 +166,24 @@ const heist: Command = {
 		}
 		const existingInjuryData = await loadInjuryDataFromMongoDB();
 
+		// Check if the user has any active injuries before executing the !heist command
 		if (participantData[user] && participantData[user].injuries.length > 0) {
-			const activeInjuries = participantData[user].injuries.filter((injury: Injury) => {
-				const injuryEndTime = injury.timestamp + injury.duration * 60000;
-				return injuryEndTime > Date.now();
-			});
-	
-			if (activeInjuries.length > 0) {
-				console.log('User has an active injury.');
-				const remainingInjuryDurations = activeInjuries.map((injury: Injury) => {
-					const remainingInjuryDuration = Math.ceil((injury.timestamp + injury.duration * 60000 - Date.now()) / 60000);
-					console.log('Injury:', injury);
-					return `${remainingInjuryDuration} minutes`;
-				});
-				await chatClient.say(channel, `${user} has ${activeInjuries.length} active injury/injuries and needs to wait ${remainingInjuryDurations.join(', ')} to recover.`);
+			const injury = participantData[user].injuries[0]; // Since a user can only have one injury
+			const injuryEndTime = injury.timestamp + injury.duration * 1000; // Convert duration to milliseconds
+			const remainingInjuryDuration = Math.ceil((injuryEndTime - Date.now()) / 1000); // Calculate remaining duration in seconds
+
+			if (remainingInjuryDuration > 0) {
+				console.log(`${user} has an active injury.`);
+				await chatClient.say(channel, `${user} has an active injury and needs to wait ${remainingInjuryDuration} seconds to recover.`);
 				return; // Exit the command if the user has an active injury
 			} else {
-				console.log('User\'s injury has healed.');
+				console.log(`No active injuries for ${user}.`);
+				await deleteEntryFromDatabase(user);
 			}
 		} else {
-			console.log('User does not have any injuries.');
+			console.log(`No injuries for ${user}.`);
+			// If the user has no injuries at all, delete the entry from the database
+			await deleteEntryFromDatabase(user);
 		}
 
 		// Check if there are injuries in the database for the user attempting the command
@@ -243,7 +241,6 @@ const heist: Command = {
 			participantData[user] = { injuries: [] };
 		}
 
-		console.log('User:', user);
 		console.log('Participant Data:', participantData);
 		if (participantData[user]) {
 			console.log('Participant Data for User:', participantData[user]);
@@ -340,6 +337,8 @@ const heist: Command = {
 			}
 
 			resultMessage += ` You managed to steal ${loot} units of loot. You stole the following items: ${stolenItems.join(', ')}`;
+			// Save updated injury data to MongoDB
+			await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
 		} else {
 			resultMessage += ' The heist failed. Better luck next time!';
 			// Loop through each participant
@@ -387,9 +386,6 @@ const heist: Command = {
 
 		// Set heist in progress to false
 		isHeistInProgress = false;
-
-		// Delete expired injuries from MongoDB after the heist finishes
-		await deleteExpiredInjuries();
 	}
 };
 
@@ -471,27 +467,6 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 		console.log('Injury data saved to MongoDB');
 	} catch (error) {
 		console.error('Error saving injury data to MongoDB:', error);
-	}
-}
-// Function to delete expired injuries from MongoDB
-async function deleteExpiredInjuries(): Promise<void> {
-	try {
-		const now = Date.now();
-		// Find and delete injuries where the injury end time has passed
-		const injuries = await InjuryModel.find();
-		for (const injuryData of injuries) {
-			if (Array.isArray(injuryData.injuries)) {
-				for (const injury of injuryData.injuries) {
-					const expirationTime = injury.timestamp + (getInjuryDuration(injury.severity) || 0) * 60000;
-					if (expirationTime < now) {
-						await InjuryModel.deleteOne({ '_id': injuryData._id });
-					}
-				}
-			}
-		}
-		console.log('Expired injuries deleted from MongoDB');
-	} catch (error) {
-		console.error('Error deleting expired injuries from MongoDB:', error);
 	}
 }
 
@@ -689,22 +664,36 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 		throw new Error('Invalid loot item type.');
 	}
 }
+async function deleteEntryFromDatabase(user: string): Promise<void> {
+	try {
+		// Find and delete the entry corresponding to the user from the database
+		await InjuryModel.deleteOne({ participant: user });
+		console.log(`Entry for ${user} deleted from the database.`);
+	} catch (error) {
+		console.error(`Error deleting entry for ${user} from the database:`, error);
+		throw error;
+	}
+}
 
 // Handle the join command
 (async () => {
-	const chatClient = await getChatClient();
-	chatClient.onMessage(async (channel: string, user: string, message: string, msg: ChatMessage) => {
+	const chatClient: ChatClient = await getChatClient();
+	chatClient.onMessage(async (channel: string, user: string, message: string, msg) => {
 		const command = message.trim().toLowerCase();
 
-		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {// needs to be tested to see if a user with an injury can join the heist.
+		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {
 			// Check if the user has any recorded injuries
 			if (participantData[user] && participantData[user].injuries.length > 0) {
 				const injury = participantData[user].injuries[0];
-				const expirationTime = injury.timestamp + (getInjuryDuration(injury.severity) || 0) * 60000;
-				const remainingInjuryDuration = Math.ceil((expirationTime - Date.now()) / 60000);
+				const injuryEndTime = injury.timestamp + injury.duration * 1000;
+				const remainingInjuryDuration = Math.ceil((injuryEndTime - Date.now()) / 1000);
+
 				if (remainingInjuryDuration > 0) {
-					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
+					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} seconds to recover.`);
 					return;
+				} else {
+					console.log(`No active injuries for ${user}.`);
+					await deleteEntryFromDatabase(user);
 				}
 			}
 
@@ -725,7 +714,7 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 
 			participants.push(user);
 
-			// Add the user to the participantData object
+			// Add the user to the participantData object if not already present
 			if (!participantData[user]) {
 				participantData[user] = { injuries: [] };
 			}

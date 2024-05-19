@@ -19,3 +19,4 @@
   * [x] Heist
   * [x] Gamble
 * [x] change channelPoints Message to display only on the console when channelpoints rewardId is not found.
+* [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
