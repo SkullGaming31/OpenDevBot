@@ -5,15 +5,16 @@ import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
+import { ParticipantModel } from '../../database/models/Participant';
+import { InjuryModel } from '../../database/models/injury';
 
 type LootValue = {
 	[itemName: string]: number | Gems | Antique | Artwork | Cash;
 };
 
-const lootValues: LootValue = {// maybe let AI determine its value and we just give it a rareity value for it to calculate the value from.
+const lootValues: LootValue = {
 	gold: 2000,
 	silver: 1500,
-	diamond: 2500,
 	artwork: {
 		Paintings: 5000,
 		Sculptures: 4000,
@@ -104,11 +105,15 @@ interface LootResult {
 	items: string[];
 	message: string;
 }
+export interface Injury {
+	severity: string;
+	duration: number;
+	description: string;
+	timestamp: number;
+}
 
-interface Injury {
-	severity: string; // e.g., "minor", "moderate", "severe"
-	duration: number; // Duration in seconds for recovery
-	description: string; // description of the injury
+interface InjuryData {
+	[participantName: string]: Injury[];
 }
 interface Zone {
 	name: string;
@@ -121,6 +126,8 @@ let isHeistInProgress: boolean = false;
 let betAmount: number = 0;
 
 const participantData: { [participantName: string]: { injuries: Injury[] } } = {};
+// Define a JSON object to store the injury data
+const injuryData: { [participantName: string]: Injury[] } = {};
 
 const heist: Command = {
 	name: 'heist',
@@ -132,52 +139,61 @@ const heist: Command = {
 		const amount = parseInt(args[0]);
 		betAmount = amount;
 
-		function loadInjuryDataFromFile(filePath: string): { [participantName: string]: { injuries: Injury[] } } {
+		// Function to load injury data from MongoDB
+		async function loadInjuryDataFromMongoDB(): Promise<InjuryData> {
 			try {
-				if (fs.existsSync(filePath)) { // Check if the file exists
-					const data = fs.readFileSync(filePath, 'utf-8');
-					if (data.trim() === '') { // Check if the file is empty
-						return {}; // Return an empty object if the file is empty
-					} else {
-						return JSON.parse(data); // Parse the JSON data if the file is not empty
-					}
-				} else {
-					console.log('File Does Not Exist');
-					return {}; // Return an empty object if the file does not exist
-				}
+			// Retrieve all injury data from MongoDB
+				const injuryData = await InjuryModel.find().lean().exec();
+			
+				// Convert the retrieved data to the desired format
+				const formattedData: InjuryData = {};
+				injuryData.forEach((entry: any) => {
+					const participantName = entry.participantName;
+					const injuries = entry.injuries.map((injury: any) => ({
+						severity: injury.severity,
+						duration: injury.duration,
+						description: injury.description,
+						timestamp: injury.timestamp
+					}));
+					formattedData[participantName] = injuries;
+				});
+
+				return formattedData;
 			} catch (error) {
-				console.error('Error loading injury data:', error);
-				return {}; // Return an empty object if there's an error
+				console.error('Error loading injury data from MongoDB:', error);
+				return {};
 			}
 		}
-		const injuryData = loadInjuryDataFromFile('./src/injury_data.json');
+		const existingInjuryData = await loadInjuryDataFromMongoDB();
 
-		// Check if the user initiating the heist has an injury
-		if (injuryData[user] && injuryData[user].injuries?.length > 0) {
-			console.log('User has an injury.');
-			const injury = injuryData[user].injuries[0]; // Get the first injury
-			const remainingInjuryDuration = Math.ceil((injury.duration - Date.now()) / (60 * 1000));
-			if (remainingInjuryDuration > 0) {
-				console.log('User needs to wait for injury recovery.');
-				await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
-				isHeistInProgress = false;
-				return; // Exit the command if the user has an injury
+		if (participantData[user] && participantData[user].injuries.length > 0) {
+			const activeInjuries = participantData[user].injuries.filter((injury: Injury) => {
+				const injuryEndTime = injury.timestamp + injury.duration * 60000;
+				return injuryEndTime > Date.now();
+			});
+	
+			if (activeInjuries.length > 0) {
+				console.log('User has an active injury.');
+				const remainingInjuryDurations = activeInjuries.map((injury: Injury) => {
+					const remainingInjuryDuration = Math.ceil((injury.timestamp + injury.duration * 60000 - Date.now()) / 60000);
+					console.log('Injury:', injury);
+					return `${remainingInjuryDuration} minutes`;
+				});
+				await chatClient.say(channel, `${user} has ${activeInjuries.length} active injury/injuries and needs to wait ${remainingInjuryDurations.join(', ')} to recover.`);
+				return; // Exit the command if the user has an active injury
+			} else {
+				console.log('User\'s injury has healed.');
 			}
 		} else {
-			console.log('User does not have an injury.');
+			console.log('User does not have any injuries.');
 		}
 
-		console.log('injuryData(user): ', injuryData[user]);
-		console.log('User Injuries:', injuryData[user]?.injuries);
-		console.log('Number of Injuries:', injuryData[user]?.injuries?.length);
-
-		console.log('All injury data:', injuryData);
-
-		// Check if the user is present in the injuryData
-		if (user in injuryData) {
-			console.log(`User '${user}' is present in injuryData.`);
+		// Check if there are injuries in the database for the user attempting the command
+		if (existingInjuryData[user] && existingInjuryData[user].length > 0) {
+			console.log('User has injuries in the database:', existingInjuryData[user]);
+			// Additional logic here if needed
 		} else {
-			console.log(`User '${user}' is not present in injuryData.`);
+			console.log('User does not have any injuries in the database.');
 		}
 
 
@@ -341,6 +357,9 @@ const heist: Command = {
 					} else {
 						participantData[participant] = { injuries: [injury] };
 					}
+
+					// Save updated injury data to MongoDB
+					await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
 		
 					// Log the updated participantData
 					console.log('Updated ParticipantData:', participantData);
@@ -351,6 +370,15 @@ const heist: Command = {
 			}
 		}
 
+		// Helper function to convert participantData to InjuryData
+		function convertToInjuryData(participantData: { [participantName: string]: { injuries: Injury[] } }): InjuryData {
+			const injuryData: InjuryData = {};
+			for (const participantName in participantData) {
+				injuryData[participantName] = participantData[participantName].injuries;
+			}
+			return injuryData;
+		}
+
 		// Send the result message to the chat
 		await chatClient.say(channel, resultMessage);
 
@@ -359,6 +387,9 @@ const heist: Command = {
 
 		// Set heist in progress to false
 		isHeistInProgress = false;
+
+		// Delete expired injuries from MongoDB after the heist finishes
+		await deleteExpiredInjuries();
 	}
 };
 
@@ -395,32 +426,13 @@ const severeInjuryDescriptions = [
 	'Witnessed a teammate get captured, causing them to act recklessly and get seriously injured.'
 ];
 
-// Define a JSON object to store the injury data
-const injuryData: { [participantName: string]: Injury[] } = {};
-
-// function assignInjury(participant: string, severity: string): Injury {
-// 	const injury = {
-// 		severity: severity,
-// 		duration: getInjuryDuration(severity), // Get duration based on severity
-// 		description: getRandomDescription(severity), // Get random description based on severity
-// 	};
-
-// 	// Check if participant data exists, if not, create an empty object
-// 	if (!participantData[participant]) {
-// 		participantData[participant] = { injuries: [] };
-// 	}
-
-// 	participantData[participant].injuries.push(injury);
-// 	// Log the details of the injury for the participant
-// 	console.log(`Assigned injury to participant ${participant}:`, injury);
-// 	return injury;
-// }
 // Function to assign injuries to a participant
 function assignInjury(participant: string, severity: string): Injury {
 	const injury = {
 		severity: severity,
 		duration: getInjuryDuration(severity),
-		description: getRandomDescription(severity)
+		description: getRandomDescription(severity),
+		timestamp: Date.now() // Add current timestamp
 	};
 
 	// Check if participant data exists, if not, create an empty array
@@ -431,24 +443,56 @@ function assignInjury(participant: string, severity: string): Injury {
 	// Add the injury to the participant's array in the JSON object
 	injuryData[participant].push(injury);
 
-	// Save the injury data to a JSON file
-	saveInjuryDataToFile(injuryData, './src/injury_data.json');
-
 	// Log the details of the injury for the participant
 	console.log(`Assigned injury to participant ${participant}:`, injury);
 
 	return injury;
 }
 
-// Function to save the injury data to a JSON file
-function saveInjuryDataToFile(data: any, filePath: string) {
-	// Serialize the data to JSON format
-	const jsonData = JSON.stringify(data, null, 2); // Use 2 spaces for indentation
-
-	// Write the JSON data to the file
-	fs.writeFileSync(filePath, jsonData, 'utf-8');
-
-	console.log('Injury data saved to file:', filePath);
+// Function to save injury data to MongoDB
+async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
+	try {
+		// Iterate through each participant's injury data and update it in MongoDB
+		for (const participantName in data) {
+			const injuries = data[participantName];
+			if (injuries.length > 0) {
+				// If there are injuries for the participant, update the existing injury
+				const injury = injuries[0]; // Assuming there's only one injury per user
+				await InjuryModel.findOneAndUpdate(
+					{ participantName },
+					{ injuries: [injury] }, // Update with the new injury
+					{ upsert: true }
+				);
+			} else {
+				// If there are no injuries for the participant, remove the existing injury
+				await InjuryModel.findOneAndDelete({ participantName });
+			}
+		}
+		console.log('Injury data saved to MongoDB');
+	} catch (error) {
+		console.error('Error saving injury data to MongoDB:', error);
+	}
+}
+// Function to delete expired injuries from MongoDB
+async function deleteExpiredInjuries(): Promise<void> {
+	try {
+		const now = Date.now();
+		// Find and delete injuries where the injury end time has passed
+		const injuries = await InjuryModel.find();
+		for (const injuryData of injuries) {
+			if (Array.isArray(injuryData.injuries)) {
+				for (const injury of injuryData.injuries) {
+					const expirationTime = injury.timestamp + (getInjuryDuration(injury.severity) || 0) * 60000;
+					if (expirationTime < now) {
+						await InjuryModel.deleteOne({ '_id': injuryData._id });
+					}
+				}
+			}
+		}
+		console.log('Expired injuries deleted from MongoDB');
+	} catch (error) {
+		console.error('Error deleting expired injuries from MongoDB:', error);
+	}
 }
 
 function getInjuryDuration(severity: string): number {
@@ -652,11 +696,12 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 	chatClient.onMessage(async (channel: string, user: string, message: string, msg: ChatMessage) => {
 		const command = message.trim().toLowerCase();
 
-		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {
+		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {// needs to be tested to see if a user with an injury can join the heist.
 			// Check if the user has any recorded injuries
 			if (participantData[user] && participantData[user].injuries.length > 0) {
 				const injury = participantData[user].injuries[0];
-				const remainingInjuryDuration = Math.ceil((injury.duration - Date.now()) / 60000);
+				const expirationTime = injury.timestamp + (getInjuryDuration(injury.severity) || 0) * 60000;
+				const remainingInjuryDuration = Math.ceil((expirationTime - Date.now()) / 60000);
 				if (remainingInjuryDuration > 0) {
 					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} minutes to recover.`);
 					return;

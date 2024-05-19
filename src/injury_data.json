@@ -1,9 +1,10 @@
 {
   "canadiendragon": [
     {
-      "severity": "minor",
-      "duration": 60,
-      "description": "twisted an ankle while jumping over a fence"
+      "severity": "severe",
+      "duration": 900,
+      "description": "was shot in the leg during a shootout with security",
+      "timestamp": 1716095785480
     }
   ]
 }

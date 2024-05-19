@@ -5,6 +5,7 @@ import { initializeChat } from './chat';
 import Database from './database';
 import createApp from './util/createApp';
 import { CustomGuildedClient } from './guilded';
+import DiscordBot from './Discord/index';
 import fs from 'fs';
 
 class OpenDevBot {
@@ -59,8 +60,12 @@ class OpenDevBot {
 				console.timeEnd(message);
 			}
 
-			const token = process.env.GUILDED_TOKEN as string; // Your Guilded Bot token here
+			const token = process.env.GUILDED_TOKEN as string;
 			const client = new CustomGuildedClient(token);
+
+			const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
+			const discordBot = new DiscordBot();
+			await discordBot.login(discordToken);
 
 			const app = createApp();
 			// Start the server with app.listen
