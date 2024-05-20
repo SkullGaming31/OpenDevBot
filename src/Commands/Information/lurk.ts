@@ -53,7 +53,7 @@ const lurk: Command = {
 				break;
 		}
 		await sleep(5000);
-		await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking`);
+		await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking. ${numLurkers}`);
 	},
 };
 export default lurk;

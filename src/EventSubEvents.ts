@@ -555,10 +555,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					console.error(error);
 				}
 				break;
-			case 'Guilded':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-				const guildedEmbed = new EmbedBuilder()
-					.setTitle('Twitch Event[REDEEM (Guilded)]')
+			case 'Discord':
+				const discordEmbed = new EmbedBuilder()
+					.setTitle('Twitch Event[REDEEM (Discord)]')
 					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}`})
 					.setColor('Random')
 					.addFields([
@@ -573,7 +572,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							inline: true
 						},
 						{
-							name: 'Coins',
+							name: 'DragonFire Coins',
 							value: `${cp.rewardCost}`,
 							inline: true
 						}
@@ -583,11 +582,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}`})
 					.setTimestamp();
 				try {
-					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Guilded Server: https://guilded.gg/canadiendragon`); }
+					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Discord Server: https://discord.com/invite/6TGV75sDjW`); }
 				} catch (error) {
 					console.error(error);
 				}
-				await twitchActivity.send({ embeds: [guildedEmbed] });
+				await twitchActivity.send({ embeds: [discordEmbed] });
 				break;
 			case 'Merch':
 				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -744,13 +743,18 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							name: 'DragonFire Coins',
 							value: `${cp.rewardCost}`,
 							inline: true
+						},
+						{
+							name: 'Banned Word',
+							value: `${cp.input.toLowerCase()}`,
+							inline: false
 						}
 					])
 					.setThumbnail(`${streamer.profilePictureUrl}`)
 					.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}`})
 					.setTimestamp();
 				try {
-					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toUpperCase()}`); }
+					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toLowerCase()}`); }
 					await twitchActivity.send({ embeds: [irlwordbanEmbed] });
 				} catch (error) {
 					console.log(error);
@@ -969,7 +973,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.error(error);
 		}
 	});
-	// need to get GameId for 7DaysToDie
 	const follow = eventSubListener.onChannelFollow(broadcasterInfo.id as UserIdResolvable, broadcasterInfo.id as UserIdResolvable, async (e) => {
 		try {
 			const userInfo = await e.getUser();

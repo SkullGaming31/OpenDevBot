@@ -16,13 +16,11 @@ const dadjoke: Command = {
 				'User-Agent': 'Personal Twitch ChatBot (https://github.com/skullgaming31/openDevBot)'
 			}
 		});
-		// console.log(response.data);
 		try {
 			if (response.data.status === 200) {
 				await chatClient.say(channel, `${response.data.joke}`);
 			} else {
 				await chatClient.say(channel, 'An error occured while trying to send the dadjoke');
-				// console.info(response.data.status);
 			}
 		} catch (error) {
 			console.error(error);

@@ -72,7 +72,7 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-
+			
 			const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
 			const discordBot = new DiscordBot();
 			await discordBot.login(discordToken);

@@ -8,7 +8,7 @@ import { broadcasterInfo } from '../../util/constants';
 
 const bots: Command = {
 	name: 'bots',
-	description: 'All known Bot names on Twitch',
+	description: 'All known Bot names on Twitch(Known by me)',
 	usage: '!bots [add|remove|list]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();

@@ -25,13 +25,14 @@ const feature: Command = {
 
 			if (!name || !description) return chatClient.say(channel, 'You must provide a name and description for the feature.');
 
-			const featureEmbed = new EmbedBuilder();
+			const featureEmbed = new EmbedBuilder().setColor('Purple');
 
 			if (name) featureEmbed.setTitle(name);
 
 			if (usersSearch?.name && usersSearch?.profilePictureUrl) featureEmbed.setAuthor({ name: usersSearch.name, iconURL: usersSearch.profilePictureUrl });
 
 			featureEmbed.setDescription(description);
+			featureEmbed.setURL(`https://twitch.tv/${usersSearch?.name.toLowerCase()}`);
 			featureEmbed.setFooter({ text: `Feature request from ${msg.userInfo.userName}, userID: ${msg.userInfo.userId}`});
 			featureEmbed.setTimestamp();
 
