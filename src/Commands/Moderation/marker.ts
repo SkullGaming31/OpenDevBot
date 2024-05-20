@@ -1,11 +1,11 @@
 import { HelixChannelEditor, UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 axios.defaults;
 
@@ -42,9 +42,9 @@ const marker: Command = {
 		const description = args.slice(1).join(' ').trim(); // Join all args starting from index 1 into a single description
 		const sanitizedDescription = description.replace(/[^\w\s]/gi, ''); // Remove non-alphanumeric characters
 
-		const markerEmbed = new Embed()
+		const markerEmbed = new EmbedBuilder()
 			.setTitle('Twitch Event[Channel Marker Added]')
-			.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+			.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 			.setColor('Red')
 			.addFields([
 				{
@@ -59,7 +59,7 @@ const marker: Command = {
 						: []
 				)
 			])
-			.setFooter(`${msg.userInfo.displayName} just created a stream marker with description: ${sanitizedDescription} in ${channel}'s twitch channel`)
+			.setFooter({ text: `${msg.userInfo.displayName} just created a stream marker with description: ${sanitizedDescription} in ${channel}'s twitch channel`})
 			.setTimestamp();
 
 		// Check if user is authorized to use the command
@@ -72,7 +72,7 @@ const marker: Command = {
 				const streamTime = formatStreamTime(positionInSeconds);
 
 				await chatClient.say(channel, `Stream Marker Created Successfully at ${streamTime}`);
-				await commandUsage.send({ embeds: [markerEmbed.toJSON()] });
+				await commandUsage.send({ embeds: [markerEmbed] });
 			} else {
 				await chatClient.say(channel, 'The stream must be live to use this command');
 			}

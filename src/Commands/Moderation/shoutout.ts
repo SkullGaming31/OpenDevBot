@@ -1,11 +1,11 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { sleep } from '../../util/util';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const shoutout: Command = {
 	name: 'shoutout',
@@ -29,9 +29,9 @@ const shoutout: Command = {
 
 			const shoutoutMessage = `Yay! Look who's here! @${userSearch.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userSearch.displayName} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userChannelInfo?.gameName}. So go check them out and join in on the fun!`;
 
-			const commandUsageEmbed = new Embed()
+			const commandUsageEmbed = new EmbedBuilder()
 				.setTitle('CommandUsage[Shoutout]')
-				.setAuthor(msg.userInfo.displayName, userSearch.profilePictureUrl)
+				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl})
 				.setColor('Yellow')
 				.addFields([
 					{ name: 'Executer', value: msg.userInfo.displayName, inline: true },
@@ -43,16 +43,16 @@ const shoutout: Command = {
 							: []
 					)
 				])
-				.setFooter(`${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`})
 				.setTimestamp();
 
-			const shoutoutEmbed = new Embed()
+			const shoutoutEmbed = new EmbedBuilder()
 				.setTitle('Twitch Shoutout')
-				.setAuthor(user, userSearch.profilePictureUrl)
+				.setAuthor({ name: user, iconURL: userSearch.profilePictureUrl})
 				.setColor('Green')
 				.setDescription(shoutoutMessage)
 				.setURL(`https://twitch.tv/${userChannelInfo?.name}`)
-				.setFooter(`${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`})
 				.setTimestamp();
 
 			if (userSearch.profilePictureUrl) {
@@ -66,9 +66,9 @@ const shoutout: Command = {
 			await sleep(5000);
 			if (broadcasterStream !== null) await userApiClient.chat.shoutoutUser(broadcasterInfo?.id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await sleep(3000);
-			await commandUsage.send({ embeds: [commandUsageEmbed.toJSON()] });
+			await commandUsage.send({ embeds: [commandUsageEmbed] });
 			await sleep(5000);
-			await TwitchActivity.send({ embeds: [shoutoutEmbed.toJSON()] });
+			await TwitchActivity.send({ embeds: [shoutoutEmbed] });
 		} catch (error) {
 			console.error(error);
 		}

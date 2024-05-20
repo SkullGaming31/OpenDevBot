@@ -170,25 +170,23 @@ const heist: Command = {
 		if (participantData[user] && participantData[user].injuries.length > 0) {
 			const injury = participantData[user].injuries[0]; // Since a user can only have one injury
 			const injuryEndTime = injury.timestamp + injury.duration * 1000; // Convert duration to milliseconds
-			const remainingInjuryDuration = Math.ceil((injuryEndTime - Date.now()) / 1000); // Calculate remaining duration in seconds
+			const remainingInjuryDurationSeconds = Math.ceil((injuryEndTime - Date.now()) / 1000); // Calculate remaining duration in seconds
+			const remainingInjuryDurationMinutes = Math.ceil(remainingInjuryDurationSeconds / 60); // Convert seconds to minutes
 
-			if (remainingInjuryDuration > 0) {
-				console.log(`${user} has an active injury.`);
-				await chatClient.say(channel, `${user} has an active injury and needs to wait ${remainingInjuryDuration} seconds to recover.`);
+			if (remainingInjuryDurationMinutes > 0) {
+				const timeString = remainingInjuryDurationMinutes === 1 ? 'minute' : 'minutes';
+				await chatClient.say(channel, `${user} has an active injury and needs to wait ${remainingInjuryDurationMinutes} ${timeString} to recover.`);
 				return; // Exit the command if the user has an active injury
 			} else {
-				console.log(`No active injuries for ${user}.`);
 				await deleteEntryFromDatabase(user);
 			}
 		} else {
-			console.log(`No injuries for ${user}.`);
-			// If the user has no injuries at all, delete the entry from the database
-			await deleteEntryFromDatabase(user);
+			// No injuries for the user
 		}
 
 		// Check if there are injuries in the database for the user attempting the command
 		if (existingInjuryData[user] && existingInjuryData[user].length > 0) {
-			console.log('User has injuries in the database:', existingInjuryData[user]);
+			// console.log('User has injuries in the database:', existingInjuryData[user]);
 			// Additional logic here if needed
 		} else {
 			console.log('User does not have any injuries in the database.');
@@ -222,8 +220,8 @@ const heist: Command = {
 		// Check if the lowercase zoneName exists in the zonesLowercase object
 		if (!(zoneName in zonesLowercase)) {
 			console.error('Specified zone does not exist');
-			console.log('zoneName:', zoneName);
-			console.log('zones:', zonesLowercase);
+			// console.log('zoneName:', zoneName);
+			// console.log('zones:', zonesLowercase);
 			await chatClient.say(channel, `The specified zone "${zoneName}" does not exist. Available zones are: ${Object.values(zones).map(zone => zone.name).join(', ')}`);
 			return; // or handle the error appropriately
 		}
@@ -241,12 +239,12 @@ const heist: Command = {
 			participantData[user] = { injuries: [] };
 		}
 
-		console.log('Participant Data:', participantData);
+		// console.log('Participant Data:', participantData);
 		if (participantData[user]) {
-			console.log('Participant Data for User:', participantData[user]);
+			// console.log('Participant Data for User:', participantData[user]);
 			console.log('Injuries:', participantData[user]?.injuries);
 		} else {
-			console.log('Participant Data for User:', participantData[user]);
+			// console.log('Participant Data for User:', participantData[user]);
 		}
 
 		const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
@@ -307,6 +305,7 @@ const heist: Command = {
 			loot = lootResult.totalAmount;
 			stolenItems = lootResult.items;
 		}
+		console.log('Stolen Items:', stolenItems);
 
 		//
 		const numWinners = randomInt(1, participants.length + 1);
@@ -344,7 +343,7 @@ const heist: Command = {
 			// Loop through each participant
 			for (const participant of participants) {
 				// Check for 50/50 chance of injury
-				if (Math.random() <= 0.5) {
+				if (Math.random() <= 0.9) {
 					const injurySeverity = determineInjurySeverity();
 		
 					// Assign the injury and get the injury details
@@ -361,7 +360,7 @@ const heist: Command = {
 					await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
 		
 					// Log the updated participantData
-					console.log('Updated ParticipantData:', participantData);
+					// console.log('Updated ParticipantData:', participantData);
 		
 					// Construct the result message with injury details
 					resultMessage += ` ${participant} received a ${injury.severity} injury and needs to recover for ${Math.floor(injury.duration / 60)} minutes. ${injury.description}`;
@@ -457,14 +456,11 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 				await InjuryModel.findOneAndUpdate(
 					{ participantName },
 					{ injuries: [injury] }, // Update with the new injury
-					{ upsert: true }
+					{ new: true, upsert: true }
 				);
-			} else {
-				// If there are no injuries for the participant, remove the existing injury
-				await InjuryModel.findOneAndDelete({ participantName });
 			}
 		}
-		console.log('Injury data saved to MongoDB');
+		// console.log('Injury data saved to MongoDB');
 	} catch (error) {
 		console.error('Error saving injury data to MongoDB:', error);
 	}
@@ -515,21 +511,22 @@ function getRandomDescription(severity: string): string {
 function getInjuryProbability(severity: string, /* difficulty: number */): number {
 	// Set base probabilities based on severity (example)
 	const baseProbabilities: {
-		minor: number;
-		moderate: number;
-		severe: number;
-		[key: string]: number; // Add index signature to allow for any string keys
-	} = {
-		minor: 0.7,
-		moderate: 0.2,
-		severe: 0.1,
-	};
+    minor: number;
+    moderate: number;
+    severe: number;
+    [key: string]: number;
+} = {
+	minor: 0.4,   // Adjusted probabilities
+	moderate: 0.2,
+	severe: 0.9,
+};
 
 	// Adjust probabilities based on difficulty (example)
 	// const difficultyModifier = difficulty / 10; // Increase chance of higher severity with higher difficulty
 
 	return baseProbabilities[severity] /* + difficultyModifier */;
 }
+
 function determineInjurySeverity(/* difficulty: number */): string {
 	const randomValue = Math.random();
 
@@ -658,8 +655,14 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 	if (typeof item === 'number') {
 		return item;
 	} else if (typeof item === 'object') {
-		const gemValues = Object.values(item) as number[];
-		return gemValues.reduce((sum, value) => sum + value, 0);
+		if (Array.isArray(item)) {
+			// If it's an array, sum up its elements
+			return item.reduce((sum, value) => sum + value, 0);
+		} else {
+			// If it's an object, sum up the values of its properties
+			const values = Object.values(item);
+			return values.reduce((sum, value) => sum + value, 0);
+		}
 	} else {
 		throw new Error('Invalid loot item type.');
 	}
@@ -692,7 +695,7 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} seconds to recover.`);
 					return;
 				} else {
-					console.log(`No active injuries for ${user}.`);
+					// console.log(`No active injuries for ${user}.`);
 					await deleteEntryFromDatabase(user);
 				}
 			}

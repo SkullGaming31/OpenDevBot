@@ -39,6 +39,11 @@ const ping: Command = {
 		// 		'Moderator User Login:', moderator.userName);
 		// });
 
+		const tbd = await userApiClient.games.getGameByName('7 Days To Die');
+
+		console.log('7DaysToDie: ', tbd?.id);
+		
+
 		try {
 			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			const pingValue = await checkTwitchApiPing();

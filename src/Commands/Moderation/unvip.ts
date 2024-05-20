@@ -1,10 +1,10 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const unvip: Command = {
 	name: 'unvip',
@@ -26,9 +26,9 @@ const unvip: Command = {
 			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo?.id as UserIdResolvable, { limit: 20 });
 			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is already a vip');
 
-			const unVIPEmbed = new Embed()
+			const unVIPEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[VIP Removed]')
-				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 				.setColor('Red')
 				.addFields([
 					{
@@ -43,7 +43,7 @@ const unvip: Command = {
 							: []
 					)
 				])
-				.setFooter(`${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 			try {
 				if (userSearch) {
@@ -52,7 +52,7 @@ const unvip: Command = {
 				} else {
 					console.error('Something happened while searching for user');
 				}
-				await commandUsage.send({ embeds: [unVIPEmbed.toJSON()] });
+				await commandUsage.send({ embeds: [unVIPEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

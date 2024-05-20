@@ -2,7 +2,6 @@ import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
 import { HelixChatChatter, UserIdResolvable } from '@twurple/api/lib';
-import { WebhookClient, Embed, EmbedPayload } from 'guilded.js';
 import fs from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
@@ -14,6 +13,7 @@ import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 interface Chatter {
 	userId: string;
@@ -208,15 +208,15 @@ export async function initializeChat(): Promise<void> {
 			// Create embed for ban message
 			const displayName = msg.userInfo.displayName;
 
-			const banEmbed: Embed = new Embed()
+			const banEmbed: EmbedBuilder = new EmbedBuilder()
 				.setTitle('TwitchBan[Automated Ban]')
-				.setAuthor(displayName)
+				.setAuthor({ name: displayName })
 				.setColor('Red')
 				.addFields([
 					{ name: 'User:', value: displayName, inline: true },
 					{ name: 'Reason:', value: 'Promoting selling followers (violates Twitch TOS)', inline: true },
 				])
-				.setFooter(`Someone just got BANNED from ${channel}'s channel`)
+				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
 				.setTimestamp();
 
 			try {
@@ -235,7 +235,7 @@ export async function initializeChat(): Promise<void> {
 				// - Send chat message notifying ban
 				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
 				// - Send embed to activity feed
-				await twitchActivity.send({ embeds: [banEmbed.toJSON()] });
+				await twitchActivity.send({ embeds: [banEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

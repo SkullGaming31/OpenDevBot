@@ -1,10 +1,10 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const unmod: Command = {
 	name: 'unmod',
@@ -25,9 +25,9 @@ const unmod: Command = {
 			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 
-			const unModeratorEmbed = new Embed()
+			const unModeratorEmbed = new EmbedBuilder()
 				.setTitle('Command Usage[Unmod]')
-				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 				.setColor('Red')
 				.addFields([
 					{
@@ -42,13 +42,13 @@ const unmod: Command = {
 							: []
 					)
 				])
-				.setFooter(`${display} just unmodded ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${display} just unmodded ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 			try {
 				if (isEditor || msg.userInfo.isBroadcaster) {
 					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id as UserIdResolvable);
 					await chatClient.say(channel, `${args[0]} has had there moderator powers removed by ${display}`);
-					await commandUsage.send({ embeds: [unModeratorEmbed.toJSON()] });
+					await commandUsage.send({ embeds: [unModeratorEmbed] });
 				} else {
 					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');
 				}

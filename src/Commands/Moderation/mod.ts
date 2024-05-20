@@ -1,10 +1,10 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const mod: Command = {
 	name: 'mod',
@@ -25,9 +25,9 @@ const mod: Command = {
 			// Check if the user invoking the command is a channel editor
 			const isChannelEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 
-			const moderatorEmbed = new Embed()
+			const moderatorEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Channel Mod Added]')
-				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 				.setColor('Blue')
 				.addFields([
 					{
@@ -42,7 +42,7 @@ const mod: Command = {
 							: []
 					)
 				])
-				.setFooter(`${display} just modded ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${display} just modded ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 
 			try {
@@ -55,7 +55,7 @@ const mod: Command = {
 				} else {
 					await chatClient.say(channel, 'You must be a channel editor to use this command');
 				}
-				await commandUsage.send({ embeds: [moderatorEmbed.toJSON()] });
+				await commandUsage.send({ embeds: [moderatorEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { Error } from 'mongoose';
+import { Client } from 'discord.js';
 
 class ErrorHandler {
 	private logFile: string;

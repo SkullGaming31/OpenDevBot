@@ -1,11 +1,11 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat';
-import { Embed, WebhookClient } from 'guilded.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const removepoints: Command = {
 	name: 'removepoints',
@@ -58,9 +58,9 @@ const removepoints: Command = {
 
 			// console.log(`Saved User: ${savedUser}`); // Debugging line
 
-			const removePointsEmbed = new Embed()
+			const removePointsEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Points Removal]')
-				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 				.setColor('Red')
 				.addFields([
 					{
@@ -77,11 +77,11 @@ const removepoints: Command = {
 					{ name: 'Balance', value: `${amountToRemove}`, inline: false },
 					{ name: 'New Balance', value: `${savedUser.balance}`, inline: true },
 				])
-				.setFooter(`${msg.userInfo.displayName} just removed ${amountToRemove} points from ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${msg.userInfo.displayName} just removed ${amountToRemove} points from ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 
 			await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${savedUser.balance}`);
-			await commandUsage.send({ embeds: [removePointsEmbed.toJSON()] });
+			await commandUsage.send({ embeds: [removePointsEmbed] });
 		} else {
 			await chatClient.say(channel, `User ${targetUser} not found.`);
 		}

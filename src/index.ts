@@ -4,7 +4,6 @@ import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
 import Database from './database';
 import createApp from './util/createApp';
-import { CustomGuildedClient } from './guilded';
 import DiscordBot from './Discord/index';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
@@ -73,9 +72,6 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-		
-			const token = process.env.GUILDED_TOKEN as string;
-			const client = new CustomGuildedClient(token);
 
 			const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
 			const discordBot = new DiscordBot();

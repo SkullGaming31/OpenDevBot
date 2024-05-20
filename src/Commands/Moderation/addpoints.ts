@@ -1,6 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import { Embed, WebhookClient } from 'guilded.js';
+import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { User, UserModel } from '../../database/models/userModel';
@@ -53,9 +53,9 @@ const addpoints: Command = {
 			const savedUser = await existingUser.save();
 			// console.log('User: ', savedUser); // Debugging code for userModel
 
-			const addPointsEmbed = new Embed()
+			const addPointsEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Addpoints]')
-				.setAuthor(`${userSearch.displayName}`, `${userSearch.profilePictureUrl}`)
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
 				.setColor('Green')
 				.addFields([
 					{
@@ -72,12 +72,12 @@ const addpoints: Command = {
 					{ name: 'Balance', value: `${amountToAdd}`, inline: false },
 					{ name: 'New Balance', value: `${savedUser.balance}`, inline: true },
 				])
-				.setFooter(`${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel`)
+				.setFooter({ text: `${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 
 			// Send a message to the chat confirming the points added
 			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${savedUser.balance}`);
-			await commandUsage.send({ embeds: [addPointsEmbed.toJSON()] });
+			await commandUsage.send({ embeds: [addPointsEmbed] });
 		} else {
 			// User not found in the database
 			await chatClient.say(channel, `User ${targetUser} not found.`);
