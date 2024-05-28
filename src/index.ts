@@ -72,10 +72,17 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-			
-			const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
-			const discordBot = new DiscordBot();
-			await discordBot.login(discordToken);
+
+			// const Enviroment = process.env.Enviroment as string;
+			// if (Enviroment === 'dev' || Enviroment === 'debug') {
+			// 	const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
+			// 	const discordBot = new DiscordBot();
+			// 	await discordBot.login(discordToken);
+			// } else {
+			// 	const discordToken = process.env.DISCORD_BOT_TOKEN as string;
+			// 	const discordBot = new DiscordBot();
+			// 	await discordBot.login(discordToken);
+			// }
 
 			const app = createApp();
 			// Start the server with app.listen
@@ -108,4 +115,4 @@ const client = new OpenDevBot();
 
 client.start()
 	.then(() => console.log('Bot started successfully'))
-	.catch(error => console.error('Failed to start bot:', error));
+	.catch((error) => console.error('Failed to start bot:', error));

@@ -139,8 +139,8 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		prompt: 'Click for a link to my Tik-Tok profile',
 		userInputRequired: false
 	});
-	const guildedUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '3d9e67e4-85fa-4c50-9e7f-8a78afd1bf67', {
-		title: 'Guilded',
+	const discordUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '88a92e0f-4199-4bc8-b555-76d70856b5a4', {
+		title: 'Discord',
 		cost: 1,
 		autoFulfill: true,
 		backgroundColor: '#d0080a',
@@ -148,7 +148,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		isEnabled: true,
 		maxRedemptionsPerUserPerStream: null,
 		maxRedemptionsPerStream: null,
-		prompt: 'click for a link to my Guilded Server',
+		prompt: 'click for a link to my Discord Server',
 		userInputRequired: false
 	});
 	const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
@@ -307,7 +307,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const redeem = eventSubListener.onChannelRedemptionAdd(broadcasterInfo.id, async (cp) => {
 		const userInfo = await cp.getUser();
 		const streamer = await cp.getBroadcaster();
-		// console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, broadcasterInfo: ${cp.id}`);
+		console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}`);
 		// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterInfo?.id!, `${cp.rewardId}`, `${cp.id}`);
 		switch (cp.rewardTitle || cp.rewardId) {
 			case 'Shoutout':

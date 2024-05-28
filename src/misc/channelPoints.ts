@@ -27,17 +27,17 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 	if (broadcasterID?.id === undefined) return;
 	console.log('registering Channel Points Rewards');
 	try {
-		// const NBJ = await userApiClient.channelPoints.createCustomReward(broadcasterID?.id, {
-		// 	title: 'No Bullet Jumping',
-		// 	cost: 600,
-		// 	autoFulfill: true,
-		// 	backgroundColor: '#32CD32',
-		// 	globalCooldown: 600,
-		// 	isEnabled: false,
-		// 	maxRedemptionsPerUserPerStream: null,
-		// 	maxRedemptionsPerStream: null,
-		// 	prompt: 'Not aloud to bullet jump in warframe',
-		// 	userInputRequired: false
-		// });
+		const Discord = await userApiClient.channelPoints.createCustomReward(broadcasterID?.id, {
+			title: 'Discord',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#32CD32',
+			globalCooldown: 600,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Get a link to my discord server',
+			userInputRequired: false
+		});
 	} catch (error) { console.error(error); }
 }

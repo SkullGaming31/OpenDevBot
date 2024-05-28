@@ -266,14 +266,20 @@ const heist: Command = {
 
 
 		// Wait for the heist to start (e.g., 60 seconds)
-		const delay = 10000;
+		const ENVIROMENT = process.env.Enviroment as string;
+		let delay = 0;
+		if (ENVIROMENT !== 'dev' && ENVIROMENT !== 'debug') {
+			delay = 60000;
+		} else {
+			delay = 10000;
+		}
 		await new Promise((resolve) => setTimeout(resolve, delay));
 
 		// Check if there are enough participants for the heist
-		if (participants.length < 1) {
-			await chatClient.say(channel, 'The heist requires a minimum of 1 participants. The heist has been canceled.');
+		if (participants.length <= 1) {
 			participants = [];
 			isHeistInProgress = false;
+			await chatClient.say(channel, 'The heist requires a minimum of 1 participants. The heist has been canceled.');
 			return;
 		}
 
@@ -305,7 +311,7 @@ const heist: Command = {
 			loot = lootResult.totalAmount;
 			stolenItems = lootResult.items;
 		}
-		console.log('Stolen Items:', stolenItems);
+		// console.log('Stolen Items:', stolenItems);
 
 		//
 		const numWinners = randomInt(1, participants.length + 1);
