@@ -276,10 +276,10 @@ const heist: Command = {
 		await new Promise((resolve) => setTimeout(resolve, delay));
 
 		// Check if there are enough participants for the heist
-		if (participants.length <= 1) {
+		if (participants.length <= 2) {
 			participants = [];
 			isHeistInProgress = false;
-			await chatClient.say(channel, 'The heist requires a minimum of 1 participants. The heist has been canceled.');
+			await chatClient.say(channel, 'The heist requires a minimum of 2 participants. The heist has been canceled.');
 			return;
 		}
 

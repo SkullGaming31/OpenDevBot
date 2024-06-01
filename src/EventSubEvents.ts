@@ -296,7 +296,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await LIVE.send({ embeds: [offlineEmbed] });
 			await sleep(2000);
 			if (broadcasterInfo?.name) {
-				chatClient.say(broadcasterInfo.name, 'dont forget you can join the Guilded Server too, https://guilded.gg/canadiendragon');
+				chatClient.say(broadcasterInfo.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
 			}
 			lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
 			await LurkMessageModel.deleteMany({});// Clear all messages from the MongoDB collection
