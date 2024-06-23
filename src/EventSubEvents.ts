@@ -12,6 +12,7 @@ import { LurkMessageModel } from './database/models/LurkModel';
 import { createChannelPointsRewards } from './misc/channelPoints';
 import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, moderatorID } from './util/constants';
 import { sleep } from './util/util';
+import { SubscriptionInfo, SubscriptionModel } from './database/models/eventSubscriptions';
 
 
 export async function initializeTwitchEventSub(): Promise<void> {
@@ -1320,28 +1321,75 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 		if (broadcasterInfo) { await chatClient.say(broadcasterInfo?.name, `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
 	});
-	const subscriptionCreateSuccess = eventSubListener.onSubscriptionCreateSuccess((subscription) => {
+	const subscriptionCreateSuccess = eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
 		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug') {
+		if (Enviroment === 'debug' || Enviroment === 'dev') {
 			console.log(`(CS)SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+		}
+		try {
+			// Check if the subscription already exists in MongoDB
+			const existingSubscription = await SubscriptionModel.findOne<SubscriptionInfo>({
+				subscriptionId: subscription.id,
+				authUserId: subscription.authUserId,
+			});
+
+			if (existingSubscription) {
+				// console.log(`(CS) Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				return; // Exit early if subscription already exists
+			}
+
+			// Save subscription details to MongoDB
+			const newSubscription = new SubscriptionModel({
+				subscriptionId: subscription.id,
+				authUserId: subscription.authUserId,
+			});
+			await newSubscription.save();
+		} catch (error) {
+			console.error('Error saving subscription to database:', error);
 		}
 	});
 	const subscriptionCreateFailure = eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
 		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug') {
-			console.log(`(CF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		if (Enviroment === 'debug' || Enviroment === 'dev') {
+			console.error(`(CF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
 		}
 	});
-	const subscriptionDeleteSuccess = eventSubListener.onSubscriptionDeleteSuccess((subscription) => {
+	const subscriptionDeleteSuccess = eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {
 		const Enviroment = process.env.Enviroment as string;
 		if (Enviroment === 'debug') {
 			console.log(`(DS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
 		}
+		try {
+			// Check if the subscription exists in MongoDB
+			const existingSubscription = await SubscriptionModel.findOne({
+				subscriptionId: subscription.id,
+				authUserId: subscription.authUserId,
+			});
+
+			if (!existingSubscription) {
+				console.log(`(DS) Subscription not found in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				return; // Exit early if subscription not found
+			}
+
+			// Delete subscription from MongoDB
+			const deletedSubscription = await SubscriptionModel.findOneAndDelete({
+				subscriptionId: subscription.id,
+				authUserId: subscription.authUserId,
+			});
+
+			if (deletedSubscription) {
+				console.log(`(DS) Deleted Subscription: SubscriptionID: ${deletedSubscription.subscriptionId}, SubscriptionAuthUserId: ${deletedSubscription.authUserId}`);
+			} else {
+				console.log(`(DS) Subscription not found in database during delete operation: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+			}
+		} catch (error) {
+			console.error('Error deleting subscription from database:', error);
+		}
 	});
 	const subscriptionDeleteFailure = eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
 		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug') {
-			console.log(`(DF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		if (Enviroment === 'debug' || Enviroment === 'dev') {
+			console.error(`(DF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
 		}
 	});
 	let previousTitle: string = '';
@@ -1351,20 +1399,20 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const { streamTitle, categoryName } = event;
 		const chatClient = await getChatClient();
 
-		// Check if the title has changed
-		if (streamTitle !== previousTitle) {
+		// Check if both title and category have changed
+		if (streamTitle !== previousTitle && categoryName !== previousCategory) {
+			// Display a chat message with both updated stream title and category
+			await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}. Stream category has been updated: ${categoryName}`);
+			previousTitle = streamTitle; // Update the previous title
+			previousCategory = categoryName; // Update the previous category
+		} else if (streamTitle !== previousTitle) {
 			// Display a chat message with the updated stream title
 			await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}`);
 			previousTitle = streamTitle; // Update the previous title
-			return; // Exit the function to prevent displaying the category
-		}
-
-		// Check if the category has changed
-		if (categoryName !== previousCategory) {
+		} else if (categoryName !== previousCategory) {
 			// Display a chat message with the updated stream category
 			await chatClient.say(event.broadcasterName, `Stream category has been updated: ${categoryName}`);
 			previousCategory = categoryName; // Update the previous category
-			return;
 		}
 	});
 	//#endregion

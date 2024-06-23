@@ -6,6 +6,9 @@ import knownBotsModel, { Bots } from '../../database/models/knownBotsModel';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
+// TODO: add the channel the bot was added from and who from that channel added the bot
+// TODO: add logs to discord to show channel, user and bot name that was added to the database ex: modvlog(user) added drapsnatt(bot) from modvlog(channel)
+
 const bots: Command = {
 	name: 'bots',
 	description: 'All known Bot names on Twitch(Known by me)',
@@ -15,34 +18,40 @@ const bots: Command = {
 		const userApiClient = await getUserApi();
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
 
-		const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
+		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 
-		const isStaff = isEditor || msg.userInfo.isMod || msg.userInfo.isMod;
+		const isStaff = isEditor || msg.userInfo.isMod || msg.userInfo.isBroadcaster;
+		if (!args[0]) return chatClient.say(channel, `Usage: ${bots.usage}`);
 
 		switch (args[0]) {
 			case 'add':
 				if (isStaff) {
-					// Retrieve the usernames from the command arguments
-					const usernamesToAdd = args.slice(1); // Exclude the command itself
+					const usernamesToAdd = args.slice(1).map(username => username.toLowerCase());
 
 					try {
-						const newBots: Bots[] = []; // Array to store the new bot documents
+						const existingBots = await knownBotsModel.find({ username: { $in: usernamesToAdd } });
+						const existingUsernames = existingBots.map(bot => bot.username);
 
-						// Create a new bot document for each username
-						for (const usernameToAdd of usernamesToAdd) {
-							const usertoGet = await userApiClient.users.getUserByName(usernameToAdd);
-							const newBot: Bots = new knownBotsModel({
-								id: usertoGet?.id,
-								username: usernameToAdd.toLowerCase(),
-							});
+						const newUsernamesToAdd = usernamesToAdd.filter(username => !existingUsernames.includes(username));
+						const newBots: Bots[] = [];
 
-							newBots.push(newBot);
+						for (const usernameToAdd of newUsernamesToAdd) {
+							const userToGet = await userApiClient.users.getUserByName(usernameToAdd);
+							if (userToGet?.id) {
+								const newBot: Bots = new knownBotsModel({
+									id: userToGet.id,
+									username: usernameToAdd.toLowerCase(),
+								});
+								newBots.push(newBot);
+							}
 						}
 
-						// Save the bots to the database
-						await knownBotsModel.insertMany(newBots);
-
-						await chatClient.say(channel, `Successfully added ${usernamesToAdd.join(', ')} to the database.`);
+						if (newBots.length > 0) {
+							await knownBotsModel.insertMany(newBots);
+							await chatClient.say(channel, `Successfully added ${newUsernamesToAdd.join(', ')} to the database.`);
+						} else {
+							await chatClient.say(channel, 'All usernames provided are already in the database.');
+						}
 					} catch (error: any) {
 						console.error('Failed to add usernames to the database:', error);
 						await chatClient.say(channel, 'An error occurred while adding the usernames to the database.');
@@ -51,6 +60,7 @@ const bots: Command = {
 					await chatClient.say(channel, 'You must be a moderator or the broadcaster to use this command');
 				}
 				break;
+
 			case 'list':
 				try {
 					const botCount = await knownBotsModel.countDocuments();
@@ -68,25 +78,28 @@ const bots: Command = {
 				break;
 
 			case 'remove':
-				if (!isStaff) { return chatClient.say(channel, 'You must be a moderator, broadcaster or Channel Editor to use this command.'); }
+				if (!isStaff) return chatClient.say(channel, 'You must be a moderator, broadcaster, or Channel Editor to use this command.');
+				if (!args[1]) return chatClient.say(channel, 'Please provide the usernames to remove.');
 
-				if (!args[1]) { return chatClient.say(channel, 'Please provide the usernames to remove.'); }
-
-				const usernamesToRemove = args.slice(1);
+				const usernamesToRemove = args.slice(1).map(username => username.toLowerCase());
 
 				try {
-					const result = await knownBotsModel.deleteMany({ username: { $in: usernamesToRemove } });
-					const deletedCount = result.deletedCount || 0;
+					const existingBotsToRemove = await knownBotsModel.find({ username: { $in: usernamesToRemove } });
+					const existingUsernamesToRemove = existingBotsToRemove.map(bot => bot.username.toLowerCase());
 
-					if (deletedCount === 0) {
+					if (existingUsernamesToRemove.length === 0) {
 						await chatClient.say(channel, 'No matching users found in the database.');
 					} else {
-						await chatClient.say(channel, `${deletedCount} user(s) have been removed from the database: ${usernamesToRemove.join(', ')}.`);
+						await knownBotsModel.deleteMany({ username: { $in: existingUsernamesToRemove } });
+						await chatClient.say(channel, `${existingUsernamesToRemove.length} user(s) have been removed from the database: ${existingUsernamesToRemove.join(', ')}.`);
 					}
 				} catch (error: any) {
 					console.error('Error removing users:', error);
 					await chatClient.say(channel, 'An error occurred while removing the users.');
 				}
+				break;
+			default:
+				await chatClient.say(channel, `Invalid subcommand. Usage: ${bots.usage}`);
 				break;
 		}
 	},

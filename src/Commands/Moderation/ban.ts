@@ -17,31 +17,42 @@ const ban: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		try {
-			if (!args[1]) return chatClient.say(channel, `${display}, Usage: ${ban.usage}`);
+			if (!args[0]) {
+				chatClient.say(channel, `${display}, Usage: ${ban.usage}`);
+				return;
+			}
 
-			const reason = args[1] || 'No Reason Provided';
+			const reason = args.slice(1).join(' ') || 'No Reason Provided';
 			const username = args[0].replace('@', '');
 			const userSearch = await userApiClient.users.getUserByName(username);
 
-			if (!userSearch?.id) return;
+			if (!userSearch?.id) {
+				chatClient.say(channel, `${display}, User not found.`);
+				return;
+			}
 
 			// Check if the user is a mod or broadcaster
-			if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
+			if (!msg.userInfo.isMod && !msg.userInfo.isBroadcaster) {
+				chatClient.say(channel, `${display}, You don't have permission to use this command.`);
+				return;
+			}
 
 			// Ban the user
-			await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, { user: userSearch.id, reason });
+			await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+				user: userSearch.id,
+				reason
+			});
 
 			// Send chat message about the ban
 			await chatClient.say(channel, `@${username} has been banned for Reason: ${reason}`);
 
 			const commandUsageEmbed = new EmbedBuilder()
 				.setTitle('CommandUsage[Ban]')
-				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl})
+				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl })
 				.setDescription(reason)
 				.setColor('Red')
 				.addFields([
 					{ name: 'Executer', value: msg.userInfo.displayName, inline: true },
-					// Check if the user is a mod or broadcaster, and add the appropriate field
 					...(msg.userInfo.isMod
 						? [{ name: 'Mod', value: 'Yes', inline: true }]
 						: msg.userInfo.isBroadcaster
@@ -49,14 +60,14 @@ const ban: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just banned out ${userSearch.displayName} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just banned ${userSearch.displayName} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			// Send the embed
 			await commandUsage.send({ embeds: [commandUsageEmbed] });
 
 		} catch (error) {
-			console.error(error);
+			console.error('Error executing ban command:', error);
 		}
 	}
 };
