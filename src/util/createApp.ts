@@ -12,7 +12,7 @@ export default function createApp(): express.Application {
 	const redirectUri = process.env.TWITCH_REDIRECT_URL as string;
 
 	// List of scopes
-	const scopes = [
+	const userScopes = [
 		'bits:read',
 		'channel:edit:commercial',
 		'channel:manage:broadcast',
@@ -63,13 +63,68 @@ export default function createApp(): express.Application {
 		'user:read:follows',
 		'user:read:subscriptions'
 	].join('+'); // Join scopes with '+'
+	const botScopes = ['bits:read',
+		'channel:edit:commercial',
+		'channel:manage:broadcast',
+		'channel:manage:extensions',
+		'channel:manage:guest_star',
+		'channel:manage:moderators',
+		'channel:manage:polls',
+		'channel:manage:predictions',
+		'channel:manage:raids',
+		'channel:manage:redemptions',
+		'channel:manage:schedule',
+		'channel:manage:videos',
+		'channel:manage:vips',
+		'channel:read:charity',
+		'channel:read:editors',
+		'channel:read:goals',
+		'channel:read:guest_star',
+		'channel:read:hype_train',
+		'channel:read:polls',
+		'channel:read:predictions',
+		'channel:read:redemptions',
+		'channel:read:subscriptions',
+		'channel:read:vips',
+		'chat:edit',
+		'chat:read',
+		'clips:edit',
+		'moderation:read',
+		'moderator:manage:announcements',
+		'moderator:manage:automod',
+		'moderator:manage:automod_settings',
+		'moderator:manage:banned_users',
+		'moderator:manage:blocked_terms',
+		'moderator:manage:chat_messages',
+		'moderator:manage:chat_settings',
+		'moderator:manage:guest_star',
+		'moderator:manage:shield_mode',
+		'moderator:manage:shoutouts',
+		'moderator:read:automod_settings',
+		'moderator:read:blocked_terms',
+		'moderator:read:chat_settings',
+		'moderator:read:chatters',
+		'moderator:read:followers',
+		'moderator:read:guest_star',
+		'moderator:read:shield_mode',
+		'moderator:read:shoutouts',
+		'user:edit',
+		'user:manage:blocked_users',
+		'user:manage:chat_color',
+		'user:manage:whispers',
+		'user:read:blocked_users',
+		'user:read:email',
+		'user:read:follows',
+		'user:read:subscriptions',
+		'whispers:edit',
+		'whispers:read'].join('+');
 
 	// Step 1: Redirect to Twitch for authorization
 	app.get('/api/v1/twitch', (req: express.Request, res: express.Response) => {
 		console.log('Redirect URI:', redirectUri); // Log the redirect URI
-		const authorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
-		console.log('authorizeURL: ', authorizeUrl);
-		res.redirect(authorizeUrl);
+		const userAuthorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${userScopes}`;
+		const botAuthURL = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${botScopes}`;
+		res.redirect(userAuthorizeUrl);
 	});
 
 	// Step 2: Handle the OAuth2 callback from Twitch
@@ -106,30 +161,29 @@ export default function createApp(): express.Application {
 				const broadcaster_type = userResponse.data.data[0].broadcaster_type || 'streamer';
 				const obtainmentTimestamp = Date.now();
 
-				// Save the tokens to MongoDB
 				// Check if token already exists in MongoDB
 				let tokenDoc = await TokenModel.findOne({ user_id: userId });
 				if (!tokenDoc) {
 					// If no token is found, create a new one
 					tokenDoc = new TokenModel({
 						user_id: userId,
+						login: username,
 						access_token,
 						refresh_token,
-						scope: scopes.split('+'),
+						scope: userScopes.split('+'),
 						expires_in,
 						obtainmentTimestamp,
-						broadcaster_type,
-						username
+						broadcaster_type
 					});
 				} else {
 					// If token is found, update it
+					tokenDoc.login = username;
 					tokenDoc.access_token = access_token;
 					tokenDoc.refresh_token = refresh_token;
-					tokenDoc.scope = scopes.split('+');
+					tokenDoc.scope = userScopes.split('+');
 					tokenDoc.expires_in = expires_in;
 					tokenDoc.obtainmentTimestamp = obtainmentTimestamp;
 					tokenDoc.broadcaster_type = broadcaster_type;
-					tokenDoc.login = username;
 				}
 
 				// Save the token document

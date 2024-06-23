@@ -201,7 +201,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 [CanadienDragon](https://twitter.com/canadiendragon1)<br />
 [Email](skullgamingg31@gmail.com)
 
-Project Link: [OpenDevBot](https://github.com/skullgaming31/OpenDevBot)
+Other Projects: [Projects](https://github.com/SkullGaming31?tab=repositories)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 

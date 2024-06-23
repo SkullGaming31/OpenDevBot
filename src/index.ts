@@ -57,7 +57,7 @@ class OpenDevBot {
 					break;
 				case 'debug':
 				case 'dev':
-					mongoURI = process.env.MONGO_URI || '';
+					mongoURI = process.env.MONGO_URI_DEV || '';
 					break;
 				default:
 					throw new Error(`Unknown environment: ${environment}`);

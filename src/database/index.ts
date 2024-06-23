@@ -35,6 +35,9 @@ class Database {
 					console.log('Unknown Database Connection State');
 					break;
 			}
+			// Perform a no-op operation to ensure the database is created
+			await mongoose.connection.db.command({ ping: 1 });
+			console.log(`Database '${mongoose.connection.db.databaseName}' ensured.`);
 		} catch (error) {
 			console.error('Database connection error:', error);
 			throw error;
