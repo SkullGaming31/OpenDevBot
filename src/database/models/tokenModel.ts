@@ -8,6 +8,7 @@ export interface ITwitchToken extends Document {
 	scope: string[];
 	expires_in: number;
 	obtainmentTimestamp: number;
+	broadcaster_type: string;
 }
 
 const tokenSchema = new Schema<ITwitchToken>({
@@ -40,6 +41,10 @@ const tokenSchema = new Schema<ITwitchToken>({
 		type: Number,
 		required: true
 	},
+	broadcaster_type: {
+		type: String,
+		required: true
+	}
 });
 // obtainmentTimestamp is saved in seconds same with expires_in
 

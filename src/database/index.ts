@@ -1,52 +1,45 @@
-import mongoose, { Mongoose } from 'mongoose';
+import mongoose, { ConnectOptions } from 'mongoose';
 
 class Database {
-	private mongoose: Mongoose;
+	private uri: string;
 
-	constructor() {
-		this.mongoose = mongoose;
-		this.mongoose.set('strictQuery', true);
-		this.setupEventListeners();
+	constructor(uri: string) {
+		this.uri = uri;
 	}
 
-	private setupEventListeners() {
-		this.mongoose.connection.on('disconnected', async () => {
-			console.log('Twitch Database Disconnected');
-			try {
-				await this.mongoose.connect(process.env.MONGO_URI as string, {
-					user: process.env.MONGO_USER as string,
-					pass: process.env.MONGO_PASS as string,
-					dbName: process.env.MONGO_DB as string,
-				});
-			} catch (error) {
-				console.error('Error reconnecting to the database:', error);
-			}
-		});
-
-		this.mongoose.connection.on('connected', () => {
-			console.log('Twitch Database Connected');
-		});
-
-		this.mongoose.connection.on('reconnected', () => {
-			console.log('Twitch Database Reconnected');
-		});
-
-		this.mongoose.connection.on('error', (err) => {
-			console.error('Twitch Database Error:', err);
-		});
-	}
-
-	public async initialize() {
+	public async connect(): Promise<void> {
 		try {
-			await this.mongoose.connect(process.env.MONGO_URI as string, {
-				user: process.env.MONGO_USER as string,
-				pass: process.env.MONGO_PASS as string,
-				dbName: process.env.MONGO_DB as string,
-			});
-		} catch (error) {
-			console.error('Error initializing Twitch Database:', error);
-		}
-	}	
+			await mongoose.connect(this.uri, {
+				serverSelectionTimeoutMS: 5000,
+				dbName: 'opendevbot',
+			} as ConnectOptions);
 
+			// console.log('Database connection successful');
+
+			const connectionState = mongoose.connection.readyState;
+
+			switch (connectionState) {
+				case 0:
+					console.log('Database Disconnected');
+					break;
+				case 1:
+					console.log('Database Connected Successfully');
+					break;
+				case 2:
+					console.log('Database Connecting');
+					break;
+				case 3:
+					console.log('Database Disconnecting');
+					break;
+				default:
+					console.log('Unknown Database Connection State');
+					break;
+			}
+		} catch (error) {
+			console.error('Database connection error:', error);
+			throw error;
+		}
+	}
 }
+
 export default Database;

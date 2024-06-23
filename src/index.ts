@@ -47,8 +47,25 @@ class OpenDevBot {
 		try {
 			const EventSub = process.env.ENABLE_EVENTSUB;
 			// Initialize database connection
-			const database = new Database();
-			await database.initialize();
+			const environment = process.env.Enviroment as string;
+			let mongoURI = '';
+
+			// Determine MongoDB URI based on environment
+			switch (environment) {
+				case 'prod':
+					mongoURI = process.env.MONGO_URI || '';
+					break;
+				case 'debug':
+				case 'dev':
+					mongoURI = process.env.MONGO_URI || '';
+					break;
+				default:
+					throw new Error(`Unknown environment: ${environment}`);
+			}
+
+			// Initialize database connection
+			const database = new Database(mongoURI);
+			await database.connect();
 
 			// Delete all entries in the injuries collection
 			await deleteAllInjuries();

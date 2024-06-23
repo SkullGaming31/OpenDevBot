@@ -296,7 +296,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await LIVE.send({ embeds: [offlineEmbed] });
 			await sleep(2000);
 			if (broadcasterInfo?.name) {
-				chatClient.say(broadcasterInfo.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
+				await chatClient.say(broadcasterInfo.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
 			}
 			lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
 			await LurkMessageModel.deleteMany({});// Clear all messages from the MongoDB collection
@@ -902,7 +902,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			.setThumbnail(`${userInfo.profilePictureUrl}`)
 			.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}`})
 			.setTimestamp();
-		await twitchActivity.send({ embeds: [hypeeventendEmbed.toJSON()] });
+		await twitchActivity.send({ embeds: [hypeeventendEmbed] });
 	});
 	const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(broadcasterInfo.id, async (htp) => {
 		const userInfo = await htp.getBroadcaster();
@@ -938,7 +938,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			// .setColor('Random')
 			.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}`})
 			.setTimestamp();
-		await twitchActivity.send({ embeds: [giftedSubs.toJSON()] });
+		await twitchActivity.send({ embeds: [giftedSubs] });
 	});
 	const resub = eventSubListener.onChannelSubscriptionMessage(broadcasterInfo.id, async (s) => {
 		const userInfo = await s.getUser();
@@ -1152,7 +1152,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			if (!isDescriptionEmpty) { console.log(`Users Channel Description: ${userInfo.description}`); }
 
 			await chatClient.say(broadcasterInfo.name, `${randomMessage}`);
-			await twitchActivity.send({ embeds: [followEmbed.toJSON()] });
+			await twitchActivity.send({ embeds: [followEmbed] });
 		} catch (error) {
 			console.error('An error occurred in the follower event handler:', error);
 		}
@@ -1219,7 +1219,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				.setTimestamp();
 			try {
 				await chatClient.say(broadcasterInfo?.id!, `${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
-				await twitchActivity.send({ embeds: [cheerEmbed.toJSON()] });
+				await twitchActivity.send({ embeds: [cheerEmbed] });
 			} catch (error) {
 				console.error(error);
 			}
@@ -1241,7 +1241,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				])
 				.setTimestamp();
 
-			await twitchActivity.send({ embeds: [raidEmbed.toJSON()] });
+			await twitchActivity.send({ embeds: [raidEmbed] });
 		} catch (error) {
 			console.error('Error sending raid notification to Discord:', error);
 		}
@@ -1269,7 +1269,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const raidMessage = `${raidEvent.raidedBroadcasterDisplayName} has raided the channel with ${raidEvent.viewers} viewers!`;
 			await chatClient.say(broadcasterInfo?.id!, raidMessage);
 
-			await twitchActivity.send({ embeds: [raidEmbed.toJSON()] });
+			await twitchActivity.send({ embeds: [raidEmbed] });
 
 			await sleep(3000); // Consider adjusting delay based on needs
 
