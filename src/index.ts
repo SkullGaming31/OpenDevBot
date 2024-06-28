@@ -101,9 +101,9 @@ class OpenDevBot {
 			// 	await discordBot.login(discordToken);
 			// }
 
-			const app = createApp();
 			// Start the server with app.listen
-			app.listen(process.env.PORT || 3000, () => { console.log(`Server listening on http://localhost:${process.env.PORT || 3000}`); });
+			const app = createApp();
+			app.listen(process.env.PORT || 3001, () => { console.log(`Server listening on http://localhost:${process.env.PORT || 3001}`); });
 
 			// Set initial terminal title based on the terminal type
 			const terminalTitle = process.platform === 'win32' ? 'OpenDevBot[Twitch]' : 'Uptime: ';
