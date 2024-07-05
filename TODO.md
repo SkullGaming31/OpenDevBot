@@ -12,7 +12,7 @@
 * [ ] Timer Commands
 * [x] Counters
 * [x] Quotes System?
-* [ ] Viewer Watch Time?
+* [x] Viewer Watch Time?
 * [x] Virtual Currency System
   * [x] duel
   * [x] dig

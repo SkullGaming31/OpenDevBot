@@ -158,7 +158,7 @@ This is an example of how to list things you need to use the software and how to
 * [ ] Timer Commands
 * [x] Counters
 * [x] Quotes System?
-* [ ] Viewer Watch Time?
+* [x] Viewer Watch Time?
 * [x] Virtual Currency System
   * [x] duel
   * [x] dig

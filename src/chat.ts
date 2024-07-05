@@ -21,6 +21,10 @@ interface Chatter {
 	getUser(): Promise<User>;
 }
 
+const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
+const UPDATE_INTERVAL = 30000; // 30 seconds
+const PERIODIC_SAVE_INTERVAL = 60000; // 1 minute
+
 export const commands: Set<string> = new Set<string>();
 async function loadCommands(commandsDir: string, commands: Record<string, Command>): Promise<void> {
 	const commandModules = fs.readdirSync(commandsDir);
@@ -53,6 +57,12 @@ function isDevelopment(): boolean { return process.env.Enviroment !== 'prod'; }
 
 function isIndexFile(module: string): boolean { return module === 'index.ts' || module === 'index.js'; }
 
+interface ViewerWatchTime {
+	joinedAt: number;
+	watchTime: number;
+	intervalId: NodeJS.Timeout;
+}
+
 export async function initializeChat(): Promise<void> {
 	// Load commands
 	const chatClient = await getChatClient();
@@ -63,6 +73,8 @@ export async function initializeChat(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
+	// Add a new Map to track viewer watch times
+	// const viewerWatchTimes: Map<string, ViewerWatchTime> = new Map();
 
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
@@ -318,27 +330,29 @@ export async function initializeChat(): Promise<void> {
 		// sendMessageEvery10Minutes();
 	};
 	chatClient.onMessage(commandHandler);
+	
+	// Periodic check to ensure watch times are saved regularly
+	setInterval(async () => {
+		for (const [user, viewer] of viewerWatchTimes) {
+			const watchTime = Date.now() - viewer.joinedAt;
+			const totalWatchTime = viewer.watchTime + watchTime;
+			viewer.joinedAt = Date.now();
+			viewer.watchTime = totalWatchTime;
 
-	chatClient.onJoin(async (channel: string, user: string) => {
-		try {
-			if (chatClient.isConnected) {
-				if (broadcasterInfo && broadcasterInfo.id) {
-					const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo.id as UserIdResolvable, openDevBotID as UserIdResolvable);
-					if (!isMod) {
-						await chatClient.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
-						await sleep(1000);
-						await chatClient.action(channel, '/mod opendevbot');
-					}
+			try {
+				const userRecord = await UserModel.findOne({ username: user });
+				if (userRecord) {
+					userRecord.watchTime = totalWatchTime;
+					await userRecord.save();
 				} else {
-					console.info('broadcasterInfo or broadcasterInfo.id is undefined');
+					const newUser = new UserModel({ username: user, watchTime: totalWatchTime, roles: 'USER' });
+					await newUser.save();
 				}
-			} else {
-				console.info('The chatClient is not connected');
+			} catch (error) {
+				console.error('Error updating watch time:', error);
 			}
-		} catch (error) {
-			console.error(error);
 		}
-	});
+	}, PERIODIC_SAVE_INTERVAL);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
@@ -361,6 +375,7 @@ function registerCommand(newCommand: Command, name: string) {
 // holds the ChatClient
 let chatClientInstance: ChatClient;
 export async function getChatClient(): Promise<ChatClient> {
+	const userApiClient = await getUserApi();
 	if (!chatClientInstance) {
 		const authProvider = await getAuthProvider();
 
@@ -371,12 +386,101 @@ export async function getChatClient(): Promise<ChatClient> {
 			authProvider,
 			channels: [], // Initialize with an empty array
 			logger: { minLevel: 'ERROR' },
-			authIntents: ['chat'],
-			botLevel: 'none',
-			isAlwaysMod: false,
 			requestMembershipEvents: true,
 		});
 
+		chatClientInstance.onJoin(async (channel: string, user: string) => {
+			try {
+				console.log(`${user} has joined ${channel}'s channel`);
+				
+				const stream = await userApiClient.streams.getStreamByUserName('canadiendragon');
+				if (stream === null) return;
+				const userId = await userApiClient.users.getUserByName(user);
+				if (!userId) {
+					throw new Error(`User ID for ${user} not found`);
+				}
+
+
+				// Fetch existing watch time from the database
+				const userRecord = await UserModel.findOne({ id: userId.id });
+				const existingWatchTime = userRecord ? userRecord.watchTime || 0 : 0;
+
+				// Initialize the map with existing watch time and start an interval to update it
+				const intervalId = setInterval(async () => {
+					const viewer = viewerWatchTimes.get(user);
+					if (viewer) {
+						const watchTime = Date.now() - viewer.joinedAt;
+						const totalWatchTime = viewer.watchTime + watchTime;
+						viewer.joinedAt = Date.now();
+						viewer.watchTime = totalWatchTime;
+
+						try {
+							const userRecord = await UserModel.findOne({ id: userId.id });
+							if (userRecord) {
+								userRecord.watchTime = totalWatchTime;
+								await userRecord.save();
+							} else {
+								const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+								await newUser.save();
+							}
+						} catch (error) {
+							console.error('Error updating watch time:', error);
+						}
+					}
+				}, UPDATE_INTERVAL);
+
+				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTime, intervalId });
+
+				if (chatClientInstance.isConnected) {
+					if (broadcasterInfo && broadcasterInfo.id) {
+						const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo.id as UserIdResolvable, openDevBotID as UserIdResolvable);
+						if (!isMod) {
+							await chatClientInstance.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
+							await sleep(1000);
+							await chatClientInstance.action(channel, '/mod opendevbot');
+						}
+					} else {
+						console.info('broadcasterInfo or broadcasterInfo.id is undefined');
+					}
+				} else {
+					console.info('The chatClient is not connected');
+				}
+			} catch (error) {
+				console.error(error);
+			}
+		});
+		
+		chatClientInstance.onPart(async (channel: string, user: string) => {
+			console.log(`${user} has left ${channel}'s channel`);
+			const viewer = viewerWatchTimes.get(user);
+
+			if (viewer) {
+				clearInterval(viewer.intervalId); // Clear the interval to stop periodic updates
+				const watchTime = Date.now() - viewer.joinedAt;
+				const totalWatchTime = viewer.watchTime + watchTime;
+				viewerWatchTimes.delete(user); // Remove user from the map once their watch time is updated
+
+				try {
+					const userId = await userApiClient.users.getUserByName(user);
+					if (!userId) {
+						throw new Error(`User ID for ${user} not found`);
+					}
+
+					const userRecord = await UserModel.findOne({ id: userId.id });
+					if (userRecord) {
+						userRecord.watchTime = totalWatchTime;
+						await userRecord.save();
+					} else {
+						const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+						await newUser.save();
+					}
+				} catch (error) {
+					console.error('Error updating watch time:', error);
+				}
+			}
+		});
+
+		// Connect the chat client
 		chatClientInstance.connect();
 
 		// Delay between joining channels
@@ -393,6 +497,35 @@ export async function getChatClient(): Promise<ChatClient> {
 			}, 2000); // 2000 milliseconds (2 seconds) delay
 		}
 	}
+
+	// Periodic check to ensure watch times are saved regularly
+	setInterval(async () => {
+		for (const [user, viewer] of viewerWatchTimes) {
+			const watchTime = Date.now() - viewer.joinedAt;
+			const totalWatchTime = viewer.watchTime + watchTime;
+			viewer.joinedAt = Date.now();
+			viewer.watchTime = totalWatchTime;
+
+			try {
+				const userId = await userApiClient.users.getUserByName(user);
+				if (!userId) {
+					throw new Error(`User ID for ${user} not found`);
+				}
+
+				const userRecord = await UserModel.findOne({ id: userId.id });
+				if (userRecord) {
+					userRecord.watchTime = totalWatchTime;
+					await userRecord.save();
+				} else {
+					const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+					await newUser.save();
+				}
+			} catch (error) {
+				console.error('Error updating watch time:', error);
+			}
+		}
+	}, PERIODIC_SAVE_INTERVAL);
+
 	return chatClientInstance;
 }
 // Define a function to retrieve usernames from MongoDB

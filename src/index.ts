@@ -4,7 +4,7 @@ import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
 import Database from './database';
 import createApp from './util/createApp';
-import DiscordBot from './Discord/index';
+// import DiscordBot from './Discord/index';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
 
@@ -74,6 +74,7 @@ class OpenDevBot {
 			const errorHandler = new ErrorHandler();
 			await errorHandler.initialize().then(() => console.log('Error Handler initialized')).catch((err: Error) => { console.error('Failed to start Error Handler', err); });
 
+
 			// Initialize Twitch EventSub event listeners
 			if (EventSub) {
 				const message = process.env.Enviroment === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
@@ -130,6 +131,4 @@ class OpenDevBot {
 config();
 const client = new OpenDevBot();
 
-client.start()
-	.then(() => console.log('Bot started successfully'))
-	.catch((error) => console.error('Failed to start bot:', error));
+client.start().then(() => console.log('Bot started successfully')).catch((error) => console.error('Failed to start bot:', error));

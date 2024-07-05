@@ -31,6 +31,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	if (broadcasterInfo === undefined) return;
 	if (moderatorID === undefined) return;
 
+
+	// Retrieve all existing subscriptions from MongoDB
+	const existingSubscriptions = await SubscriptionModel.find({}).exec();
+
+	// Fetch the list of existing subscriptions from Twitch using the ApiClient
+	const twitchSubscriptions = await userApiClient.eventSub.getSubscriptions();
+
+	// Create a map of existing Twitch subscription IDs for quick lookup
+	const twitchSubscriptionIds = new Set(twitchSubscriptions.data.map(sub => sub.id));
+
 	//#region ChannelPoints
 	const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '27716a8a-496d-4b94-b727-33be94b81611', {
 		title: 'Shoutout',
