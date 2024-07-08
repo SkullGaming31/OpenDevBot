@@ -7,6 +7,7 @@ import createApp from './util/createApp';
 // import DiscordBot from './Discord/index';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
+import { SubscriptionModel } from './database/models/eventSubscriptions';
 
 export async function deleteAllInjuries(): Promise<void> {
 	try {
@@ -90,17 +91,6 @@ class OpenDevBot {
 				await initializeChat();
 				console.timeEnd(message);
 			}
-
-			// const Enviroment = process.env.Enviroment as string;
-			// if (Enviroment === 'dev' || Enviroment === 'debug') {
-			// 	const discordToken = process.env.DEV_DISCORD_BOT_TOKEN as string;
-			// 	const discordBot = new DiscordBot();
-			// 	await discordBot.login(discordToken);
-			// } else {
-			// 	const discordToken = process.env.DISCORD_BOT_TOKEN as string;
-			// 	const discordBot = new DiscordBot();
-			// 	await discordBot.login(discordToken);
-			// }
 
 			// Start the server with app.listen
 			const app = createApp();

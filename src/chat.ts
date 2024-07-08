@@ -73,15 +73,11 @@ export async function initializeChat(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
-	// Add a new Map to track viewer watch times
-	// const viewerWatchTimes: Map<string, ViewerWatchTime> = new Map();
 
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
-		if (isDevelopment()) {
-			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-		}
+		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
 
 		try {
 			const cursor = ''; // Initialize the cursor value
@@ -209,13 +205,10 @@ export async function initializeChat(): Promise<void> {
 
 			// Check if user is staff (moderator, broadcaster, or editor)
 			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster ||
-				(await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable))
-					.some(editor => editor.userId === msg.userInfo.userId);
+				(await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable)).some(editor => editor.userId === msg.userInfo.userId);
 
 			// Don't ban staff members
-			if (isStaff) {
-				return;
-			}
+			if (isStaff) return;
 
 			// Create embed for ban message
 			const displayName = msg.userInfo.displayName;
@@ -226,7 +219,7 @@ export async function initializeChat(): Promise<void> {
 				.setColor('Red')
 				.addFields([
 					{ name: 'User:', value: displayName, inline: true },
-					{ name: 'Reason:', value: 'Promoting selling followers (violates Twitch TOS)', inline: true },
+					{ name: 'Reason:', value: 'Promoting/Selling followers (violates Twitch TOS)', inline: true },
 				])
 				.setFooter({ text: `Someone just got BANNED from ${channel}'s channel` })
 				.setTimestamp();
@@ -330,29 +323,6 @@ export async function initializeChat(): Promise<void> {
 		// sendMessageEvery10Minutes();
 	};
 	chatClient.onMessage(commandHandler);
-	
-	// Periodic check to ensure watch times are saved regularly
-	setInterval(async () => {
-		for (const [user, viewer] of viewerWatchTimes) {
-			const watchTime = Date.now() - viewer.joinedAt;
-			const totalWatchTime = viewer.watchTime + watchTime;
-			viewer.joinedAt = Date.now();
-			viewer.watchTime = totalWatchTime;
-
-			try {
-				const userRecord = await UserModel.findOne({ username: user });
-				if (userRecord) {
-					userRecord.watchTime = totalWatchTime;
-					await userRecord.save();
-				} else {
-					const newUser = new UserModel({ username: user, watchTime: totalWatchTime, roles: 'USER' });
-					await newUser.save();
-				}
-			} catch (error) {
-				console.error('Error updating watch time:', error);
-			}
-		}
-	}, PERIODIC_SAVE_INTERVAL);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
@@ -496,6 +466,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				} else { return; }
 			}, 2000); // 2000 milliseconds (2 seconds) delay
 		}
+		console.log('ChatClient instance initialized and connected.');
 	}
 
 	// Periodic check to ensure watch times are saved regularly

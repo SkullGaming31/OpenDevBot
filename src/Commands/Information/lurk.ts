@@ -16,7 +16,7 @@ const lurk: Command = {
 		const savedLurkMessage = await LurkMessageModel.findOne({ id: msg.userInfo.userId });
 		const numLurkers = await LurkMessageModel.countDocuments();
 
-		if (!toggle || toggle === '') { return chatClient.say(channel, `Usage: ${lurk.usage}`); }
+		if (!toggle || toggle === '') { return chatClient.say(channel, ` @${msg.userInfo.displayName} Usage: ${lurk.usage}`); }
 
 		switch (toggle) {
 			case 'on':

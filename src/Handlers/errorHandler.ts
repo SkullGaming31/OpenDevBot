@@ -5,7 +5,7 @@ import { Client } from 'discord.js';
 class ErrorHandler {
 	private logFile: string;
 
-	constructor(logFile = 'C:/Development/OpenDevBot/src/dev logs/logs.log') {
+	constructor(logFile = 'C:/Users/corey/Desktop/ProjectIndigo/bot/OpenDevBot/src/dev logs/logs.log') {
 		this.logFile = logFile;
 	}
 

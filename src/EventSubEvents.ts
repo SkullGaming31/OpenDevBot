@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 config();
 
-import { ApiClient, UserIdResolvable } from '@twurple/api/lib';
+import { ApiClient, HelixPaginatedEventSubSubscriptionsResult, HelixPagination, UserIdResolvable } from '@twurple/api/lib';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
@@ -30,16 +30,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	// eventSub Stuff
 	if (broadcasterInfo === undefined) return;
 	if (moderatorID === undefined) return;
-
-
-	// Retrieve all existing subscriptions from MongoDB
-	const existingSubscriptions = await SubscriptionModel.find({}).exec();
-
-	// Fetch the list of existing subscriptions from Twitch using the ApiClient
-	const twitchSubscriptions = await userApiClient.eventSub.getSubscriptions();
-
-	// Create a map of existing Twitch subscription IDs for quick lookup
-	const twitchSubscriptionIds = new Set(twitchSubscriptions.data.map(sub => sub.id));
 
 	//#region ChannelPoints
 	const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '27716a8a-496d-4b94-b727-33be94b81611', {
@@ -112,18 +102,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		maxRedemptionsPerUserPerStream: null,
 		maxRedemptionsPerStream: null,
 		prompt: 'Mute Headset Sounds untel you tell me i can put them back on or encounter ends!',
-		userInputRequired: false
-	});
-	const twitterUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, '90693245-492f-48ea-8cae-1b13c699ffc9', {
-		title: 'Twitter',
-		cost: 1,
-		autoFulfill: true,
-		backgroundColor: '#d0080a',
-		globalCooldown: 30,
-		isEnabled: true,
-		maxRedemptionsPerUserPerStream: null,
-		maxRedemptionsPerStream: null,
-		prompt: 'Click for a link to my twitter profile',
 		userInputRequired: false
 	});
 	const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(broadcasterInfo?.id, 'e054cc48-edc4-4c01-96d7-856edc9c39b6', {
@@ -363,40 +341,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				try {
 					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/canadiendragon`); }
 					await twitchActivity.send({ embeds: [tipEmbed] });
-				} catch (error) {
-					console.error(error);
-				}
-				break;
-			case 'Twitter':
-				console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}, rewardId: ${cp.rewardId}`);
-				const twitterEmbed = new EmbedBuilder()
-					.setTitle('REDEEM EVENT')
-					.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}`})
-					.setColor('Random')
-					.addFields([
-						{
-							name: 'User',
-							value: `${cp.userDisplayName}`,
-							inline: true
-						},
-						{
-							name: 'Redeemed',
-							value: `${cp.rewardTitle}`,
-							inline: true
-						},
-						{
-							name: 'DragonFire Coins',
-							value: `${cp.rewardCost}`,
-							inline: true
-						}
-					])
-					.setThumbnail(`${streamer.profilePictureUrl}`)
-					.setURL(`https://twitch.tv/${userInfo.name}`)
-					.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}`})
-					.setTimestamp();
-				try {
-					if (broadcasterInfo) { await chatClient.say(broadcasterInfo.name, `@${cp.broadcasterDisplayName}'s Twitter: https://twitter.com/canadiendragon`); }
-					await twitchActivity.send({ embeds: [twitterEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
