@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+config();
 import mongoose from 'mongoose';
 import FollowMessage, { FollowMessageDoc } from './src/database/models/followMessages';
 
