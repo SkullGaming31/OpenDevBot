@@ -140,7 +140,7 @@ const followerRandomMessages = [
 ];
 
 async function seedFollowerMessages() {
-	const mongoUri = process.env.NODE_ENV === 'prod' ? process.env.MONGO_URI : process.env.MONGO_URI_DEV;
+	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI : process.env.MONGO_URI_DEV;
 	await mongoose.connect(mongoUri, { autoIndex: true });
 
 	// Clear existing data
