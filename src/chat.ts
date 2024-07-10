@@ -303,7 +303,7 @@ export async function initializeChat(): Promise<void> {
 				}
 			} else {
 				if (text.includes('!join')) return;
-				await chatClient.say(channel, 'Command not recognized, please try again');
+				// await chatClient.say(channel, 'Command not recognized, please try again');
 			}
 		}
 
