@@ -143,9 +143,13 @@ async function seedFollowerMessages() {
 	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI as string : process.env.MONGO_URI_DEV as string;
 	await mongoose.connect(mongoUri, { autoIndex: true });
 
-	// Clear existing data
-	await FollowMessage.deleteMany({});
-	console.log('Successfully Deleted all Data');
+	const existingEntries = await FollowMessage.find({});
+	if (existingEntries.length > 0) {
+		console.log('Deleting Existing Data');
+		await FollowMessage.deleteMany({});
+		console.log('Successfully Deleted all Data');
+	}
+
 
 	// Adjust the mapping to ensure all properties align with FollowMessageDoc
 	const insertDocuments: FollowMessageDoc[] = followerRandomMessages.map(game => ({
@@ -160,6 +164,4 @@ async function seedFollowerMessages() {
 	await mongoose.disconnect();
 }
 
-seedFollowerMessages().catch(err => {
-	console.error('Error seeding the database:', err);
-});
+seedFollowerMessages().catch(err => { console.error('Error seeding the database:', err); });

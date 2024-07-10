@@ -119,6 +119,8 @@ export default function createApp(): express.Application {
 		'whispers:edit',
 		'whispers:read'].join('+');
 
+	// https://id.twitch.tv/oauth2/authorize?client_id=4qhq6yv4vbpy6yp4jagdlx7olozrnx&redirect_uri=http://localhost:3000/api/v1/auth/twitch/callback&response_type=code&scope=bits:read+channel:edit:commercial+channel:manage:broadcast+channel:manage:extensions+channel:manage:guest_star+channel:manage:moderators+channel:manage:polls+channel:manage:predictions+channel:manage:raids+channel:manage:redemptions+channel:manage:schedule+channel:manage:videos+channel:manage:vips+channel:read:charity+channel:read:editors+channel:read:goals+channel:read:guest_star+channel:read:hype_train+channel:read:polls+channel:read:predictions+channel:read:redemptions+channel:read:subscriptions+channel:read:vips+chat:edit+chat:read+clips:edit+moderation:read+moderator:manage:announcements+moderator:manage:automod+moderator:manage:automod_settings+moderator:manage:banned_users+moderator:manage:blocked_terms+moderator:manage:chat_messages+moderator:manage:chat_settings+moderator:manage:guest_star+moderator:manage:shield_mode+moderator:manage:shoutouts+moderator:read:automod_settings+moderator:read:blocked_terms+moderator:read:chat_settings+moderator:read:chatters+moderator:read:followers+moderator:read:guest_star+moderator:read:shield_mode+moderator:read:shoutouts+user:edit+user:manage:blocked_users+user:manage:chat_color+user:manage:whispers+user:read:blocked_users+user:read:email+user:read:follows+user:read:subscriptions+whispers:edit+whispers:read
+
 	// Step 1: Redirect to Twitch for authorization
 	app.get('/api/v1/twitch', (req: express.Request, res: express.Response) => {
 		console.log('Redirect URI:', redirectUri); // Log the redirect URI
