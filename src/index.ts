@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+config();
 import { initializeTwitchEventSub } from './EventSubEvents';
 import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
