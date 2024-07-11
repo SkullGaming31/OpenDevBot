@@ -1,12 +1,21 @@
 import fs from 'fs';
 import { Error } from 'mongoose';
-import { Client } from 'discord.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 class ErrorHandler {
 	private logFile: string;
 
-	constructor(logFile = 'C:/Users/corey/Desktop/ProjectIndigo/bot/OpenDevBot/src/dev logs/logs.log') {
-		this.logFile = logFile;
+	constructor() {
+		const environment = process.env.Environment || 'dev';
+		const logFilePath = environment === 'prod' ? process.env.PROD_LOG_FILE : process.env.DEV_LOG_FILE;
+
+		if (!logFilePath) {
+			throw new Error('Log file path is not defined.');
+		}
+
+		this.logFile = logFilePath;
 	}
 
 	private async writeError(error: Error | string, title: string) {
@@ -40,4 +49,5 @@ class ErrorHandler {
 		});
 	}
 }
+
 export default ErrorHandler;
