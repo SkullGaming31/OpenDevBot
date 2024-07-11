@@ -1,15 +1,13 @@
+import { config } from 'dotenv';
+config();
 import fs from 'fs';
-import { Error } from 'mongoose';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 class ErrorHandler {
 	private logFile: string;
 
 	constructor() {
-		const environment = process.env.Environment || 'dev';
-		const logFilePath = environment === 'prod' ? process.env.PROD_LOG_FILE : process.env.DEV_LOG_FILE;
+		const logFilePath = process.env.Enviroment === 'prod' ? process.env.PROD_LOG_FILE : process.env.DEV_LOG_FILE;
 
 		if (!logFilePath) {
 			throw new Error('Log file path is not defined.');

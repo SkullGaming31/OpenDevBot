@@ -33,6 +33,8 @@ declare global {
 			MONGO_DB: string;
 			MONGO_URI: string;
 			MONGO_URI_DEV: string;
+			PROD_LOG_FILE: string;
+			DEV_LOG_FILE: string;
 			Enviroment: Enviroment;
 			ENABLE_CHAT: boolean;
 			ENABLE_EVENTSUB: boolean;
