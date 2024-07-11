@@ -102,6 +102,7 @@
   },
   "exclude": [
     "node_modules",
-    "seedDatabase.ts"
+    "seedDatabase.ts",
+    "insertTestData.ts"
   ]
 }

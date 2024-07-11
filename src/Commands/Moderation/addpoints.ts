@@ -17,7 +17,7 @@ const addpoints: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		// Check if the user is a mod, broadcaster or ChannelEditor
-		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 		const isEditor = ChannelEditor.map(editor => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
 

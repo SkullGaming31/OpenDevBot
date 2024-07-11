@@ -25,7 +25,7 @@ const shoutout: Command = {
 			if (!userSearch?.id) return chatClient.say(channel, 'User not found.');
 
 			const userChannelInfo = await userApiClient.channels.getChannelInfoById(userSearch.id as UserIdResolvable);
-			const broadcasterStream = await userApiClient.streams.getStreamByUserId(broadcasterInfo?.id as UserIdResolvable);
+			const broadcasterStream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
 
 			const shoutoutMessage = `Yay! Look who's here! @${userSearch.displayName} just got mentioned! Let's all head over to their awesome Twitch channel at https://twitch.tv/${userSearch.displayName} and show them some love! By the way, if you're wondering what game they were last playing, it was ${userChannelInfo?.gameName}. So go check them out and join in on the fun!`;
 
@@ -64,7 +64,7 @@ const shoutout: Command = {
 
 			await chatClient.say(channel, shoutoutMessage);
 			await sleep(5000);
-			if (broadcasterStream !== null) await userApiClient.chat.shoutoutUser(broadcasterInfo?.id as UserIdResolvable, userSearch.id as UserIdResolvable);
+			if (broadcasterStream !== null) await userApiClient.chat.shoutoutUser(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await sleep(3000);
 			await commandUsage.send({ embeds: [commandUsageEmbed] });
 			await sleep(5000);

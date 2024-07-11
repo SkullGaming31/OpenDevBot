@@ -18,8 +18,8 @@ const settitle: Command = {
 		if (!args[0]) return chatClient.say(channel, `Usage: ${settitle.usage}`);
 
 		const title = args.join(' ');
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
-		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 

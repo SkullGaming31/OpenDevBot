@@ -27,7 +27,7 @@ const socials: Command = {
 
 		if (social && social in socialURLs) {
 			const socialURL = socialURLs[social];
-			await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterInfo?.displayName}'s ${social}: ${socialURL}`);
+			await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterInfo[0].displayName}'s ${social}: ${socialURL}`);
 		} else {
 			await chatClient.say(channel, `Which social are you looking for? Usage: ${socials.usage}`);
 		}

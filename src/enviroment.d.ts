@@ -1,4 +1,4 @@
-type Enviroment = dev | prod | debug;
+declare type Enviroment = 'dev' | 'prod' | 'debug';
 
 declare global {
 	namespace NodeJS {

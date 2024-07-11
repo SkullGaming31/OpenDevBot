@@ -17,7 +17,7 @@ const vip: Command = {
 			const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 			// Check user privileges
-			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
 			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
 
@@ -37,7 +37,7 @@ const vip: Command = {
 			}
 
 			// Check if the user is a moderator
-			const modLookup = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable, { userId: userSearch?.id });
+			const modLookup = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable, { userId: userSearch?.id });
 			const moderators = modLookup.data;
 			const isModerator = moderators.some(moderator => moderator.userId === userSearch.id);
 			if (isModerator) {
@@ -45,7 +45,7 @@ const vip: Command = {
 			}
 
 			// Check if user is already a VIP
-			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo?.id as UserIdResolvable, { limit: 10 });
+			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo[0].id as UserIdResolvable, { limit: 10 });
 			if (vipLookup.data.some(vipUser => vipUser.id === userSearch.id)) {
 				return await chatClient.say(channel, 'This user is already a VIP');
 			}
@@ -72,7 +72,7 @@ const vip: Command = {
 				.setTimestamp();
 
 			// Add user as VIP
-			await userApiClient.channels.addVip(broadcasterInfo?.id as UserIdResolvable, userSearch.id as UserIdResolvable);
+			await userApiClient.channels.addVip(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await chatClient.say(channel, `@${args[0]} has been added as VIP by ${msg.userInfo.displayName}`);
 			await commandUsage.send({ embeds: [vipEmbed] });
 		} catch (error) {

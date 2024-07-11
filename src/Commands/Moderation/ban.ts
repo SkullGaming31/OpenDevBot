@@ -38,7 +38,7 @@ const ban: Command = {
 			}
 
 			// Ban the user
-			await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+			await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
 				user: userSearch.id,
 				reason
 			});

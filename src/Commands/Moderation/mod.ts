@@ -20,7 +20,7 @@ const mod: Command = {
 			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
 			// Get the array of channel editors
-			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 
 			// Check if the user invoking the command is a channel editor
 			const isChannelEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
@@ -47,7 +47,7 @@ const mod: Command = {
 
 			try {
 				if (isChannelEditor) {
-					await userApiClient.moderation.addModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id).then(async () => {
+					await userApiClient.moderation.addModerator(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id).then(async () => {
 						await chatClient.say(channel, `${args[0]} has been givin the Moderator Powers by ${display}`);
 					});
 				} else if (msg.userInfo.isBroadcaster) {

@@ -13,7 +13,7 @@ const category: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 		if (broadcasterResponse?.id === undefined) return;
 
 		await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterResponse?.displayName} is currently streaming in ${broadcasterResponse?.gameName} Category`);

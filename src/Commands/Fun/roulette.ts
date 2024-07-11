@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { userID } from '../../util/constants';
+import { broadcasterInfo } from '../../util/constants';
 import ChamberStateModel from '../../database/models/roulette';
 import { randomInt } from 'node:crypto';
 import { UserModel } from '../../database/models/userModel';
@@ -32,14 +32,14 @@ const roulette: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
-		const broadcasterInfo = await userApiClient.channels.getChannelInfoById(userID);
-		if (!broadcasterInfo?.id) return;
+		const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
+		if (!broadcasterID?.id) return;
 
-		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo.id as UserIdResolvable);
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID.id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data;
 
 		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-		const isBroadcaster = broadcasterInfo.id === msg.userInfo.userId;
+		const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 		const isStaff = isModerator || isBroadcaster;
 
 		if (!isStaff) {
@@ -63,7 +63,7 @@ const roulette: Command = {
 					await chatClient.say(channel, `@${msg.userInfo.displayName} Your lucky i dont have the power to time you out, YOU FAILED`);  
 					chamberState.bullets = 1; // Reset the chamber to 1 bullet
 				} else {
-					await userApiClient.moderation.banUser(broadcasterInfo.id as UserIdResolvable, {
+					await userApiClient.moderation.banUser(broadcasterID.id as UserIdResolvable, {
 						user: msg.userInfo.userId as UserIdResolvable,
 						reason: 'Lost at roulette',
 						duration: 60

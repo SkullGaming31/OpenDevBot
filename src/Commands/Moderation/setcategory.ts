@@ -15,13 +15,13 @@ const setcategory: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 		if (!broadcasterResponse?.id) return;
 
-		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
-		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 
 		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
 		const isBroadcaster = broadcasterResponse.id === msg.userInfo.userId;
@@ -30,14 +30,14 @@ const setcategory: Command = {
 		const isStaff = isModerator || isBroadcaster || isEditor;
 		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		const category = args.join(' ');
-		const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 
 
 		if (!args[0]) return chatClient.say(channel, `Usage: ${setcategory.usage}`);
 
 		if (isStaff) {
 			const newGame = await userApiClient.games.getGameByName(category);
-			await userApiClient.channels.updateChannelInfo(broadcasterInfo?.id as UserIdResolvable, { gameId: `${newGame?.id}` });
+			await userApiClient.channels.updateChannelInfo(broadcasterInfo[0].id as UserIdResolvable, { gameId: `${newGame?.id}` });
 			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 
 			const commandEmbed = new EmbedBuilder()

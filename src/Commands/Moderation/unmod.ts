@@ -18,7 +18,7 @@ const unmod: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
 
-		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 		try {
@@ -46,7 +46,7 @@ const unmod: Command = {
 				.setTimestamp();
 			try {
 				if (isEditor || msg.userInfo.isBroadcaster) {
-					await userApiClient.moderation.removeModerator(broadcasterInfo?.id as UserIdResolvable, userSearch?.id as UserIdResolvable);
+					await userApiClient.moderation.removeModerator(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id as UserIdResolvable);
 					await chatClient.say(channel, `${args[0]} has had there moderator powers removed by ${display}`);
 					await commandUsage.send({ embeds: [unModeratorEmbed] });
 				} else {

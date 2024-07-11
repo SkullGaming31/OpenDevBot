@@ -38,12 +38,12 @@ const clipCommand: Command = {
 		// console.log('Clip embed created:', clipEmbed);
 
 		if (broadcasterInfo) {
-			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
+			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
 			// console.log('Stream info:', stream);
 
 			if (stream !== null) {
 				if (msg.userInfo.isBroadcaster || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip) {
-					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo.id as UserIdResolvable, createAfterDelay: true });
+					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo[0].id as UserIdResolvable, createAfterDelay: true });
 					// console.log('Clip ID:', clipId);
 
 					const clipUrl = `https://clips.twitch.tv/${clipId}`;

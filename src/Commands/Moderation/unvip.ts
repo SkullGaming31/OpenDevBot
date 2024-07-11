@@ -19,11 +19,11 @@ const unvip: Command = {
 		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${unvip.usage}`);
 
 		try {
-			const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+			const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 			if (broadcasterResponse?.id === undefined) return;
 			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
-			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo?.id as UserIdResolvable, { limit: 20 });
+			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo[0].id as UserIdResolvable, { limit: 20 });
 			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is already a vip');
 
 			const unVIPEmbed = new EmbedBuilder()
@@ -47,7 +47,7 @@ const unvip: Command = {
 				.setTimestamp();
 			try {
 				if (userSearch) {
-					await userApiClient.channels.removeVip(broadcasterInfo?.id as UserIdResolvable, userSearch?.id);
+					await userApiClient.channels.removeVip(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id);
 					await chatClient.say(channel, `@${args[0].replace('@', '')} has been removed from VIP status`);
 				} else {
 					console.error('Something happened while searching for user');

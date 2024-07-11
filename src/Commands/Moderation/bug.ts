@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { userID } from '../../util/constants';
+import { broadcasterInfo } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 axios.defaults;
@@ -22,15 +22,15 @@ const bug: Command = {
 			const bugwebhooktoken = process.env.BUG_REPORT_WEBHOOK_TOKEN as string;
 			const bugReport = new WebhookClient({ id: bugWebhookID, token: bugwebhooktoken });
 
-			const broadcasterInfo = await userApiClient.channels.getChannelInfoById(userID);
-			if (!broadcasterInfo?.id) return;
+			const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+			if (!broadcasterID?.id) return;
 
 
-			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo.id as UserIdResolvable);
+			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID.id as UserIdResolvable);
 			const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
 			const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-			const isBroadcaster = broadcasterInfo.id === msg.userInfo.userId;
+			const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 			const isStaff = isModerator || isBroadcaster;
 			const bugReportUser = await userApiClient.users.getUserById(msg.userInfo.userId);
 

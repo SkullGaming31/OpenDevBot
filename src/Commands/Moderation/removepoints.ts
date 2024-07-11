@@ -23,7 +23,7 @@ const removepoints: Command = {
 
 		// console.log(`Target User: ${targetUser}, Amount to Remove: ${amountToRemove}`); // Debugging line
 
-		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+		const ChannelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 		const isEditor = ChannelEditor.map(editor => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
 

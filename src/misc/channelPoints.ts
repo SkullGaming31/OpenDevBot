@@ -1,5 +1,6 @@
+import { UserIdResolvable } from '@twurple/api';
 import { getUserApi } from '../api/userApiClient';
-import { userID } from '../util/constants';
+import { broadcasterInfo } from '../util/constants';
 
 /**
  * tip- 1- click for a link to my Tipping Page
@@ -23,21 +24,23 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 	if (!registerNewRewards) return;
 	const userApiClient = await getUserApi();
 
-	const broadcasterID = await userApiClient.channels.getChannelInfoById(userID);
+	const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
 	if (broadcasterID?.id === undefined) return;
 	console.log('registering Channel Points Rewards');
 	try {
-		const Discord = await userApiClient.channelPoints.createCustomReward(broadcasterID?.id, {
-			title: 'Discord',
-			cost: 1,
-			autoFulfill: true,
-			backgroundColor: '#32CD32',
-			globalCooldown: 600,
-			isEnabled: true,
-			maxRedemptionsPerUserPerStream: null,
-			maxRedemptionsPerStream: null,
-			prompt: 'Get a link to my discord server',
-			userInputRequired: false
-		});
+		if (broadcasterID.id === '31124455') {
+		// const Discord = await userApiClient.channelPoints.createCustomReward(broadcasterID?.id, {
+		// 	title: 'Discord',
+		// 	cost: 1,
+		// 	autoFulfill: true,
+		// 	backgroundColor: '#32CD32',
+		// 	globalCooldown: 600,
+		// 	isEnabled: true,
+		// 	maxRedemptionsPerUserPerStream: null,
+		// 	maxRedemptionsPerStream: null,
+		// 	prompt: 'Get a link to my discord server',
+		// 	userInputRequired: false
+		// });
+		}
 	} catch (error) { console.error(error); }
 }

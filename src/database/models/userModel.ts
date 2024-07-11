@@ -3,6 +3,7 @@ import { Document, Schema, model } from 'mongoose';
 export interface User extends Document {
 	id: string;
 	username: string;
+	channelId: string;
 	roles: string;
 	balance?: number;
 	lastBegTime?: Date;
@@ -14,7 +15,8 @@ export interface User extends Document {
 
 const userSchema = new Schema<User>({
 	id: { type: String, unique: true },
-	username: { type: String },
+	username: { type: String, required: true },
+	channelId: { type: String, required: true },
 	roles: { type: String, required: true },
 	balance: { type: Number, default: 0 },
 	lastBegTime: { type: Date, default: new Date(0) },

@@ -25,8 +25,8 @@ const purge: Command = {
 		try {
 			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined || null) return;
-			if (userSearch.id === broadcasterInfo?.id as UserIdResolvable) return chatClient.say(channel, 'You can\'t ban/purge this user');
-			await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+			if (userSearch.id === broadcasterInfo[0].id as UserIdResolvable) return chatClient.say(channel, 'You can\'t ban/purge this user');
+			await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
 				user: userSearch.id,
 				duration: Number(args[1]),
 				reason: args[2],

@@ -15,7 +15,7 @@ const followage: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
-		const { data: [follow] } = await userApiClient.channels.getChannelFollowers(broadcasterInfo?.id as UserIdResolvable, msg.userInfo.userId);
+		const { data: [follow] } = await userApiClient.channels.getChannelFollowers(broadcasterInfo[0].id as UserIdResolvable, msg.userInfo.userId);
 		if (follow) {
 			const followStartTimestamp = follow.followDate.getTime();
 			await chatClient.say(channel, `@${msg.userInfo.displayName} You have been following for ${countdown(new Date(followStartTimestamp))}!`);

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, userID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID, broadcasterInfo } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 axios.defaults;
@@ -27,14 +27,14 @@ const marker: Command = {
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
-		const broadcasterInfo = await userApiClient.channels.getChannelInfoById(userID);
-		if (!broadcasterInfo?.id) return;
+		const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+		if (!broadcasterID?.id) return;
 
-		const EditorResponse = await userApiClient.channels.getChannelEditors(broadcasterInfo.id as UserIdResolvable);
+		const EditorResponse = await userApiClient.channels.getChannelEditors(broadcasterID.id as UserIdResolvable);
 
 		const isEditor = EditorResponse.some((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isBroadcaster || isEditor;
-		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo.id as UserIdResolvable);
+		const stream = await userApiClient.streams.getStreamByUserId(broadcasterID.id as UserIdResolvable);
 
 		const userSearch = await userApiClient.users.getUserByName(msg.userInfo.userName);
 		if (userSearch?.id === undefined) return;
@@ -67,7 +67,7 @@ const marker: Command = {
 
 		try {
 			if (stream !== null) {
-				const createdSegment = await userApiClient.streams.createStreamMarker(broadcasterInfo.id, sanitizedDescription || undefined);
+				const createdSegment = await userApiClient.streams.createStreamMarker(broadcasterID.id, sanitizedDescription || undefined);
 				const positionInSeconds = createdSegment.positionInSeconds;
 				const streamTime = formatStreamTime(positionInSeconds);
 

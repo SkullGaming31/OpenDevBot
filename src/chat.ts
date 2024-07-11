@@ -15,12 +15,6 @@ import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, o
 import { sleep } from './util/util';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
-interface Chatter {
-	userId: string;
-	userName: string;
-	getUser(): Promise<User>;
-}
-
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
 const PERIODIC_SAVE_INTERVAL = 60000; // 1 minute
@@ -81,7 +75,7 @@ export async function initializeChat(): Promise<void> {
 
 		try {
 			const cursor = ''; // Initialize the cursor value
-			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: 100 });
+			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
 			const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
@@ -95,6 +89,7 @@ export async function initializeChat(): Promise<void> {
 			const maxIterations = 1000;
 			let iterationCount = 0;
 
+			const channelId = await userApiClient.users.getUserByName(channel);
 			const processChatters = async (chatters: HelixChatChatter[]) => {
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
@@ -110,11 +105,20 @@ export async function initializeChat(): Promise<void> {
 							const newUser = new UserModel({
 								id: chatter.userId,
 								username: chatter.userName,
+								channelId: channelId?.id,
 								roles: 'Bot',
 								balance: updatedBalance,
 							});
+							console.log(`New user to be added: ${JSON.stringify(newUser)}`);
 							await newUser.save();
 						} else {
+							const updateData = {
+								username: chatter.userName,
+								channelId: channelId?.id,
+								roles: 'User',
+								balance: updatedBalance,
+							};
+							console.log(`Updating user ${chatter.userId} with data: ${JSON.stringify(updateData)}`);
 							await UserModel.updateOne(
 								{ id: chatter.userId },
 								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } }
@@ -129,10 +133,12 @@ export async function initializeChat(): Promise<void> {
 						console.log('Maximum iteration count reached. Exiting the loop.');
 						break;
 					}
+					// const channelId = await userApiClient.users.getUserByName(channel);
 					let newUser: User;
 					if (!user) {
 						newUser = new UserModel({
 							id: chatter.userId,
+							channelId,
 							username: chatter.userName,
 							roles: 'User',
 							balance: 100,
@@ -143,9 +149,10 @@ export async function initializeChat(): Promise<void> {
 						const updatedBalance = (user.balance || 0) + 100;
 						await UserModel.updateOne(
 							{ id: chatter.userId },
-							{ $set: { username: chatter.userName, roles: 'User', balance: updatedBalance } },
+							{ $set: { username: chatter.userName, channelId, roles: 'User', balance: updatedBalance } },
 							{ upsert: true }
 						);
+						console.log();
 						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
 					}
 				}
@@ -169,7 +176,7 @@ export async function initializeChat(): Promise<void> {
 				}
 
 				if (requestIndex < requestsPerInterval) {
-					const chatters = await userApiClient.chat.getChatters(broadcasterInfo?.id as UserIdResolvable, { after: cursor, limit: chunkSize });
+					const chatters = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: chunkSize });
 					await processChatters(chatters.data);
 					requestIndex++;
 				} else {
@@ -205,7 +212,7 @@ export async function initializeChat(): Promise<void> {
 
 			// Check if user is staff (moderator, broadcaster, or editor)
 			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster ||
-				(await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable)).some(editor => editor.userId === msg.userInfo.userId);
+				(await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable)).some(editor => editor.userId === msg.userInfo.userId);
 
 			// Don't ban staff members
 			if (isStaff) return;
@@ -227,11 +234,11 @@ export async function initializeChat(): Promise<void> {
 			try {
 				// Perform moderation actions:
 				// - Delete user's message
-				await userApiClient.moderation.deleteChatMessages(broadcasterInfo?.id as UserIdResolvable, msg.id);
+				await userApiClient.moderation.deleteChatMessages(broadcasterInfo[0].id as UserIdResolvable, msg.id);
 				// - Sleep for 1 second (optional delay)
 				await sleep(1000);
 				// - Ban user
-				await userApiClient.moderation.banUser(broadcasterInfo?.id as UserIdResolvable, {
+				await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
 					user: msg.userInfo.userId,
 					reason: 'Promoting selling followers (violates Twitch TOS)',
 				});
@@ -250,12 +257,12 @@ export async function initializeChat(): Promise<void> {
 			const commandName = args.shift()?.toLowerCase();
 			if (commandName === undefined) return;
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
-			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo?.id as UserIdResolvable);
+			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
 			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
 			const isModerator = msg.userInfo.isMod;
 			const isBroadcaster = msg.userInfo.isBroadcaster;
-			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo?.id as UserIdResolvable);
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
 			const isStaff = isModerator || isBroadcaster || isEditor;
 
@@ -303,7 +310,9 @@ export async function initializeChat(): Promise<void> {
 				}
 			} else {
 				if (text.includes('!join')) return;
-				// await chatClient.say(channel, 'Command not recognized, please try again');
+				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+					await chatClient.say(channel, 'Command not recognized, please try again');
+				}
 			}
 		}
 
@@ -361,7 +370,9 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance.onJoin(async (channel: string, user: string) => {
 			try {
-				console.log(`${user} has joined ${channel}'s channel`);
+				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+					console.log(`${user} has joined ${channel}'s channel`);
+				}
 				
 				const stream = await userApiClient.streams.getStreamByUserName('canadiendragon');
 				if (stream === null) return;
@@ -402,8 +413,8 @@ export async function getChatClient(): Promise<ChatClient> {
 				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTime, intervalId });
 
 				if (chatClientInstance.isConnected) {
-					if (broadcasterInfo && broadcasterInfo.id) {
-						const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo.id as UserIdResolvable, openDevBotID as UserIdResolvable);
+					if (broadcasterInfo && broadcasterInfo[0].id) {
+						const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo[0].id as UserIdResolvable, openDevBotID as UserIdResolvable);
 						if (!isMod) {
 							await chatClientInstance.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
 							await sleep(1000);
@@ -421,7 +432,9 @@ export async function getChatClient(): Promise<ChatClient> {
 		});
 		
 		chatClientInstance.onPart(async (channel: string, user: string) => {
-			console.log(`${user} has left ${channel}'s channel`);
+			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+				console.log(`${user} has left ${channel}'s channel`);
+			}
 			const viewer = viewerWatchTimes.get(user);
 
 			if (viewer) {

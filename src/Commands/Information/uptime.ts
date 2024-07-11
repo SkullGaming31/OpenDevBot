@@ -15,19 +15,15 @@ const uptime: Command = {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo?.id as UserIdResolvable);
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 		if (broadcasterResponse?.id === undefined) return;
-		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo?.id as UserIdResolvable);
-		switch (channel) {
-			case 'canadiendragon':
-				if (stream !== null) {
-					const uptime = countdown(new Date(stream.startDate));
-					await chatClient.say(channel, `${msg.userInfo.displayName}, the stream has been live for ${uptime}`);
-				}
-				else {
-					return chatClient.say(channel, 'the Stream is currently Offline');
-				}
-				break;
+		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
+		if (stream !== null) {
+			const uptime = countdown(new Date(stream.startDate));
+			await chatClient.say(channel, `${msg.userInfo.displayName}, the stream has been live for ${uptime}`);
+		}
+		else {
+			return chatClient.say(channel, 'the Stream is currently Offline');
 		}
 	}
 };
