@@ -1230,7 +1230,9 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 				
 			if (existingSubscription) {
-				console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+					console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				}
 				return; // Exit early if subscription already exists
 			}
 				
