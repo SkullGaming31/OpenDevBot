@@ -7,7 +7,7 @@ class ErrorHandler {
 	private logFile: string;
 
 	constructor() {
-		const logFilePath = process.env.Enviroment === 'prod' ? process.env.PROD_LOG_FILE : process.env.DEV_LOG_FILE;
+		const logFilePath = process.env.Enviroment === 'prod' ? process.env.PROD_LOG_FILE as string : process.env.DEV_LOG_FILE as string;
 
 		if (!logFilePath) {
 			throw new Error('Log file path is not defined.');

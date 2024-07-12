@@ -374,7 +374,7 @@ export async function getChatClient(): Promise<ChatClient> {
 					console.log(`${user} has joined ${channel}'s channel`);
 				}
 				
-				const stream = await userApiClient.streams.getStreamByUserName('canadiendragon');
+				const stream = await userApiClient.streams.getStreamByUserName(channel);
 				if (stream === null) return;
 				const userId = await userApiClient.users.getUserByName(user);
 				if (!userId) {
@@ -385,6 +385,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				// Fetch existing watch time from the database
 				const userRecord = await UserModel.findOne({ id: userId.id });
 				const existingWatchTime = userRecord ? userRecord.watchTime || 0 : 0;
+				const streamerChannel = await userApiClient.channels.getChannelInfoById(channel);
 
 				// Initialize the map with existing watch time and start an interval to update it
 				const intervalId = setInterval(async () => {
@@ -401,7 +402,7 @@ export async function getChatClient(): Promise<ChatClient> {
 								userRecord.watchTime = totalWatchTime;
 								await userRecord.save();
 							} else {
-								const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+								const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel?.id, watchTime: totalWatchTime, roles: 'USER' });
 								await newUser.save();
 							}
 						} catch (error) {
@@ -442,6 +443,8 @@ export async function getChatClient(): Promise<ChatClient> {
 				const watchTime = Date.now() - viewer.joinedAt;
 				const totalWatchTime = viewer.watchTime + watchTime;
 				viewerWatchTimes.delete(user); // Remove user from the map once their watch time is updated
+				const streamerChannel = await userApiClient.streams.getStreamByUserName(channel);
+				if (streamerChannel?.id === undefined) return;
 
 				try {
 					const userId = await userApiClient.users.getUserByName(user);
@@ -452,9 +455,10 @@ export async function getChatClient(): Promise<ChatClient> {
 					const userRecord = await UserModel.findOne({ id: userId.id });
 					if (userRecord) {
 						userRecord.watchTime = totalWatchTime;
+						userRecord.channelId = streamerChannel?.id;
 						await userRecord.save();
 					} else {
-						const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+						const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel.id, watchTime: totalWatchTime, roles: 'USER' });
 						await newUser.save();
 					}
 				} catch (error) {
@@ -492,6 +496,8 @@ export async function getChatClient(): Promise<ChatClient> {
 
 			try {
 				const userId = await userApiClient.users.getUserByName(user);
+				const streamerChannel = await userApiClient.streams.getStreamByUserName(broadcasterInfo[0].id);
+				if (streamerChannel?.id === undefined) return;
 				if (!userId) {
 					throw new Error(`User ID for ${user} not found`);
 				}
@@ -499,9 +505,10 @@ export async function getChatClient(): Promise<ChatClient> {
 				const userRecord = await UserModel.findOne({ id: userId.id });
 				if (userRecord) {
 					userRecord.watchTime = totalWatchTime;
+					userRecord.channelId = streamerChannel?.id;
 					await userRecord.save();
 				} else {
-					const newUser = new UserModel({ id: userId.id, username: user, watchTime: totalWatchTime, roles: 'USER' });
+					const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel?.id, watchTime: totalWatchTime, roles: 'USER' });
 					await newUser.save();
 				}
 			} catch (error) {
