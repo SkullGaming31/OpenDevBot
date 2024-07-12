@@ -496,7 +496,7 @@ export async function getChatClient(): Promise<ChatClient> {
 
 			try {
 				const userId = await userApiClient.users.getUserByName(user);
-				const streamerChannel = await userApiClient.streams.getStreamByUserName(broadcasterInfo[0].id);
+				const streamerChannel = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id);
 				if (streamerChannel?.id === undefined) return;
 				if (!userId) {
 					throw new Error(`User ID for ${user} not found`);
