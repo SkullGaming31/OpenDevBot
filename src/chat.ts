@@ -385,7 +385,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				// Fetch existing watch time from the database
 				const userRecord = await UserModel.findOne({ id: userId.id });
 				const existingWatchTime = userRecord ? userRecord.watchTime || 0 : 0;
-				const streamerChannel = await userApiClient.channels.getChannelInfoById(channel);
+				const streamerChannel = await userApiClient.streams.getStreamByUserName(channel);
 
 				// Initialize the map with existing watch time and start an interval to update it
 				const intervalId = setInterval(async () => {
