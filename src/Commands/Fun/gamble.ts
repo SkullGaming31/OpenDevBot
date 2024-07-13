@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 /**
  * Bug: Not deducting correct amount when losing, FIXED
@@ -19,9 +19,9 @@ const gamble: Command = {
 		const username = user.toLowerCase();
 		try {
 			// Retrieve the user from the database
-			let userModel: User | null;
+			let userModel: IUser | null;
 			try {
-				userModel = await UserModel.findOne<User>({ username }).exec();
+				userModel = await UserModel.findOne<IUser>({ username, channelId: msg.channelId }).exec();
 			} catch (error) {
 				console.error('Error retrieving user from database:', error);
 				await chatClient.say(channel, 'An error occurred while retrieving user information.');

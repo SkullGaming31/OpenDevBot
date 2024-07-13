@@ -32,9 +32,9 @@ export async function initializeConstants() {
 
 		for (const userToken of userTokens) {
 			const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
-			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-				console.log(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
-			}
+			// if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+			// 	console.log(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
+			// }
 			const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id); 
       
 			if (helixBroadcaster === null || helixModerator === null) {
@@ -63,8 +63,8 @@ export async function initializeConstants() {
 				gameId: helixModerator.gameId,
 				gameName: helixModerator.gameName,
 				language: helixModerator.language,
-				getBroadcaster: helixBroadcaster.getBroadcaster,
-				getGame: helixBroadcaster.getGame,
+				getBroadcaster: helixModerator.getBroadcaster,
+				getGame: helixModerator.getGame,
 				tags: helixModerator.tags,
 				title: helixModerator.title
 			});

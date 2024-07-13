@@ -1,6 +1,6 @@
 import { Document, Schema, model } from 'mongoose';
 
-export interface User extends Document {
+export interface IUser extends Document {
 	id: string;
 	username: string;
 	channelId: string;
@@ -13,8 +13,8 @@ export interface User extends Document {
 	watchTime: number;
 }
 
-const userSchema = new Schema<User>({
-	id: { type: String, unique: true },
+const userSchema = new Schema<IUser>({
+	id: { type: String },
 	username: { type: String, required: true },
 	channelId: { type: String, required: true },
 	roles: { type: String, required: true },
@@ -26,4 +26,4 @@ const userSchema = new Schema<User>({
 	watchTime: { type: Number, default: 0 }
 });
 
-export const UserModel = model<User>('Users', userSchema);
+export const UserModel = model<IUser>('Users', userSchema);

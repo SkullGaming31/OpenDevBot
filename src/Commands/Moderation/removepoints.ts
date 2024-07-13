@@ -2,7 +2,7 @@ import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
@@ -39,7 +39,7 @@ const removepoints: Command = {
 
 		if (targetUser.startsWith('@')) { targetUser = targetUser.substring(1); }
 
-		const existingUser = await UserModel.findOne<User>({ username: targetUser.toLowerCase() });
+		const existingUser = await UserModel.findOne<IUser>({ username: targetUser.toLowerCase(), channelId: msg.channelId });
 
 		// console.log(`Existing User: ${existingUser}`); // Debugging line
 

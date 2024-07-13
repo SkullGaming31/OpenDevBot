@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 const houseItems: {
@@ -97,7 +97,7 @@ const robber: Command = {
 				// Update user's balance with stolen value (assuming you have a User model and user ID)
 				const userId = msg.userInfo.userId;
 				try {
-					const user = await UserModel.findOne({ id: userId }); // Updated user object
+					const user = await UserModel.findOne({ id: userId, channelId: msg.channelId }); // Updated user object
 
 					if (user && user.balance !== undefined) {
 						// balance not being updated!
@@ -119,7 +119,7 @@ const robber: Command = {
 				break;
 			case 'person':
 				// Retrieve all user models with the Bot role
-				const botUsers: User[] = await UserModel.find({ roles: 'Bot' });
+				const botUsers: IUser[] = await UserModel.find({ roles: 'Bot' });
 
 				// Select a random bot user from the list
 				const randomBotUser = botUsers[randomInt(0, botUsers.length - 1)];
@@ -183,7 +183,7 @@ const robber: Command = {
 					// For demonstration purposes, let's just print the amount and stolen items
 					const userId = msg.userInfo.userId;
 					try {
-						const user = await UserModel.findOne({ id: userId }); // Updated user object
+						const user = await UserModel.findOne({ id: userId, channelId: msg.channelId }); // Updated user object
 
 						if (user && user.balance !== undefined) {
 							user.balance = user.balance + robberyAmount;
@@ -224,7 +224,7 @@ const robber: Command = {
 				try {
 					// Select random items from the store if no specific items are chosen
 					const userId = msg.userInfo.userId;
-					const user = await UserModel.findOne({ id: userId });
+					const user = await UserModel.findOne({ id: userId, channelId: msg.channelId });
 					if (chosenItems.length === 0) {
 						const itemsToSteal = Object.keys(storeItems); // Get all item names
 

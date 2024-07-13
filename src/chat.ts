@@ -1,7 +1,7 @@
 import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
-import { HelixChatChatter, UserIdResolvable } from '@twurple/api/lib';
+import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple/api/lib';
 import fs from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
@@ -9,15 +9,22 @@ import { getAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { ITwitchToken, TokenModel } from './database/models/tokenModel';
-import { User, UserModel } from './database/models/userModel';
 import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { IUser, UserModel } from './database/models/userModel';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
-const PERIODIC_SAVE_INTERVAL = 60000; // 1 minute
+// Define your constants
+let PERIODIC_SAVE_INTERVAL: number;
+
+if (process.env.Enviroment === 'prod') {
+	PERIODIC_SAVE_INTERVAL = 60000; // 1 minute in production
+} else {
+	PERIODIC_SAVE_INTERVAL = 30000; // 30 seconds in development or debug mode
+}
 
 export const commands: Set<string> = new Set<string>();
 async function loadCommands(commandsDir: string, commands: Record<string, Command>): Promise<void> {
@@ -78,63 +85,66 @@ export async function initializeChat(): Promise<void> {
 			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
-			const intervalDuration = 5 * 60 * 1000; // Interval duration in milliseconds (5 minutes)
+	
+			let intervalDuration: number;
+			if (process.env.Env === 'dev' || process.env.Env === 'debug') {
+				intervalDuration = 30 * 1000; // 30 seconds in milliseconds
+			} else {
+				intervalDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+			}
+	
 			const requestsPerInterval = 800; // Maximum number of requests allowed per interval
-
+	
 			const totalChunks = Math.ceil(chatters.length / chunkSize); // Total number of chunks
-
+	
 			let chunkIndex = 0; // Counter for tracking the current chunk index
 			let requestIndex = 0; // Counter for tracking the current request index
-
-			const maxIterations = 1000;
-			let iterationCount = 0;
-
-			const channelId = await userApiClient.users.getUserByName(channel);
+	
+			// const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+			// console.log('Data: ', broadcasterInfo[0]);
+			const channelId = msg.channelId;
+			console.log('Broadcaster ChanneL ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
 				const chattersChunk = chatters.slice(start, end);
-
+	
 				for (const chatter of chattersChunk) {
-					const user = await UserModel.findOne<User>({ id: chatter.userId }).lean();
+					const user = await UserModel.findOne<IUser>({ id: chatter.userId, channelId }).lean();
 					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-
+	
 					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
 						const updatedBalance = (user?.balance || 0) + 100;
 						if (!user) {
 							const newUser = new UserModel({
 								id: chatter.userId,
 								username: chatter.userName,
-								channelId: channelId?.id,
+								channelId: channelId,
 								roles: 'Bot',
 								balance: updatedBalance,
 							});
-							console.log(`New user to be added: ${JSON.stringify(newUser)}`);
 							await newUser.save();
+							console.log(`New user to be added: ${JSON.stringify(newUser)}`);
 						} else {
 							const updateData = {
 								username: chatter.userName,
-								channelId: channelId?.id,
+								channelId: channelId,
 								roles: 'User',
 								balance: updatedBalance,
 							};
-							console.log(`Updating user ${chatter.userId} with data: ${JSON.stringify(updateData)}`);
 							await UserModel.updateOne(
-								{ id: chatter.userId },
-								{ $set: { username: chatter.userName, roles: 'Bot', balance: updatedBalance } }
+								{ id: chatter.userId, channelId },
+								{ $set: { username: chatter.userName, channelId, roles: 'Bot', balance: updatedBalance } },
+								{ upsert: true }
 							);
+							console.log(`Updating user ${chatter.userId} with data: ${JSON.stringify(updateData)}`);
 						}
 						continue;
 					}
 					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
 						continue; // Skip giving coins to specific usernames
 					}
-					if (iterationCount >= maxIterations) {
-						console.log('Maximum iteration count reached. Exiting the loop.');
-						break;
-					}
-					// const channelId = await userApiClient.users.getUserByName(channel);
-					let newUser: User;
+					let newUser: IUser;
 					if (!user) {
 						newUser = new UserModel({
 							id: chatter.userId,
@@ -143,56 +153,48 @@ export async function initializeChat(): Promise<void> {
 							roles: 'User',
 							balance: 100,
 						});
-						// console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 						await newUser.save();
+						console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
 					} else {
 						const updatedBalance = (user.balance || 0) + 100;
 						await UserModel.updateOne(
-							{ id: chatter.userId },
+							{ id: chatter.userId, channelId },
 							{ $set: { username: chatter.userName, channelId, roles: 'User', balance: updatedBalance } },
 							{ upsert: true }
 						);
-						console.log();
-						// console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+						console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
 					}
 				}
-
+	
 				requestIndex++;
 				chunkIndex++;
-
+	
 				if (chunkIndex === totalChunks) {
 					chunkIndex = 0;
 				}
 			};
-
-			let isIntervalRunning = true;
-
+	
+			const isIntervalRunning = true;
+	
 			const intervalHandler = async () => {
-				if (iterationCount >= maxIterations) {
-					console.log('Maximum iteration count reached. Exiting the loop.');
-					clearInterval(interval);
-					isIntervalRunning = false;
-					return;
-				}
-
 				if (requestIndex < requestsPerInterval) {
 					const chatters = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: chunkSize });
 					await processChatters(chatters.data);
 					requestIndex++;
 				} else {
 					requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
-					iterationCount++;
 				}
 			};
-
+	
 			const interval = setInterval(async () => {
 				if (isIntervalRunning) {
 					await intervalHandler();
 				}
 			}, intervalDuration);
+	
 		} catch (error) {
 			console.error(error);
-		}
+		}	
 
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
@@ -208,7 +210,7 @@ export async function initializeChat(): Promise<void> {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
 			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
-		if (text.includes('Want to become famous?') && channel === '#canadiendragon') {
+		if (text.includes('Want to become famous?')) {
 
 			// Check if user is staff (moderator, broadcaster, or editor)
 			const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster ||
@@ -354,6 +356,8 @@ function registerCommand(newCommand: Command, name: string) {
 // holds the ChatClient
 let chatClientInstance: ChatClient;
 export async function getChatClient(): Promise<ChatClient> {
+	// const TBD = await UserModel.deleteMany({});
+	// console.log('User Collection: ', TBD.deletedCount);
 	const userApiClient = await getUserApi();
 	if (!chatClientInstance) {
 		const authProvider = await getAuthProvider();
@@ -370,22 +374,34 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance.onJoin(async (channel: string, user: string) => {
 			try {
-				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+				if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 					console.log(`${user} has joined ${channel}'s channel`);
 				}
-				
+					
+				// Check if the channel is currently streaming
 				const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-				if (stream === null) return;
-				const userId = await userApiClient.users.getUserByName(user);
+				if (stream === null) return; // Exit if the channel is not live
+	
+				// Fetch user ID by their username
+				const userId = await userApiClient.users.getUserByName(user as UserNameResolvable);
 				if (!userId) {
 					throw new Error(`User ID for ${user} not found`);
 				}
-
-
-				// Fetch existing watch time from the database
-				const userRecord = await UserModel.findOne({ id: userId.id });
-				const existingWatchTime = userRecord ? userRecord.watchTime || 0 : 0;
-				
+	
+				// Fetch existing watch times from the database for all channels
+				const userRecords = await UserModel.find({ id: userId.id });
+				const existingWatchTimesMap = new Map<string, number>(); // Map to store watch times by channelId
+				userRecords.forEach(record => {
+					existingWatchTimesMap.set(record.channelId, record.watchTime || 0);
+				});
+	
+				// Initialize or update watch time tracking for the current channel
+				const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+				if (!channelInfo || channelInfo.id === undefined) return;
+	
+				const channelId = channelInfo.id as string;
+				console.log(`User ${user} joined channel ${channel} (${channelId})`);
+	
 				// Initialize the map with existing watch time and start an interval to update it
 				const intervalId = setInterval(async () => {
 					const viewer = viewerWatchTimes.get(user);
@@ -394,80 +410,84 @@ export async function getChatClient(): Promise<ChatClient> {
 						const totalWatchTime = viewer.watchTime + watchTime;
 						viewer.joinedAt = Date.now();
 						viewer.watchTime = totalWatchTime;
-						const streamerChannel = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-						if (streamerChannel?.id === undefined) return;
-
+	
 						try {
-							const userRecord = await UserModel.findOne({ id: userId.id });
+							// Update or create user record in the database for the current channel
+							const userRecord = await UserModel.findOne({ id: userId.id, channelId });
 							if (userRecord) {
 								userRecord.watchTime = totalWatchTime;
-								userRecord.channelId = streamerChannel?.id;
 								await userRecord.save();
+								console.log(`Updated watch time for user ${user} on channel ${channelId}: ${totalWatchTime}`);
 							} else {
-								const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel?.id, watchTime: totalWatchTime, roles: 'USER' });
+								const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
 								await newUser.save();
+								console.log(`New user record created for user ${user} on channel ${channelId}: ${totalWatchTime}`);
 							}
 						} catch (error) {
 							console.error('Error updating watch time:', error);
 						}
 					}
 				}, UPDATE_INTERVAL);
-
-				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTime, intervalId });
-
-				if (chatClientInstance.isConnected) {
-					if (broadcasterInfo && broadcasterInfo[0].id) {
-						const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo[0].id as UserIdResolvable, openDevBotID as UserIdResolvable);
-						if (!isMod) {
-							await chatClientInstance.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
-							await sleep(1000);
-							await chatClientInstance.action(channel, '/mod opendevbot');
-						}
-					} else {
-						console.info('broadcasterInfo or broadcasterInfo.id is undefined');
+	
+				// Store viewer's data in the map
+				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTimesMap.get(channelId) || 0, intervalId });
+	
+				// Ensure bot is a moderator in the channel if required
+				if (chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
+					const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo[0].id as UserIdResolvable, openDevBotID as UserIdResolvable);
+					if (!isMod) {
+						await chatClientInstance.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
+						await sleep(1000);
+						await chatClientInstance.action(channel, '/mod opendevbot');
 					}
 				} else {
-					console.info('The chatClient is not connected');
+					console.info('The chatClient is not connected or broadcasterInfo is undefined');
 				}
 			} catch (error) {
-				console.error(error);
+				console.error('Error handling onJoin event:', error);
 			}
-		});
+		});	
 		
 		chatClientInstance.onPart(async (channel: string, user: string) => {
-			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+			if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 				console.log(`${user} has left ${channel}'s channel`);
 			}
+	
 			const viewer = viewerWatchTimes.get(user);
-
+	
 			if (viewer) {
 				clearInterval(viewer.intervalId); // Clear the interval to stop periodic updates
 				const watchTime = Date.now() - viewer.joinedAt;
 				const totalWatchTime = viewer.watchTime + watchTime;
 				viewerWatchTimes.delete(user); // Remove user from the map once their watch time is updated
-				const streamerChannel = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-				if (streamerChannel?.id === undefined) return;
-
+	
 				try {
-					const userId = await userApiClient.users.getUserByName(user);
+					const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
+					const userId = await userApiClient.users.getUserByName(user as UserNameResolvable);
 					if (!userId) {
 						throw new Error(`User ID for ${user} not found`);
 					}
-
-					const userRecord = await UserModel.findOne({ id: userId.id });
+			
+					const channelId = streamerChannel?.id;
+			
+					const userRecord = await UserModel.findOne({ id: userId.id, channelId });
 					if (userRecord) {
 						userRecord.watchTime = totalWatchTime;
-						userRecord.channelId = streamerChannel?.id;
+						if (channelId) {
+							userRecord.channelId = channelId;
+						}
 						await userRecord.save();
+						console.log('Updated User Record: ', userRecord);
 					} else {
-						const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel.id, watchTime: totalWatchTime, roles: 'USER' });
+						const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
 						await newUser.save();
+						console.log('New User Data Created: ', newUser);
 					}
 				} catch (error) {
 					console.error('Error updating watch time:', error);
-				}
+				}			
 			}
-		});
+		});		
 
 		// Connect the chat client
 		chatClientInstance.connect();
@@ -484,10 +504,12 @@ export async function getChatClient(): Promise<ChatClient> {
 					console.log(`Joined channel: ${username}`);
 				} else { return; }
 			}, 2000); // 2000 milliseconds (2 seconds) delay
+			chatClientInstance.reconnect();
 		}
 		console.log('ChatClient instance initialized and connected.');
 	}
 
+	// Periodic check to ensure watch times are saved regularly
 	// Periodic check to ensure watch times are saved regularly
 	setInterval(async () => {
 		for (const [user, viewer] of viewerWatchTimes) {
@@ -497,21 +519,33 @@ export async function getChatClient(): Promise<ChatClient> {
 			viewer.watchTime = totalWatchTime;
 
 			try {
-				const userId = await userApiClient.users.getUserByName(user);
-				const streamerChannel = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-				if (streamerChannel?.id === undefined) return;
+				const userId = await userApiClient.users.getUserByName(user as UserNameResolvable);
 				if (!userId) {
 					throw new Error(`User ID for ${user} not found`);
 				}
 
-				const userRecord = await UserModel.findOne({ id: userId.id });
+				// Fetch the channel info for the specific broadcaster ID
+				const broadcasterId = broadcasterInfo[0].id as UserIdResolvable; // Assuming you want the first broadcaster in the array
+				const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterId);
+							
+				if (!streamerChannel || !streamerChannel.id) {
+					console.error(`Streamer channel not found for user ${user}`);
+					continue;
+				}
+
+				const channelId = streamerChannel.id;
+				console.log('Broadcaster Channel ID: ', channelId);
+
+				// Update or create user record in the database for the current channel
+				const userRecord = await UserModel.findOne({ id: userId.id, channelId });
 				if (userRecord) {
 					userRecord.watchTime = totalWatchTime;
-					userRecord.channelId = streamerChannel?.id;
 					await userRecord.save();
+					console.log('Updated User Record: ', userRecord);
 				} else {
-					const newUser = new UserModel({ id: userId.id, username: user, channelId: streamerChannel?.id, watchTime: totalWatchTime, roles: 'USER' });
+					const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
 					await newUser.save();
+					console.log('New User Data Created: ', newUser);
 				}
 			} catch (error) {
 				console.error('Error updating watch time:', error);

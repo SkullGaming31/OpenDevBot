@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 const transfer: Command = {
@@ -24,8 +24,8 @@ const transfer: Command = {
 			if (parsedAmount <= 0) return chatClient.say(channel, `@${user}, you can only transfer positive amounts.`);
 
 			// Combine sender balance check and update into a single operation
-			const updatedSenderDoc = await UserModel.findOneAndUpdate<User>(
-				{ username: sender.toLowerCase() },
+			const updatedSenderDoc = await UserModel.findOneAndUpdate<IUser>(
+				{ username: sender.toLowerCase(), channelId: msg.channelId },
 				{
 					$inc: { balance: -parsedAmount },// Decrement balance directly
 				},
@@ -41,7 +41,7 @@ const transfer: Command = {
 				return chatClient.say(channel, `@${user}, you don't have enough gold to make this transfer.`);
 			}
 
-			const recipientDoc = await UserModel.findOneAndUpdate<User>({ username: recipient.toLowerCase() });
+			const recipientDoc = await UserModel.findOneAndUpdate<IUser>({ username: recipient.toLowerCase(), channelId: msg.channelId });
 			if (recipientDoc && recipientDoc.balance !== undefined) {
 				recipientDoc.balance += parsedAmount;
 				recipientDoc.save(); // Updates the saved document

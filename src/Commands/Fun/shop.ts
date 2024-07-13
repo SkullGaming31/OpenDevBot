@@ -1,6 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 interface ItemPrices {
@@ -60,13 +60,13 @@ const shop: Command = {
 				}
 
 				const updatedBalance = balance - itemPrice;
-				const updatedUser: Partial<User> = {
+				const updatedUser: Partial<IUser> = {
 					id: userId,
 					balance: updatedBalance,
 					inventory: [...(existingUser.inventory ?? []), itemName],
 				};
 
-				await UserModel.findOneAndUpdate({ id: userId }, updatedUser);
+				await UserModel.findOneAndUpdate({ id: userId, channelId: msg.channelId }, updatedUser);
 
 				chatClient.say(channel, `Item "${itemName}" purchased successfully. Your new balance is ${updatedBalance}.`);
 				break;
@@ -94,13 +94,13 @@ const shop: Command = {
 				}
 
 				const updatedBalanceSell = balance + sellPrice;
-				const updatedUserSell: Partial<User> = {
+				const updatedUserSell: Partial<IUser> = {
 					id: userId,
 					balance: updatedBalanceSell,
 					inventory: updatedInventory,
 				};
 
-				await UserModel.findOneAndUpdate({ id: userId }, updatedUserSell);
+				await UserModel.findOneAndUpdate({ id: userId, channelId: msg.channelId }, updatedUserSell);
 
 				chatClient.say(channel, `Item "${itemName}" sold successfully. Your new balance is ${updatedBalanceSell}.`);
 				break;

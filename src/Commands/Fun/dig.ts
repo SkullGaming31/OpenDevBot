@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 const dig: Command = {
@@ -20,7 +20,7 @@ const dig: Command = {
 		if (digAmount < 100 && digAmount > 5000) return chatClient.say(channel, 'Minimum/maximum bet amount is 100-5000');
 
 		// Check if the user has enough balance
-		const userDoc = await UserModel.findOne<User>({ username });
+		const userDoc = await UserModel.findOne<IUser>({ username, channelId: msg.channelId });
 		if (userDoc?.balance === undefined) return;
 		if (!userDoc || userDoc.balance < digAmount) { return chatClient.say(channel, 'You don\'t have enough balance to dig.'); }
 

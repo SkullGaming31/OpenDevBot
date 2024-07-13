@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { User, UserModel } from '../../database/models/userModel';
+import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 
@@ -29,8 +29,8 @@ const addpoints: Command = {
 		if (!isStaff) { return chatClient.say(channel, `${msg.userInfo.displayName}, You are not authorized to use this command.`); }
 		if (!args[0]) return chatClient.say(channel, `${addpoints.usage}`);
 		if (isNaN(amountToAdd)) { return chatClient.say(channel, 'Invalid amount. Please provide a valid number.'); } // Check if the amount is a valid number
-		console.log('args 0: ', args[0]);
-		console.log('args 1: ', args[1]);
+		// console.log('args 0: ', args[0]);
+		// console.log('args 1: ', args[1]);
 
 		const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 		if (userSearch?.id === undefined) return;
@@ -39,7 +39,7 @@ const addpoints: Command = {
 		if (targetUser.startsWith('@')) { targetUser = targetUser.substring(1).toLowerCase(); }
 
 		// Find the target user in the database
-		const existingUser = await UserModel.findOne<User>({ username: targetUser });
+		const existingUser = await UserModel.findOne<IUser>({ username: targetUser, channelId: msg.channelId });
 
 		if (existingUser) {
 			// Calculate the new balance
