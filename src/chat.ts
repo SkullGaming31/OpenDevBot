@@ -318,20 +318,19 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 
-		// TODO: send chat message every 10 minutes consistently in typescript.
-		// const sendMessageEvery10Minutes = async () => {
-		// 	try {
-		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
-		// 	} catch (error) {
-		// 		console.error(error);
-		// 	} finally {
-		// Schedule the next call 10 minutes from now
-		// 		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
-		// 	}
-		// };
-
-		// Initiate the first call
-		// sendMessageEvery10Minutes();
+		const sendMessageEvery10Minutes = async () => {
+			try {
+				await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+			} catch (error) {
+				console.error(error);
+			} finally {
+				// Schedule the next call 10 minutes from now
+				setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
+			}
+		};
+	
+		// Initiate the first call with a delay
+		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
 	};
 	chatClient.onMessage(commandHandler);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
