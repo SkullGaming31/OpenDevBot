@@ -1,9 +1,9 @@
-import { UserIdResolvable } from '@twurple/api';
+import { UserIdResolvable, UserNameResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const ban: Command = {
@@ -27,18 +27,22 @@ const ban: Command = {
 			const userSearch = await userApiClient.users.getUserByName(username);
 
 			if (!userSearch?.id) {
-				chatClient.say(channel, `${display}, User not found.`);
-				return;
+				return chatClient.say(channel, `${display}, User not found.`);
 			}
 
 			// Check if the user is a mod or broadcaster
 			if (!msg.userInfo.isMod && !msg.userInfo.isBroadcaster) {
-				chatClient.say(channel, `${display}, You don't have permission to use this command.`);
-				return;
+				return chatClient.say(channel, `${display}, You don't have permission to use this command.`);
+			}
+
+			// Retrieve broadcaster information
+			const broadcaster = await userApiClient.users.getUserByName(channel as UserNameResolvable);
+			if (!broadcaster) {
+				return chatClient.say(channel, `Could not find broadcaster information for channel: ${channel}`);
 			}
 
 			// Ban the user
-			await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
+			await userApiClient.moderation.banUser(broadcaster.id as UserIdResolvable, {
 				user: userSearch.id,
 				reason
 			});

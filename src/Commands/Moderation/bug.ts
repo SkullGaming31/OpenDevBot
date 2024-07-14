@@ -27,12 +27,12 @@ const bug: Command = {
 
 
 			const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID.id as UserIdResolvable);
-			const moderatorsData = moderatorsResponse.data; // Access the moderator data
+			const moderatorsData = moderatorsResponse.data;
 
 			const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
 			const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 			const isStaff = isModerator || isBroadcaster;
-			const bugReportUser = await userApiClient.users.getUserById(msg.userInfo.userId);
+			const bugReportUser = await userApiClient.users.getUserById(msg.userInfo.userId as UserIdResolvable);
 
 			const commandtitle = args[0];
 			const bugDescription = args.slice(1).join(' ');

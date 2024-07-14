@@ -1,4 +1,5 @@
 import mongoose, { ConnectOptions } from 'mongoose';
+import './models/userModel';
 
 class Database {
 	private uri: string;
@@ -9,6 +10,12 @@ class Database {
 
 	public async connect(): Promise<void> {
 		try {
+			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+				mongoose.set('debug', true);
+			} else {
+				mongoose.set('debug', false);
+			}
+			
 			await mongoose.connect(this.uri, {
 				serverSelectionTimeoutMS: 5000,
 				dbName: 'opendevbot',
@@ -38,8 +45,19 @@ class Database {
 			// Perform a no-op operation to ensure the database is created
 			await mongoose.connection.db.command({ ping: 1 });
 			console.log(`Database '${mongoose.connection.db.databaseName}' ensured.`);
+			// await this.dropUsersCollection();
 		} catch (error) {
 			console.error('Database connection error:', error);
+			throw error;
+		}
+	}
+
+	public async dropUsersCollection(): Promise<void> {
+		try {
+			await mongoose.connection.dropCollection('users');
+			console.log('Users collection dropped');
+		} catch (error) {
+			console.error('Error dropping users collection:', error);
 			throw error;
 		}
 	}

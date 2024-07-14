@@ -14,10 +14,10 @@ export interface IUser extends Document {
 }
 
 const userSchema = new Schema<IUser>({
-	id: { type: String, required: true, unique: true }, // Ensures each id is unique
-	username: { type: String, required: true },
-	channelId: { type: String, required: true, unique: true }, // Ensures each channelId is unique
-	roles: { type: String, required: true },
+	id: { type: String },
+	username: { type: String },
+	channelId: { type: String },
+	roles: { type: String },
 	balance: { type: Number, default: 0 },
 	lastBegTime: { type: Date, default: new Date(0) },
 	challengedUser: { type: String },
@@ -25,8 +25,5 @@ const userSchema = new Schema<IUser>({
 	inventory: { type: [String] },
 	watchTime: { type: Number, default: 0 }
 });
-
-// Create an index on the channelId field
-userSchema.index({ channelId: 1 }, { unique: true });
 
 export const UserModel = model<IUser>('Users', userSchema);

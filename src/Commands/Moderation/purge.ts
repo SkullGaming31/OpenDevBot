@@ -8,57 +8,80 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const purge: Command = {
 	name: 'purge',
-	description: 'Purge the messages from someone in the twitch chat',
+	description: 'Purge messages from a user in the Twitch chat',
 	usage: '!purge [name] [duration[seconds]] (reason)',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const display = msg.userInfo.displayName;
 
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
-		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${purge.usage}`);
-		if (!args[1]) return chatClient.say(channel, `${display}, please specify a duration in seconds to purge texts`);
-		if (!args[2]) args[2] = 'No Reason Provided';
-		if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) return;
 		try {
-			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
-			if (userSearch?.id === undefined || null) return;
-			if (userSearch.id === broadcasterInfo[0].id as UserIdResolvable) return chatClient.say(channel, 'You can\'t ban/purge this user');
+			// Argument validation
+			if (!args[0] || !args[1]) {
+				await chatClient.say(channel, `${display}, Usage: ${purge.usage}`);
+				return;
+			}
+
+			const username = args[0].replace('@', '');
+			const durationSeconds = Number(args[1]);
+			const reason = args[2] || 'No Reason Provided';
+
+			// Check moderator or broadcaster status
+			if (!msg.userInfo.isMod && !msg.userInfo.isBroadcaster) {
+				await chatClient.say(channel, 'You do not have permission to use this command');
+				return;
+			}
+
+			// Retrieve user information
+			const userSearch = await userApiClient.users.getUserByName(username);
+
+			if (!userSearch?.id) {
+				await chatClient.say(channel, `User ${username} not found`);
+				return;
+			}
+
+			// Prevent purging/banning the broadcaster
+			if (userSearch.id === broadcasterInfo[0].id as UserIdResolvable) {
+				await chatClient.say(channel, 'You cannot purge/ban the broadcaster');
+				return;
+			}
+
+			// Purge the user
 			await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
 				user: userSearch.id,
-				duration: Number(args[1]),
-				reason: args[2],
+				duration: durationSeconds,
+				reason: reason,
 			});
+
+			// Send purge event to command usage webhook
 			const purgeEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Channel Purge(user)]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
 						name: 'Executer',
 						value: `${msg.userInfo.displayName}`,
-						inline: true
+						inline: true,
 					},
-					...(msg.userInfo.isMod
-						? [{ name: 'Mod', value: 'Yes', inline: true }]
-						: msg.userInfo.isBroadcaster
-							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
-							: []
-					)
+					{
+						name: 'Role',
+						value: msg.userInfo.isMod ? 'Mod' : 'Broadcaster',
+						inline: true,
+					},
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just purged ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just purged ${username} in ${channel}'s Twitch channel` })
 				.setTimestamp();
-			try {
 
-				await commandUsage.send({ embeds: [purgeEmbed] });
-			} catch (error) {
-				console.error(error);
-			}
+			await commandUsage.send({ embeds: [purgeEmbed] });
+			await chatClient.say(channel, `User ${username} has been purged for ${durationSeconds} seconds. Reason: ${reason}`);
 		} catch (error) {
-			console.error(error);
+			console.error('Error in purge command:', error);
+			await chatClient.say(channel, 'An error occurred while processing your request');
 		}
-	}
+	},
 };
+
 export default purge;

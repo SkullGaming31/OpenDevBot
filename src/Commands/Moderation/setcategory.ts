@@ -1,48 +1,53 @@
-import { UserIdResolvable } from '@twurple/api';
+import { UserIdResolvable, UserNameResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const setcategory: Command = {
 	name: 'setcategory',
 	aliases: ['setgame'],
-	description: 'set the channel category for the broadcaster',
+	description: 'Set the channel category for the broadcaster',
 	usage: '!setcategory [gamename]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
-
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
-		if (!broadcasterResponse?.id) return;
-
-		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
-		const moderatorsData = moderatorsResponse.data; // Access the moderator data
-
-		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
-
-		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-		const isBroadcaster = broadcasterResponse.id === msg.userInfo.userId;
-		const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
-
-		const isStaff = isModerator || isBroadcaster || isEditor;
 		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
-		const category = args.join(' ');
-		const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
-
 
 		if (!args[0]) return chatClient.say(channel, `Usage: ${setcategory.usage}`);
 
+		const category = args.join(' ');
+
+		// Get broadcaster information based on the channel where the command is issued
+		const broadcaster = await userApiClient.users.getUserByName(channel as UserNameResolvable);
+		if (!broadcaster) {
+			return chatClient.say(channel, `Could not find broadcaster information for channel: ${channel}`);
+		}
+
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcaster.id as UserIdResolvable);
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcaster.id as UserIdResolvable);
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable);
+
+		const isModerator = moderatorsResponse.data.some(moderator => moderator.userId === msg.userInfo.userId);
+		const isBroadcaster = broadcasterResponse?.id === msg.userInfo.userId;
+		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
+
+		const isStaff = isModerator || isBroadcaster || isEditor;
+
 		if (isStaff) {
 			const newGame = await userApiClient.games.getGameByName(category);
-			await userApiClient.channels.updateChannelInfo(broadcasterInfo[0].id as UserIdResolvable, { gameId: `${newGame?.id}` });
+			if (!newGame) {
+				return chatClient.say(channel, `Game "${category}" not found.`);
+			}
+
+			await userApiClient.channels.updateChannelInfo(broadcaster.id as UserIdResolvable, { gameId: `${newGame.id}` });
 			const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
 
 			const commandEmbed = new EmbedBuilder()
 				.setTitle('Command Used [setcategory]')
-				.setAuthor({ name: `${helixUser?.displayName}`, iconURL: helixUser?.profilePictureUrl})
+				.setAuthor({ name: `${helixUser?.displayName}`, iconURL: helixUser?.profilePictureUrl })
 				.setColor('Red')
 				.addFields([
 					{
@@ -52,12 +57,12 @@ const setcategory: Command = {
 					},
 					{
 						name: 'New Category:',
-						value: `\`Gamename: ${newGame?.name}\`, \n||\`GameID: ${newGame?.id}\`||`,
+						value: `\`Gamename: ${newGame.name}\`, \n||\`GameID: ${newGame.id}\`||`,
 						inline: true
 					},
 					{
 						name: 'Old Category:',
-						value: `\`Gamename: ${channelInfo?.gameName}\`, \n||\`GameID: ${channelInfo?.gameId}\`||`,
+						value: `\`Gamename: ${broadcasterResponse?.gameName}\`, \n||\`GameID: ${broadcasterResponse?.gameId}\`||`,
 						inline: true
 					},
 					...(msg.userInfo.isMod
@@ -67,17 +72,17 @@ const setcategory: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `Channel: ${channel}`})
+				.setFooter({ text: `Channel: ${channel}` })
 				.setTimestamp();
 
 			try {
-				await chatClient.say(channel, `${msg.userInfo.displayName}, has changed the channel category to ${newGame?.name}`);
+				await chatClient.say(channel, `${msg.userInfo.displayName} has changed the channel category to ${newGame.name}`);
 				await commandUsageWebhook.send({ embeds: [commandEmbed] });
 			} catch (error) {
 				console.error(error);
 			}
 		} else {
-			await chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster, you do not have access to this command`);
+			await chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster and do not have access to this command`);
 		}
 	}
 };

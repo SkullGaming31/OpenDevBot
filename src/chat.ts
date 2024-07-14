@@ -2,7 +2,7 @@ import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
 import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple/api/lib';
-import fs from 'fs';
+import fs, { existsSync } from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
 import { getAuthProvider } from './auth/authProvider';
@@ -85,10 +85,11 @@ export async function initializeChat(): Promise<void> {
 			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
+			const Enviroment = process.env.Enviroment as string;
 	
 			let intervalDuration: number;
 			if (process.env.Env === 'dev' || process.env.Env === 'debug') {
-				intervalDuration = 30 * 1000; // 30 seconds in milliseconds
+				intervalDuration = 10 * 1000; // 10 seconds in milliseconds
 			} else {
 				intervalDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
 			}
@@ -100,79 +101,58 @@ export async function initializeChat(): Promise<void> {
 			let chunkIndex = 0; // Counter for tracking the current chunk index
 			let requestIndex = 0; // Counter for tracking the current request index
 	
-			// const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
-			// console.log('Data: ', broadcasterInfo[0]);
 			const channelId = msg.channelId;
-			console.log('Broadcaster ChanneL ID: ', channelId);
+			console.log('Broadcaster Channel ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
 				const chattersChunk = chatters.slice(start, end);
-	
+
 				for (const chatter of chattersChunk) {
-					const user = await UserModel.findOne<IUser>({ id: chatter.userId, channelId }).lean();
-					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-	
-					if (knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase()) {
-						const updatedBalance = (user?.balance || 0) + 100;
-						if (!user) {
-							const newUser = new UserModel({
-								id: chatter.userId,
-								username: chatter.userName,
-								channelId: channelId,
-								roles: 'Bot',
-								balance: updatedBalance,
-							});
-							await newUser.save();
-							console.log(`New user to be added: ${JSON.stringify(newUser)}`);
-						} else {
-							const updateData = {
-								username: chatter.userName,
-								channelId: channelId,
-								roles: 'User',
-								balance: updatedBalance,
-							};
-							await UserModel.updateOne(
-								{ id: chatter.userId, channelId },
-								{ $set: { username: chatter.userName, channelId, roles: 'Bot', balance: updatedBalance } },
-								{ upsert: true }
-							);
-							console.log(`Updating user ${chatter.userId} with data: ${JSON.stringify(updateData)}`);
+					try {
+						const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
+
+						const isBot = knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase();
+						const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
+
+						if (isBot || !isIgnoredUser) {
+							const roles = isBot ? 'Bot' : 'User';
+							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
+							console.log('existingUser:', existingUser);
+
+							if (existingUser) {
+								const result = await UserModel.updateOne(
+									{ id: chatter.userId, channelId },
+									{ $inc: { balance: 100 } }
+								);
+								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
+									console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
+								}
+							} else {
+								const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User', balance: 100 });
+								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
+									console.log(`New user added: ${JSON.stringify(result)}`);
+								}
+							}					
 						}
-						continue;
-					}
-					if (chatter.userName.toLowerCase() === 'opendevbot' || chatter.userName.toLowerCase() === 'streamelements' || chatter.userName.toLowerCase() === 'streamlabs') {
-						continue; // Skip giving coins to specific usernames
-					}
-					let newUser: IUser;
-					if (!user) {
-						newUser = new UserModel({
-							id: chatter.userId,
-							channelId,
-							username: chatter.userName,
-							roles: 'User',
-							balance: 100,
-						});
-						await newUser.save();
-						console.log(`Added ${newUser.username} to the database: Balance: ${newUser.balance}`);
-					} else {
-						const updatedBalance = (user.balance || 0) + 100;
-						await UserModel.updateOne(
-							{ id: chatter.userId, channelId },
-							{ $set: { username: chatter.userName, channelId, roles: 'User', balance: updatedBalance } },
-							{ upsert: true }
-						);
-						console.log('Updated ' + chatter.userName + ' and gave them ' + updatedBalance + ' coins');
+					} catch (error: any) {
+						if (error.code === 11000) {
+							console.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
+							// Handle or log the duplicate key error as needed
+						} else {
+							console.error('Error processing chatter:', error);
+							// Handle other errors accordingly
+						}
 					}
 				}
-	
+
 				requestIndex++;
 				chunkIndex++;
-	
+
 				if (chunkIndex === totalChunks) {
 					chunkIndex = 0;
 				}
-			};
+			};						
 	
 			const isIntervalRunning = true;
 	
@@ -376,7 +356,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 					console.log(`${user} has joined ${channel}'s channel`);
 				}
-					
+							
 				// Check if the channel is currently streaming
 				const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
 				if (stream === null) return; // Exit if the channel is not live
@@ -412,18 +392,24 @@ export async function getChatClient(): Promise<ChatClient> {
 	
 						try {
 							// Update or create user record in the database for the current channel
-							const userRecord = await UserModel.findOne({ id: userId.id, channelId });
-							if (userRecord) {
-								userRecord.watchTime = totalWatchTime;
-								await userRecord.save();
+							const filter = { id: userId.id, channelId };
+							const update = { $set: { watchTime: totalWatchTime } };
+							const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+	
+							const updatedUser = await UserModel.findOneAndUpdate(filter, update, options);
+											
+							if (updatedUser) {
 								console.log(`Updated watch time for user ${user} on channel ${channelId}: ${totalWatchTime}`);
 							} else {
-								const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
-								await newUser.save();
 								console.log(`New user record created for user ${user} on channel ${channelId}: ${totalWatchTime}`);
 							}
-						} catch (error) {
-							console.error('Error updating watch time:', error);
+						} catch (error: any) {
+							if (error.code === 11000) {
+								console.error(`Duplicate key error for id ${userId.id}`);
+								// Handle the duplicate key error appropriately
+							} else {
+								console.error('Error updating watch time:', error);
+							}
 						}
 					}
 				}, UPDATE_INTERVAL);
@@ -445,7 +431,7 @@ export async function getChatClient(): Promise<ChatClient> {
 			} catch (error) {
 				console.error('Error handling onJoin event:', error);
 			}
-		});	
+		});
 		
 		chatClientInstance.onPart(async (channel: string, user: string) => {
 			if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
@@ -478,7 +464,7 @@ export async function getChatClient(): Promise<ChatClient> {
 						await userRecord.save();
 						console.log('Updated User Record: ', userRecord);
 					} else {
-						const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
+						const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 						await newUser.save();
 						console.log('New User Data Created: ', newUser);
 					}
@@ -486,7 +472,7 @@ export async function getChatClient(): Promise<ChatClient> {
 					console.error('Error updating watch time:', error);
 				}			
 			}
-		});		
+		});
 
 		// Connect the chat client
 		chatClientInstance.connect();
@@ -508,7 +494,6 @@ export async function getChatClient(): Promise<ChatClient> {
 		console.log('ChatClient instance initialized and connected.');
 	}
 
-	// Periodic check to ensure watch times are saved regularly
 	// Periodic check to ensure watch times are saved regularly
 	setInterval(async () => {
 		for (const [user, viewer] of viewerWatchTimes) {
@@ -537,12 +522,13 @@ export async function getChatClient(): Promise<ChatClient> {
 
 				// Update or create user record in the database for the current channel
 				const userRecord = await UserModel.findOne({ id: userId.id, channelId });
+				console.log('ExistingUser:', userRecord);
 				if (userRecord) {
 					userRecord.watchTime = totalWatchTime;
 					await userRecord.save();
 					console.log('Updated User Record: ', userRecord);
 				} else {
-					const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'USER' });
+					const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 					await newUser.save();
 					console.log('New User Data Created: ', newUser);
 				}

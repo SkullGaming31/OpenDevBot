@@ -13,7 +13,7 @@ const watchTime: Command = {
 		const userApiClient = await getUserApi();
 
 		try {
-			const userRecord = await UserModel.findOne({ username: msg.userInfo.userName });
+			const userRecord = await UserModel.findOne({ id: msg.userInfo.userId });
 
 			if (userRecord && userRecord.watchTime !== undefined) {
 				const totalSeconds = userRecord.watchTime / 1000;

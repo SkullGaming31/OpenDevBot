@@ -262,9 +262,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				if (stream?.thumbnailUrl) { liveEmbed.setImage(`${stream.thumbnailUrl}`); }
 				if (userInfo.profilePictureUrl) { liveEmbed.setThumbnail(userInfo.profilePictureUrl); }
 
+				
+				await sleep(60000);
+				await userApiClient.chat.sendAnnouncement(info.id  as UserIdResolvable as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName}- (${stream?.title})` });
 				if (info.id === '31124455') {
-					await sleep(60000);
-					await userApiClient.chat.sendAnnouncement(info.id  as UserIdResolvable as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName}- (${stream?.title})` });
 					await sleep(60000);
 					await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
 				}
@@ -1220,8 +1221,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		try {
 			if (Environment === 'debug' || Environment === 'dev') {
 				console.log(`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
-				await SubscriptionModel.deleteMany({});
-				console.log('All existing subscriptions deleted in dev environment.');
+				// await SubscriptionModel.deleteMany({});
+				// console.log('All existing subscriptions deleted in dev environment.');
 			}
 			// Check if the subscription already exists in MongoDB
 			const existingSubscription = await SubscriptionModel.findOne({

@@ -1,9 +1,9 @@
-import { UserIdResolvable } from '@twurple/api';
+import { UserIdResolvable, UserNameResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const settitle: Command = {
@@ -18,19 +18,24 @@ const settitle: Command = {
 		if (!args[0]) return chatClient.say(channel, `Usage: ${settitle.usage}`);
 
 		const title = args.join(' ');
-		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
-		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
+		const broadcaster = await userApiClient.users.getUserByName(channel as UserNameResolvable);
+
+		if (!broadcaster) {
+			return chatClient.say(channel, `Could not find broadcaster information for channel: ${channel}`);
+		}
+
+		const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcaster.id as UserIdResolvable);
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable);
 
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
-
 		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
-		await userApiClient.channels.updateChannelInfo(broadcasterResponse?.id!, { 'title': title }); // Channel ID:'31124455'
 		const helixUser = await userApiClient.users.getUserByName(msg.userInfo.userName);
+
 		try {
 			if (isStaff) {
 				const commandEmbed = new EmbedBuilder()
-					.setTitle('Command Used[settitle]')
-					.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl})
+					.setTitle('Command Used [settitle]')
+					.setAuthor({ name: msg.userInfo.displayName, iconURL: helixUser?.profilePictureUrl })
 					.setColor('Green')
 					.addFields([
 						{
@@ -55,16 +60,19 @@ const settitle: Command = {
 								: []
 						)
 					])
-					.setFooter({ text: `Channel: ${channel}, user_id: ${msg.userInfo.userId}`})
+					.setFooter({ text: `Channel: ${channel}, user_id: ${msg.userInfo.userId}` })
 					.setTimestamp();
+
 				try {
-					await chatClient.say(channel, `${msg.userInfo.displayName}, has updated the channel title to ${title}`);
+					await userApiClient.channels.updateChannelInfo(broadcasterResponse?.id as UserIdResolvable, { 'title': title });
+					console.log('Broadcaster ID: ', broadcasterResponse?.id);
+					await chatClient.say(channel, `${msg.userInfo.displayName} has updated the channel title to ${title}`);
 					await commandUsage.send({ embeds: [commandEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
 			} else {
-				chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster you do not have access to this command`);
+				chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster and do not have access to this command`);
 			}
 		} catch (error: any) {
 			console.error(error.message);
