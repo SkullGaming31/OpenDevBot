@@ -1,6 +1,5 @@
 /node_modules
 .env
-notes.txt
 /dist
 /src/Warframe_Data.json
 /src/dev logs

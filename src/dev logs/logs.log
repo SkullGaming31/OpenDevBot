@@ -12,3 +12,17 @@ Unhandled Rejection/Catch: Users validation failed: channelId: Cast to string fa
 Unhandled Rejection/Catch: Users validation failed: channelId: Cast to string failed for value "[HelixChannel#204831754 - please check https://twurple.js.org/reference/api/classes/HelixChannel.html for available properties]" (type HelixChannel) at path "channelId"
 Unhandled Rejection/Catch: Users validation failed: channelId: Cast to string failed for value "[HelixChannel#204831754 - please check https://twurple.js.org/reference/api/classes/HelixChannel.html for available properties]" (type HelixChannel) at path "channelId"
 Unhandled Rejection/Catch: Users validation failed: channelId: Cast to string failed for value "[HelixChannel#204831754 - please check https://twurple.js.org/reference/api/classes/HelixChannel.html for available properties]" (type HelixChannel) at path "channelId"
+Unhandled Rejection/Catch: E11000 duplicate key error collection: opendevbot.users index: id_1 dup key: { id: "31124455" }
+Unhandled Rejection/Catch: E11000 duplicate key error collection: opendevbot.users index: id_1 dup key: { id: "31124455" }
+Unhandled Rejection/Catch: E11000 duplicate key error collection: opendevbot.users index: id_1 dup key: { id: "31124455" }
+Unhandled Rejection/Catch: Encountered HTTP status code 502: Bad Gateway
+
+URL: validate
+Method: GET
+Body:
+<html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+</body>
+</html>
