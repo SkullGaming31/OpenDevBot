@@ -47,7 +47,7 @@ const unmod: Command = {
 			try {
 				if (isEditor || msg.userInfo.isBroadcaster) {
 					await userApiClient.moderation.removeModerator(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id as UserIdResolvable);
-					await chatClient.say(channel, `${args[0]} has had there moderator powers removed by ${display}`);
+					await chatClient.say(channel, `${userSearch.displayName} has had there moderator powers removed by ${display}`);
 					await commandUsage.send({ embeds: [unModeratorEmbed] });
 				} else {
 					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');

@@ -89,9 +89,9 @@ export async function initializeChat(): Promise<void> {
 	
 			let intervalDuration: number;
 			if (process.env.Env === 'dev' || process.env.Env === 'debug') {
-				intervalDuration = 10 * 1000; // 10 seconds in milliseconds
+				intervalDuration = 30 * 1000; // 30 seconds in milliseconds
 			} else {
-				intervalDuration = 5 * 60 * 1000; // 5 minutes in milliseconds
+				intervalDuration = 60 * 1000; // 1 minutes in milliseconds
 			}
 	
 			const requestsPerInterval = 800; // Maximum number of requests allowed per interval
@@ -102,7 +102,7 @@ export async function initializeChat(): Promise<void> {
 			let requestIndex = 0; // Counter for tracking the current request index
 	
 			const channelId = msg.channelId;
-			console.log('Broadcaster Channel ID: ', channelId);
+			// console.log('Broadcaster Channel ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {// TODO: Only allow points/gold/coins to be collected while the stream is live
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
@@ -118,7 +118,7 @@ export async function initializeChat(): Promise<void> {
 						if (isBot || !isIgnoredUser) {
 							const roles = isBot ? 'Bot' : 'User';
 							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
-							console.log('existingUser:', existingUser);
+							// console.log('existingUser:', existingUser);
 
 							if (existingUser) {
 								const result = await UserModel.updateOne(
@@ -126,12 +126,12 @@ export async function initializeChat(): Promise<void> {
 									{ $inc: { balance: 100 } }
 								);
 								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
+									// console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
 								}
 							} else {
 								const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User', balance: 100 });
 								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									console.log(`New user added: ${JSON.stringify(result)}`);
+									// console.log(`New user added: ${JSON.stringify(result)}`);
 								}
 							}					
 						}
@@ -158,9 +158,12 @@ export async function initializeChat(): Promise<void> {
 	
 			const intervalHandler = async () => {
 				if (requestIndex < requestsPerInterval) {
-					const chatters = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: chunkSize });
-					await processChatters(chatters.data);
-					requestIndex++;
+					const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
+					if (stream !== null) {
+						const chatters = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: chunkSize });
+						await processChatters(chatters.data);
+						requestIndex++;
+					}
 				} else {
 					requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
 				}
@@ -462,11 +465,11 @@ export async function getChatClient(): Promise<ChatClient> {
 							userRecord.channelId = channelId;
 						}
 						await userRecord.save();
-						console.log('Updated User Record: ', userRecord);
+						// console.log('Updated User Record: ', userRecord);
 					} else {
 						const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 						await newUser.save();
-						console.log('New User Data Created: ', newUser);
+						// console.log('New User Data Created: ', newUser);
 					}
 				} catch (error) {
 					console.error('Error updating watch time:', error);
@@ -518,19 +521,19 @@ export async function getChatClient(): Promise<ChatClient> {
 				}
 
 				const channelId = streamerChannel.id;
-				console.log('Broadcaster Channel ID: ', channelId);
+				// console.log('Broadcaster Channel ID: ', channelId);
 
 				// Update or create user record in the database for the current channel
 				const userRecord = await UserModel.findOne({ id: userId.id, channelId });
-				console.log('ExistingUser:', userRecord);
+				// console.log('ExistingUser:', userRecord);
 				if (userRecord) {
 					userRecord.watchTime = totalWatchTime;
 					await userRecord.save();
-					console.log('Updated User Record: ', userRecord);
+					// console.log('Updated User Record: ', userRecord);
 				} else {
 					const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 					await newUser.save();
-					console.log('New User Data Created: ', newUser);
+					// console.log('New User Data Created: ', newUser);
 				}
 			} catch (error) {
 				console.error('Error updating watch time:', error);

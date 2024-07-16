@@ -19,7 +19,7 @@ const userSchema = new Schema<IUser>({
 	channelId: { type: String },
 	roles: { type: String },
 	balance: { type: Number, default: 0 },
-	lastBegTime: { type: Date, default: new Date(0) },
+	lastBegTime: { type: Date, default: null },
 	challengedUser: { type: String },
 	duelChallengeAccepted: { type: Boolean },
 	inventory: { type: [String] },

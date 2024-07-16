@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
+import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const ban: Command = {
@@ -13,8 +13,11 @@ const ban: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const display = msg.userInfo.displayName;
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+
+		const display = msg.userInfo.displayName;
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
+		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 
 		try {
 			if (!args[0]) {
@@ -31,8 +34,8 @@ const ban: Command = {
 			}
 
 			// Check if the user is a mod or broadcaster
-			if (!msg.userInfo.isMod && !msg.userInfo.isBroadcaster) {
-				return chatClient.say(channel, `${display}, You don't have permission to use this command.`);
+			if (!msg.userInfo.isBroadcaster && !isEditor && !msg.userInfo.isMod) {
+				return chatClient.say(channel, `${display}, You don't have permission to use this command. Permission[Broadcaster, Moderator, ChannelEditor]`);
 			}
 
 			// Retrieve broadcaster information
@@ -40,15 +43,6 @@ const ban: Command = {
 			if (!broadcaster) {
 				return chatClient.say(channel, `Could not find broadcaster information for channel: ${channel}`);
 			}
-
-			// Ban the user
-			await userApiClient.moderation.banUser(broadcaster.id as UserIdResolvable, {
-				user: userSearch.id,
-				reason
-			});
-
-			// Send chat message about the ban
-			await chatClient.say(channel, `@${username} has been banned for Reason: ${reason}`);
 
 			const commandUsageEmbed = new EmbedBuilder()
 				.setTitle('CommandUsage[Ban]')
@@ -67,9 +61,12 @@ const ban: Command = {
 				.setFooter({ text: `${msg.userInfo.displayName} just banned ${userSearch.displayName} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
+			// Ban the user
+			await userApiClient.moderation.banUser(broadcaster.id as UserIdResolvable, { user: userSearch.id, reason });
+			// Send chat message about the ban
+			await chatClient.say(channel, `${username} has been banned for Reason: ${reason}`);
 			// Send the embed
 			await commandUsage.send({ embeds: [commandUsageEmbed] });
-
 		} catch (error) {
 			console.error('Error executing ban command:', error);
 		}

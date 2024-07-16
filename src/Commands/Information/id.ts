@@ -6,6 +6,7 @@ import { Command } from '../../interfaces/Command';
 const id: Command = {
 	name: 'id',
 	description: 'lookup your channel id',
+	devOnly: true,
 	usage: '!id (name)',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();

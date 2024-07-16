@@ -11,7 +11,6 @@ const shoutout: Command = {
 	name: 'shoutout',
 	description: 'Shout out a user from the chat',
 	usage: '!shoutout [@name]',
-	aliases: ['so'],
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();

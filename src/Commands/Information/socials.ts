@@ -25,11 +25,16 @@ const socials: Command = {
 
 		const social = args[0]?.toLowerCase();
 
-		if (social && social in socialURLs) {
-			const socialURL = socialURLs[social];
-			await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterInfo[0].displayName}'s ${social}: ${socialURL}`);
-		} else {
-			await chatClient.say(channel, `Which social are you looking for? Usage: ${socials.usage}`);
+		if (channel !== '#canadiendragon') return;
+		try {
+			if (social && social in socialURLs) {
+				const socialURL = socialURLs[social];
+				await chatClient.say(channel, `${msg.userInfo.displayName}, ${broadcasterInfo[0].displayName}'s ${social}: ${socialURL}`);
+			} else {
+				await chatClient.say(channel, `Which social are you looking for? Usage: ${socials.usage}`);
+			}	
+		} catch (error) {
+			console.error('Error Processing Socials Command ', error);
 		}
 	},
 };

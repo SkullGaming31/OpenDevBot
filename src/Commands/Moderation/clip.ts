@@ -16,6 +16,9 @@ const clipCommand: Command = {
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		console.log('Initialized chat client, user API client, and command usage webhook.');
+		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
+		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
+		const isStaff = msg.userInfo.isBroadcaster || isEditor || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip;
 
 		const clipEmbed = new EmbedBuilder()
 			.setTitle('Twitch Event[Twitch Clip Created]')
@@ -42,7 +45,7 @@ const clipCommand: Command = {
 			// console.log('Stream info:', stream);
 
 			if (stream !== null) {
-				if (msg.userInfo.isBroadcaster || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip) {
+				if (isStaff) {
 					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo[0].id as UserIdResolvable, createAfterDelay: true });
 					// console.log('Clip ID:', clipId);
 

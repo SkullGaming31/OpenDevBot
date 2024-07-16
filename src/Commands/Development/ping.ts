@@ -12,7 +12,7 @@ axios.defaults;
 const ping: Command = {
 	name: 'ping',
 	description: 'Displays Pong in chat',
-	usage: '!ping',
+	usage: '!ping [gamename]',
 	moderator: true,
 	devOnly: true,
 	cooldown: 30000,
@@ -31,24 +31,18 @@ const ping: Command = {
 		const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 		const isStaff = isModerator || isBroadcaster;
 
-		// Accessing and logging specific properties of each moderator
-		// moderatorsData.forEach((moderator: HelixModerator) => {
-		// 	console.log(
-		// 		'Moderator ID:', moderator.userId,
-		// 		'Moderator Display Name:', moderator.userDisplayName,
-		// 		'Moderator User Login:', moderator.userName);
-		// });
+		if (!args[0]) return chatClient.say(channel, 'Please Provide a Game to search the GameID for');
+		args.join(' ');
+		const GameQuery = await userApiClient.search.searchCategories(args[0]);
 
-		const tbd = await userApiClient.games.getGameByName('7 Days To Die');
-
-		console.log('7DaysToDie: ', tbd?.id);
+		const Game = await userApiClient.games.getGameByName(GameQuery.data[0].name);
 		
 
 		try {
 			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			const pingValue = await checkTwitchApiPing();
 			const uptime = getBotUptime(); // Get the bot uptime
-			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
+			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms, GameID: for ${Game?.name}:${Game?.id}`);
 		} catch (error) {
 			console.error(error);
 		}

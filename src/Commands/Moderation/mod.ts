@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { sleep } from '../../util/util';
 
 const mod: Command = {
 	name: 'mod',
@@ -54,6 +55,8 @@ const mod: Command = {
 				.setTimestamp();
 
 			if (isChannelEditor || msg.userInfo.isBroadcaster) {
+				await userApiClient.channels.removeVip(broadcasterInfo[0].id, userSearch.id);
+				sleep(3000);
 				await userApiClient.moderation.addModerator(broadcasterInfo[0].id as UserIdResolvable, userSearch.id);
 				await chatClient.say(channel, `${username} has been given moderator powers by ${display}`);
 			} else {

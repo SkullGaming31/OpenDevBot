@@ -65,14 +65,14 @@ const settitle: Command = {
 
 				try {
 					await userApiClient.channels.updateChannelInfo(broadcasterResponse?.id as UserIdResolvable, { 'title': title });
-					console.log('Broadcaster ID: ', broadcasterResponse?.id);
+					// console.log('Broadcaster ID: ', broadcasterResponse?.id);
 					await chatClient.say(channel, `${msg.userInfo.displayName} has updated the channel title to ${title}`);
 					await commandUsage.send({ embeds: [commandEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
 			} else {
-				chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster and do not have access to this command`);
+				chatClient.say(channel, `${msg.userInfo.displayName}, Access denied. This command can only be used by broadcasters, moderators, and channel editors.`);
 			}
 		} catch (error: any) {
 			console.error(error.message);

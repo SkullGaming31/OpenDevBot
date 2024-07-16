@@ -3,6 +3,9 @@ import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
 import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
+import { getUserApi } from '../../api/userApiClient';
+import { broadcasterInfo } from '../../util/constants';
+import { UserIdResolvable } from '@twurple/api';
 
 const beg: Command = {
 	name: 'beg',
@@ -10,12 +13,17 @@ const beg: Command = {
 	usage: '!beg',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
+		const userApiClient = await getUserApi();
 		const username = user.toLowerCase();
 		const userDoc = await UserModel.findOne({ username });
+		const channelId = msg.channelId;
 		const currentTime = new Date();
 		const lastBegTime = userDoc?.lastBegTime || new Date(0);
 		const timeSinceLastBeg = Math.floor((currentTime.getTime() - lastBegTime.getTime()) / 1000);
 		const begCooldownSeconds = 12 * 60 * 60; // 12 hours in seconds
+		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
+
+		if (stream === null) return;
 
 		if (timeSinceLastBeg < begCooldownSeconds) {
 			const remainingCooldown = begCooldownSeconds - timeSinceLastBeg;
@@ -25,11 +33,11 @@ const beg: Command = {
 			return chatClient.say(channel, `@${user}, you must wait ${remainingHours}h ${remainingMinutes}m ${remainingSeconds}s before begging again.`);
 		}
 
-		const successChance = 0.75; // Adjust as needed
-		if (Math.random() < successChance) {
+		const successChance = 0.30; // Adjust as needed
+		if (randomInt(1, 101) <= successChance * 100) {
 			// Successful beg
 			const amount = randomInt(1, 101);
-			await UserModel.updateOne({ username }, { $inc: { balance: amount }, $set: { lastBegTime: new Date() } });
+			await UserModel.updateOne({ username, channelId }, { $inc: { balance: amount }, $set: { lastBegTime: new Date() } });
 			const successResponses = [
 				`@${user}, your pitiful pleas tug at my heartstrings. Here's ${amount} Gold!`,
 				`@${user}, seems like you're down on your luck. Here's ${amount} Gold to get by.`,
@@ -42,7 +50,7 @@ const beg: Command = {
 				`@${user}, alright, alright, you win. Here's ${amount} Gold, but don't make a habit of it!`
 			];
 
-			const randomSuccessResponse = successResponses[Math.floor(Math.random() * successResponses.length)];
+			const randomSuccessResponse = successResponses[randomInt(0, successResponses.length)];
 			await chatClient.say(channel, randomSuccessResponse);
 		} else {
 			// Failed beg
@@ -56,7 +64,7 @@ const beg: Command = {
 				`@${user}, seems like you've used up all your good begging luck today. Try again later!`,
 				`@${user}, I appreciate the effort, but I'm going to have to say no this time. Maybe try offering a service instead of begging?`
 			];
-			const randomFailedResponse = failedResponses[Math.floor(Math.random() * failedResponses.length)];
+			const randomFailedResponse = failedResponses[randomInt(0, failedResponses.length)];
 			await chatClient.say(channel, randomFailedResponse);
 		}
 	}

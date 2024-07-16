@@ -138,6 +138,7 @@ const heist: Command = {
 		// Extract the amount from the command arguments
 		const amount = parseInt(args[0]);
 		betAmount = amount;
+		const channelId = msg.channelId;
 
 		// Function to load injury data from MongoDB
 		async function loadInjuryDataFromMongoDB(): Promise<InjuryData> {
@@ -247,14 +248,14 @@ const heist: Command = {
 			// console.log('Participant Data for User:', participantData[user]);
 		}
 
-		const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
+		const userBalance = await UserModel.findOne({ username: msg.userInfo.userName, channelId });
 		if (!userBalance) {
 			throw new Error('User not found');
 		}
 		if (userBalance.balance === undefined) return;
 
 		const updatedBalance = userBalance.balance - betAmount;
-		await UserModel.updateOne({ username: msg.userInfo.userName }, { balance: updatedBalance });
+		await UserModel.updateOne({ username: msg.userInfo.userName, channelId }, { balance: updatedBalance });
 
 		if (updatedBalance < 0) { return chatClient.say(channel, 'Insufficient balance for the heist.'); }
 
@@ -331,7 +332,7 @@ const heist: Command = {
 				if (winnerBalance.balance === undefined) return;
 				// Create a new object with the updated balance
 				const updatedBalance = winnerBalance.balance + winningAmount;
-				await UserModel.updateOne({ username: winner }, { balance: updatedBalance });
+				await UserModel.updateOne({ username: winner, channelId }, { balance: updatedBalance });
 			}
 
 			// Check if there are any winners
@@ -689,6 +690,7 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 	const chatClient: ChatClient = await getChatClient();
 	chatClient.onMessage(async (channel: string, user: string, message: string, msg) => {
 		const command = message.trim().toLowerCase();
+		const channelId = msg.channelId;
 
 		if (command === '!join' && isHeistInProgress && !participants.includes(user)) {
 			// Check if the user has any recorded injuries
@@ -707,7 +709,7 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 			}
 
 			// Continue with the join process if the user is eligible
-			const userBalance = await UserModel.findOne({ username: msg.userInfo.userName });
+			const userBalance = await UserModel.findOne({ username: msg.userInfo.userName, channelId });
 
 			if (!userBalance) {
 				throw new Error('User not found');

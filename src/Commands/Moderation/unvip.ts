@@ -21,10 +21,17 @@ const unvip: Command = {
 		try {
 			const broadcasterResponse = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 			if (broadcasterResponse?.id === undefined) return;
+			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
+			const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
+			const isStaff = isEditor || msg.userInfo.isMod || msg.userInfo.isBroadcaster;
+
 			const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
 			if (userSearch?.id === undefined) return;
+
 			const vipLookup = await userApiClient.channels.getVips(broadcasterInfo[0].id as UserIdResolvable, { limit: 20 });
-			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is already a vip');
+			if (vipLookup.data[1].id === userSearch?.id) return chatClient.say(channel, 'this user is not a vip');
+
+			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
 
 			const unVIPEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[VIP Removed]')
@@ -46,7 +53,7 @@ const unvip: Command = {
 				.setFooter({ text: `${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
 				.setTimestamp();
 			try {
-				if (userSearch) {
+				if (userSearch && stream === null && isStaff) {
 					await userApiClient.channels.removeVip(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id);
 					await chatClient.say(channel, `@${args[0].replace('@', '')} has been removed from VIP status`);
 				} else {

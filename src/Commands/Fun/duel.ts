@@ -10,7 +10,9 @@ const duel: Command = {
 	usage: '!duel [user] [amount]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
+
 		const username = user.toLowerCase();
+		const channelId = msg.channelId;
 
 		// Parse the challenged user and the duel amount from the arguments
 		const challengedUser = args[0];
@@ -21,14 +23,14 @@ const duel: Command = {
 		if (!duelAmount || duelAmount <= 0) return chatClient.say(channel, 'Invalid duel amount.');
 
 		// Check if the challenged user exists
-		const challengedUserDoc = await UserModel.findOne({ username: challengedUser.toLowerCase() });
+		const challengedUserDoc = await UserModel.findOne({ username: challengedUser.toLowerCase(), channelId });
 		if (!challengedUserDoc) return chatClient.say(channel, 'User not found.');
 
 		// Check if the challenged user is the same as the challenger
 		if (challengedUserDoc.id === msg.userInfo.userId) return chatClient.say(channel, 'You cannot duel yourself.');
 
 		// Check if the challenger has enough balance
-		const challengerDoc = await UserModel.findOne({ username });
+		const challengerDoc = await UserModel.findOne({ username, channelId });
 		if (challengerDoc?.balance === undefined) return;
 		if (!challengerDoc || challengerDoc.balance < duelAmount) return chatClient.say(channel, 'You don\'t have enough balance to start the duel.');
 
@@ -44,7 +46,7 @@ const duel: Command = {
 		}
 
 		// Deduct the duel amount from the challenger's balance
-		await UserModel.updateOne({ username }, { $inc: { balance: -duelAmount } });
+		await UserModel.updateOne({ username, channelId }, { $inc: { balance: -duelAmount } });
 
 		// Choose a random winner
 		const winnerIndex = Math.floor(Math.random() * 2);
@@ -52,13 +54,13 @@ const duel: Command = {
 		const loser = winnerIndex === 0 ? challengedUserDoc.id : msg.userInfo.userId;
 
 		// Award the prize to the winner
-		await UserModel.updateOne({ username: winner }, { $inc: { balance: duelAmount } });
+		await UserModel.updateOne({ username: winner, channelId }, { $inc: { balance: duelAmount } });
 
 		// Announce the winner in the chat
 		await chatClient.say(channel, `${msg.userInfo.displayName} has won the duel against ${challengedUser} and won ${duelAmount} gold!`);
 
 		// Reset the challenged user's duel challenge accepted flag
-		await UserModel.updateOne({ username: challengedUserDoc.username }, { $set: { duelChallengeAccepted: false } });
+		await UserModel.updateOne({ username: challengedUserDoc.username, channelId }, { $set: { duelChallengeAccepted: false } });
 	}
 };
 

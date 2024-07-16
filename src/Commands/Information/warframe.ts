@@ -102,6 +102,8 @@ const warframe: Command = {// needs more work
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
+		if (channel !== '#canadiendragon') return;
+
 		const display = msg.userInfo.displayName;
 		switch (args[0]) {
 			case 'about':

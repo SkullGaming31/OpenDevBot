@@ -73,7 +73,7 @@ const marker: Command = {
 
 			// Check if user is authorized to use the command
 			if (!isStaff) {
-				await chatClient.say(channel, 'You do not have the required permission to use this command: Channel {Broadcaster or Moderator}');
+				await chatClient.say(channel, 'You do not have the required permission to use this command: Channel {Broadcaster or Editor}');
 				return;
 			}
 

@@ -2,7 +2,6 @@ import { Command } from '../../interfaces/Command';
 import { ChatMessage } from '@twurple/chat/lib';
 import { UserModel } from '../../database/models/userModel';
 import { getChatClient } from '../../chat';
-import { getUserApi } from '../../api/userApiClient';
 
 const watchTime: Command = {
 	name: 'watchtime',
@@ -10,10 +9,10 @@ const watchTime: Command = {
 	usage: '!watchtime',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
-		const userApiClient = await getUserApi();
 
 		try {
 			const userRecord = await UserModel.findOne({ id: msg.userInfo.userId });
+			console.log('User Watchtime Record: ', userRecord);
 
 			if (userRecord && userRecord.watchTime !== undefined) {
 				const totalSeconds = userRecord.watchTime / 1000;

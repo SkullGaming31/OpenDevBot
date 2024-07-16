@@ -16,12 +16,14 @@ const gamble: Command = {
 	usage: '!gamble <amount>',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
+
 		const username = user.toLowerCase();
+		const channelId = msg.channelId;
 		try {
 			// Retrieve the user from the database
 			let userModel: IUser | null;
 			try {
-				userModel = await UserModel.findOne<IUser>({ username, channelId: msg.channelId }).exec();
+				userModel = await UserModel.findOne<IUser>({ username, channelId }).exec();
 			} catch (error) {
 				console.error('Error retrieving user from database:', error);
 				await chatClient.say(channel, 'An error occurred while retrieving user information.');

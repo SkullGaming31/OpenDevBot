@@ -231,40 +231,44 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		//#endregion
 
 		const online = eventSubListener.onStreamOnline(info.id as UserIdResolvable, async (o) => {
+			const userApiClient = await getUserApi();
 			const stream = await o.getStream();
 			const userInfo = await o.getBroadcaster();
 	
-			const liveEmbed = new EmbedBuilder()
-				.setTitle('Twitch Event[NOW LIVE]')
-				.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}`})
-				.addFields([
-					{
-						name: 'Stream Title',
-						value: `${stream?.title || 'No Title Set'}`,
-						inline: true
-					},
-					{
-						name: 'game: ',
-						value: `${stream?.gameName || 'No Game Set'}`,
-						inline: true
-					},
-					{
-						name: 'Viewers: ',
-						value: `${stream?.viewers || 0}`,
-						inline: true
-					},
-				])
-				.setURL(`https://twitch.tv/${userInfo.name}`)
-				.setColor('Green')
-				.setTimestamp();
-	
 			try {
+				const game = await userApiClient.games.getGameById(stream?.gameId as string);
+	
+				const liveEmbed = new EmbedBuilder()
+					.setTitle('Twitch Event[NOW LIVE]')
+					.setAuthor({ name: `${o.broadcasterName}`, iconURL: `${userInfo.profilePictureUrl}`})
+					.addFields([
+						{
+							name: 'Stream Title',
+							value: `${stream?.title || 'No Title Set'}`,
+							inline: true
+						},
+						{
+							name: 'game: ',
+							value: `${stream?.gameName || 'No Game Set'}`,
+							inline: true
+						},
+						{
+							name: 'Viewers: ',
+							value: `${stream?.viewers || 0}`,
+							inline: true
+						},
+					])
+					.setURL(`https://twitch.tv/${userInfo.name}`)
+					.setImage(`${game?.boxArtUrl}`)
+					.setColor('Green')
+					.setTimestamp();
+
 				if (stream?.thumbnailUrl) { liveEmbed.setImage(`${stream.thumbnailUrl}`); }
 				if (userInfo.profilePictureUrl) { liveEmbed.setThumbnail(userInfo.profilePictureUrl); }
 
 				
 				await sleep(60000);
-				await userApiClient.chat.sendAnnouncement(info.id  as UserIdResolvable as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName}- (${stream?.title})` });
+				await userApiClient.chat.sendAnnouncement(info.id  as UserIdResolvable, { color: 'green', message: `${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName}- (${stream?.title})` });
 				if (info.id === '31124455') {
 					await sleep(60000);
 					await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
@@ -1166,21 +1170,25 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const channelUpdates = eventSubListener.onChannelUpdate(info.id as UserIdResolvable, async (event) => {
 			const { streamTitle, categoryName } = event;
 			const chatClient = await getChatClient();
-	
+
+			if (info.name === 'canadiendragon') {
 			// Check if both title and category have changed
-			if (streamTitle !== previousTitle && categoryName !== previousCategory) {
+				if (streamTitle !== previousTitle && categoryName !== previousCategory) {
 				// Display a chat message with both updated stream title and category
-				await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}. Stream category has been updated: ${categoryName}`);
-				previousTitle = streamTitle; // Update the previous title
-				previousCategory = categoryName; // Update the previous category
-			} else if (streamTitle !== previousTitle) {
+					await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}. Stream category has been updated: ${categoryName}`);
+					previousTitle = streamTitle; // Update the previous title
+					previousCategory = categoryName; // Update the previous category
+				} else if (streamTitle !== previousTitle) {
 				// Display a chat message with the updated stream title
-				await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}`);
-				previousTitle = streamTitle; // Update the previous title
-			} else if (categoryName !== previousCategory) {
+					await chatClient.say(event.broadcasterName, `Stream title has been updated: ${streamTitle}`);
+					previousTitle = streamTitle; // Update the previous title
+				} else if (categoryName !== previousCategory) {
 				// Display a chat message with the updated stream category
-				await chatClient.say(event.broadcasterName, `Stream category has been updated: ${categoryName}`);
-				previousCategory = categoryName; // Update the previous category
+					await chatClient.say(event.broadcasterName, `Stream category has been updated: ${categoryName}`);
+					previousCategory = categoryName; // Update the previous category
+				}
+			} else {
+				return;
 			}
 		});
 	}
@@ -1232,7 +1240,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				
 			if (existingSubscription) {
 				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-					console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+					// console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
 				}
 				return; // Exit early if subscription already exists
 			}

@@ -50,6 +50,8 @@ const vip: Command = {
 				return await chatClient.say(channel, 'This user is already a VIP');
 			}
 
+			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
+
 			// Construct VIP embed message
 			const vipEmbed = new EmbedBuilder()
 				.setTitle('Command Usage[VIP]')
@@ -72,9 +74,13 @@ const vip: Command = {
 				.setTimestamp();
 
 			// Add user as VIP
-			await userApiClient.channels.addVip(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
-			await chatClient.say(channel, `@${args[0]} has been added as VIP by ${msg.userInfo.displayName}`);
-			await commandUsage.send({ embeds: [vipEmbed] });
+			if (stream !== null) {
+				await userApiClient.channels.addVip(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
+				await chatClient.say(channel, `${args[0]} has been added as VIP by ${msg.userInfo.displayName}`);
+				await commandUsage.send({ embeds: [vipEmbed] });
+			} else {
+				chatClient.say(channel, 'Stream must be live to use this command');
+			}
 		} catch (error) {
 			console.error(error);
 		}

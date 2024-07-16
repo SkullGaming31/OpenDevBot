@@ -10,7 +10,9 @@ const dig: Command = {
 	usage: '!dig [amount]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
+
 		const username = user.toLowerCase();
+		const channelId = msg.channelId;
 
 		// Parse the dig amount from the arguments
 		const digAmount = parseInt(args[0]);
@@ -20,7 +22,7 @@ const dig: Command = {
 		if (digAmount < 100 && digAmount > 5000) return chatClient.say(channel, 'Minimum/maximum bet amount is 100-5000');
 
 		// Check if the user has enough balance
-		const userDoc = await UserModel.findOne<IUser>({ username, channelId: msg.channelId });
+		const userDoc = await UserModel.findOne<IUser>({ username, channelId });
 		if (userDoc?.balance === undefined) return;
 		if (!userDoc || userDoc.balance < digAmount) { return chatClient.say(channel, 'You don\'t have enough balance to dig.'); }
 
@@ -48,7 +50,7 @@ const dig: Command = {
 
 		// Check if the user dug up a bomb
 		if (holes[0] === 'bomb') {
-			await UserModel.updateOne({ username }, { $inc: { balance: Math.min(0, -digAmount) } });
+			await UserModel.updateOne({ username, channelId }, { $inc: { balance: Math.min(0, -digAmount) } });
 			const badLuckMessages = [
 				'You dug up a bomb and lost ${digAmount} gold. There were ${numBombs} bombs in play. Better luck next time!',
 				'Oops! You hit a bomb and lost ${digAmount} gold. Try again soon!',
@@ -65,7 +67,7 @@ const dig: Command = {
 
 		// If the user didn't dig up a bomb, award them with a prize
 		const prizeAmount = Math.floor(Math.random() * (digAmount * 2)) + digAmount;
-		await UserModel.updateOne({ username }, { $inc: { balance: prizeAmount } });
+		await UserModel.updateOne({ username, channelId }, { $inc: { balance: prizeAmount } });
 		return chatClient.say(channel, `You dug up the cache  and won ${prizeAmount} gold! You managed to avoid ${numBombs} bombs.`);
 	}
 };

@@ -80,13 +80,13 @@ const roulette: Command = {
 				chamberState.bullets += 1; // Increase the bullets in the chamber
 
 				// Add gold reward
-				const userRecord = await UserModel.findOne({ id: msg.userInfo.userId });
+				const userRecord = await UserModel.findOne({ id: msg.userInfo.userId, channelId: msg.channelId });
 				if (userRecord && userRecord.balance !== undefined) {
 					userRecord.balance += rewardGold;
 					console.log('updating UserData');
 					await userRecord.save();
 				} else {
-					const newUser = new UserModel({ id: msg.userInfo.userId, balance: rewardGold, roles: 'USER' });
+					const newUser = new UserModel({ id: msg.userInfo.userId, channelId: msg.channelId, balance: rewardGold, roles: 'User' });
 					console.log('New UserData Saved');
 					await newUser.save();
 				}
