@@ -78,14 +78,16 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
-		console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+		const Enviroment = process.env.Enviroment as string;
+		if (Enviroment === 'dev' || Enviroment === 'debug') {
+			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
+		}
 
 		try {
 			const cursor = ''; // Initialize the cursor value
 			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
-			const Enviroment = process.env.Enviroment as string;
 	
 			let intervalDuration: number;
 			if (process.env.Env === 'dev' || process.env.Env === 'debug') {

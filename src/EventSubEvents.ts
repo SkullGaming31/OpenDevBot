@@ -944,6 +944,23 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		});
 		const follow = eventSubListener.onChannelFollow(info.id as UserIdResolvable, info.id as UserIdResolvable, async (e) => {
 			try {
+				const defaultMessages: string[] = [
+					'@${e.userDisplayName} has followed the channel',
+					'@${e.userDisplayName} has joined the army and entered the barracks',
+					'Brace yourself, @${e.userDisplayName} has followed',
+					'HEY! LISTEN! @${e.userDisplayName} has followed',
+					'We\'ve been expecting you @${e.userDisplayName}',
+					'@${e.userDisplayName} just followed, quick everyone look busy',
+					'Challenger Approaching - @${e.userDisplayName} has followed',
+					'Welcome @${e.userDisplayName}, stay awhile and listen',
+					'@${e.userDisplayName} has followed, it\'s super effective',
+					'@${e.userDisplayName} has joined the party! Let\'s rock and roll!',
+					'Looks like @${e.userDisplayName} is ready for an adventure! Welcome to…',
+					'The hero we need has arrived! Welcome, @${e.userDisplayName}!',
+					'@${e.userDisplayName} has leveled up! Welcome to the next stage of the…',
+					'It\'s dangerous to go alone, @${e.userDisplayName}. Take this warm welc…',
+					'Welcome to the battlefield, @${e.userDisplayName}. Let\'s conquer toget…'
+				];
 				const userInfo = await e.getUser();
 				if (!broadcasterInfo) {
 					return console.error('broadcasterInfo is undefined');
@@ -951,31 +968,26 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				
 				const stream = await userApiClient.channels.getChannelInfoById(info.id as UserIdResolvable);
 				const isDescriptionEmpty = userInfo.description === '';
-				let gameId = stream?.gameId || ''; // Default gameId to empty string if not provided
-		
-				// If gameId is an empty string, use 'default' as fallback
-				if (gameId === '') {
-					gameId = 'default';
-				}
-		
-				let followMessage;
-		
-				// Handle empty string gameId separately to fetch default messages
-				if (gameId === 'default') {
-					followMessage = await FollowMessage.findOne({ gameId: { $in: ['', 'default'] } });
-				} else {
-					followMessage = await FollowMessage.findOne({ gameId });
-				}
-		
-				if (!followMessage) {
-					console.error('No follow messages found for this game.');
+				const gameId = stream?.gameId;
+				if (!gameId) {
+					console.error('No gameId found for the current stream.');
 					return;
 				}
-		
-				const messages = followMessage.messages;
+				let followMessage = await FollowMessage.findOne({ gameId });
+				
+				if (!followMessage) {
+					console.error(`No follow messages found for gameId: ${gameId}`);
+					followMessage = await FollowMessage.findOne({ name: 'default' });
+					if (!followMessage) {
+						console.error('No default follow messages found.');
+						return;
+					}
+				}
+				
+				const messages = followMessage.messages.length > 0 ? followMessage.messages : defaultMessages;
 				const randomIndex = Math.floor(Math.random() * messages.length);
 				const randomMessage = messages[randomIndex].replace('${e.userDisplayName}', e.userDisplayName);
-		
+				
 				const followEmbed = new EmbedBuilder()
 					.setTitle('Twitch Event[Follow]')
 					.setAuthor({ name: `${e.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}` })
@@ -988,19 +1000,19 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						},
 					])
 					.setThumbnail(`${userInfo.profilePictureUrl}`)
-					.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}` })
+					.setFooter({ text: `Channel: ${info.name}`, iconURL: `${userInfo.profilePictureUrl}` })
 					.setTimestamp();
-		
+				
 				if (!isDescriptionEmpty) {
 					console.log(`Users Channel Description: ${userInfo.description}`);
 				}
-		
+				
 				await chatClient.say(info.name, `${randomMessage}`);
 				await twitchActivity.send({ embeds: [followEmbed] });
 			} catch (error) {
 				console.error('An error occurred in the follower event handler:', error);
 			}
-		});		
+		});				
 		const subs = eventSubListener.onChannelSubscription(info.id as UserIdResolvable, async (s) => {
 			const userInfo = await s.getUser();
 			let subTier;

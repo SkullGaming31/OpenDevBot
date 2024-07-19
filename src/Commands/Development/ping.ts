@@ -31,18 +31,17 @@ const ping: Command = {
 		const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 		const isStaff = isModerator || isBroadcaster;
 
-		if (!args[0]) return chatClient.say(channel, 'Please Provide a Game to search the GameID for');
-		args.join(' ');
-		const GameQuery = await userApiClient.search.searchCategories(args[0]);
-
-		const Game = await userApiClient.games.getGameByName(GameQuery.data[0].name);
-		
-
 		try {
+			if (!args[0]) return chatClient.say(channel, 'Please Provide a Game to search the GameID for');
+			const gameName = args.join(' '); // Join the args array into a string with a space separator
+			const game = await userApiClient.games.getGameByName(gameName);
+	
+			await chatClient.say(channel, `${game?.name} Id is ${game?.id}`);
+			console.log(`${game?.name} Id is ${game?.id}`);
 			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			const pingValue = await checkTwitchApiPing();
 			const uptime = getBotUptime(); // Get the bot uptime
-			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms, GameID: for ${Game?.name}:${Game?.id}`);
+			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 		} catch (error) {
 			console.error(error);
 		}
