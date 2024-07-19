@@ -1036,7 +1036,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		});
 		const cheer = eventSubListener.onChannelCheer(info.id as UserIdResolvable, async (cheer) => {
 			const userInfo = await cheer.getUser();
-			if (cheer.bits >= 100) {
+			if (cheer.bits >= 50) {
 				const cheerEmbed = new EmbedBuilder()
 					.setTitle('Twitch Event[CHEER]')
 					.setAuthor({ name: `${userInfo?.displayName}`, iconURL: `${userInfo?.profilePictureUrl}`})
@@ -1059,65 +1059,61 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					])
 					.setThumbnail(`${userInfo?.profilePictureUrl}`)
 					.setColor('Random')
-					.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo?.profilePictureUrl}`})
+					.setFooter({ text: `Channel ${info.name}`, iconURL: `${userInfo?.profilePictureUrl}`})
 					.setTimestamp();
 				try {
-					await chatClient.say(info.id, `${cheer.userDisplayName} has cheered ${cheer.bits} bits`);
+					await chatClient.say(info.name, `${cheer.userDisplayName} has cheered ${cheer.bits} bits in ${info.name}`);
 					await twitchActivity.send({ embeds: [cheerEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
 			}
 		});
-		const raidToListener = eventSubListener.onChannelRaidTo(info.id as UserIdResolvable, async (raidToEvent) => {
+		const raidToListener = eventSubListener.onChannelRaidTo(info.id as UserIdResolvable, async (raidToEvent) => { // raided by another streamer
 			try {
-				console.log('Raid To Event:', raidToEvent);
-				const raidedBroadcaster = await raidToEvent.getRaidedBroadcaster();
-				const raidingBroadcaster = await raidToEvent.getRaidingBroadcaster();
+				const raidedBroadcaster = await raidToEvent.getRaidedBroadcaster(); // You (the broadcaster)
+				const raidingBroadcaster = await raidToEvent.getRaidingBroadcaster(); // User raiding you
 	
 				const raidEmbed = new EmbedBuilder()
-					.setTitle('Raid Initiated!')
-					// .setColor('Purple') // Adjust color as needed
-					.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl})
+					.setTitle('Twitch Event [RAID]')
+					.setAuthor({ name: raidedBroadcaster.displayName, iconURL: raidedBroadcaster.profilePictureUrl})
 					.addFields([
-						{ name: 'Raided Channel:', value: `[${raidedBroadcaster.displayName}](https://twitch.tv/${raidedBroadcaster.displayName.toLowerCase()})`, inline: false },
-						{ name: 'Viewers:', value: `${raidToEvent.viewers} viewers`, inline: false },
+						{ name: 'Raided By: ', value: raidingBroadcaster.displayName, inline: true },
+						{ name: 'Viewer Count: ', value: `${raidToEvent.viewers} Viewers`, inline: true },
 					])
+					.setURL(`https://twitch.tv/${raidingBroadcaster.displayName.toLowerCase()}`)
+					.setThumbnail(raidingBroadcaster.profilePictureUrl)
+					.setFooter({ text: `Channel ${info.name}`, iconURL: raidingBroadcaster.offlinePlaceholderUrl})
 					.setTimestamp();
 	
+				const raidMessage = `${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
+				await chatClient.say(info.id, raidMessage);
 				await twitchActivity.send({ embeds: [raidEmbed] });
+	
+				await sleep(1000);
+	
+				await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.name);
 			} catch (error) {
 				console.error('Error sending raid notification to Discord:', error);
 			}
 		});
-		const raidFromListener = eventSubListener.onChannelRaidFrom(info.id as UserIdResolvable, async (raidEvent) => {
+		const raidFromListener = eventSubListener.onChannelRaidFrom(info.id as UserIdResolvable, async (raidEvent) => { // raiding another streamer
 			try {
-				console.log('Raid Data: ', raidEvent);
-	
-				const raidedBroadcaster = await raidEvent.getRaidedBroadcaster(); // You (the broadcaster)
-				const raidingBroadcaster = await raidEvent.getRaidingBroadcaster(); // User raiding you
+				console.log('Raid To Event:', raidEvent);
+				const raidedBroadcaster = await raidEvent.getRaidedBroadcaster();
+				const raidingBroadcaster = await raidEvent.getRaidingBroadcaster();
 	
 				const raidEmbed = new EmbedBuilder()
-					.setTitle('Twitch Event [RAID]')
-					// .setColor('Green')
-					.setAuthor({ name: raidingBroadcaster.displayName, iconURL: raidingBroadcaster.profilePictureUrl})
+					.setTitle('Raid Initiated!')
+					.setColor('Purple') // Adjust color as needed
+					.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl})
 					.addFields([
-						{ name: 'Raided By: ', value: raidingBroadcaster.displayName, inline: true },
-						{ name: 'Viewer Count: ', value: `${raidEvent.viewers} Viewers`, inline: true },
+						{ name: 'Raided Channel:', value: `[${raidedBroadcaster.displayName}](https://twitch.tv/${raidedBroadcaster.displayName.toLowerCase()})`, inline: false },
+						{ name: 'Viewers:', value: `${raidEvent.viewers} viewers`, inline: false },
 					])
-					.setURL(`https://twitch.tv/${raidingBroadcaster.displayName.toLowerCase()}`)
-					.setThumbnail(raidedBroadcaster.profilePictureUrl) // You (the broadcaster)
-					.setFooter({ text: 'DragonFire Lair', iconURL: raidingBroadcaster.offlinePlaceholderUrl})
 					.setTimestamp();
 	
-				const raidMessage = `${raidEvent.raidedBroadcasterDisplayName} has raided the channel with ${raidEvent.viewers} viewers!`;
-				await chatClient.say(info.id, raidMessage);
-	
 				await twitchActivity.send({ embeds: [raidEmbed] });
-	
-				await sleep(3000); // Consider adjusting delay based on needs
-	
-				await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.name);
 			} catch (error) {
 				console.error(error);
 			}

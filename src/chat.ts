@@ -416,9 +416,10 @@ export async function getChatClient(): Promise<ChatClient> {
 						}
 					}
 				}, UPDATE_INTERVAL);
-	
+				
 				// Store viewer's data in the map
 				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTimesMap.get(channelId) || 0, intervalId });
+				if (stream === null) clearInterval(intervalId);
 	
 				// Ensure bot is a moderator in the channel if required
 				if (chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
