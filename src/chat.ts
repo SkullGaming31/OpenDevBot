@@ -279,7 +279,7 @@ export async function initializeChat(): Promise<void> {
 
 					// If the command is marked as devOnly and the user is NOT a moderator or broadcaster in the specific channel, restrict access
 					if (command.devOnly && msg.channelId !== '31124455' && !(msg.userInfo.isBroadcaster || msg.userInfo.isMod)) {
-						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragon\'s Channel');
+						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragon\'s Channel, https://twitch.tv/canadiendragon');
 					}
 
 					// If the command is restricted to the broadcaster and moderators, enforce the restriction
@@ -351,6 +351,8 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance = new ChatClient({
 			authProvider,
+			botLevel: 'none',
+			rejoinChannelsOnReconnect: true,
 			channels: [], // Initialize with an empty array
 			logger: { minLevel: 'ERROR' },
 			requestMembershipEvents: true,
@@ -384,7 +386,9 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (!channelInfo || channelInfo.id === undefined) return;
 	
 				const channelId = channelInfo.id as string;
-				console.log(`User ${user} joined channel ${channel} (${channelId})`);
+				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+					console.log(`User ${user} joined channel ${channel} (${channelId})`);
+				}
 	
 				// Initialize the map with existing watch time and start an interval to update it
 				const intervalId = setInterval(async () => {
@@ -404,9 +408,13 @@ export async function getChatClient(): Promise<ChatClient> {
 							const updatedUser = await UserModel.findOneAndUpdate(filter, update, options);
 											
 							if (updatedUser) {
-								console.log(`Updated watch time for user ${user} on channel ${channelId}: ${totalWatchTime}`);
+								if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+									console.log(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+								}
 							} else {
-								console.log(`New user record created for user ${user} on channel ${channelId}: ${totalWatchTime}`);
+								if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+									console.log(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+								}
 							}
 						} catch (error: any) {
 							if (error.code === 11000) {
@@ -483,9 +491,7 @@ export async function getChatClient(): Promise<ChatClient> {
 		// Connect the chat client
 		chatClientInstance.connect();
 
-		// Delay between joining channels
 		for (const username of usernames) {
-			// Skip joining the "opendevbot" channel
 			if (username.toLowerCase() === 'opendevbot') {
 				continue;
 			}
@@ -494,7 +500,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (process.env.Enviroment === 'dev') {
 					console.log(`Joined channel: ${username}`);
 				} else { return; }
-			}, 2000); // 2000 milliseconds (2 seconds) delay
+			}, 2000);
 			chatClientInstance.reconnect();
 		}
 		console.log('ChatClient instance initialized and connected.');
