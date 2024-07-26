@@ -33,8 +33,12 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 	//#region EventSub
 	for (const info of broadcasterInfo) {
+		// Find the matching broadcaster info based on the channel 
+		const redeemChannelId = '31124455';
+		const matchingBroadcaster = broadcasterInfo.find(info => info.id === redeemChannelId);
 		//#region ChannelPoints
-		if (info.id as UserIdResolvable === '31124455') {
+		if (!matchingBroadcaster) return;
+		if (matchingBroadcaster.id as UserIdResolvable === '31124455') {
 			const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
 				title: 'Shoutout',
 				cost: 2000,
