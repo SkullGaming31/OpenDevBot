@@ -9,7 +9,7 @@ import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
 import { LurkMessageModel } from './database/models/LurkModel';
-import { createChannelPointsRewards } from './misc/channelPoints';
+import { createChannelPointsRewards, DeleteChannelPointsRewards } from './misc/channelPoints';
 import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, moderatorIDs } from './util/constants';
 import { sleep } from './util/util';
 import { SubscriptionInfo, SubscriptionModel } from './database/models/eventSubscriptions';
@@ -27,6 +27,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	//#endregion
 
 	await createChannelPointsRewards(false);
+	await DeleteChannelPointsRewards(true);
 
 	// eventSub Stuff
 	if (broadcasterInfo === undefined || moderatorIDs === undefined) return;
@@ -38,200 +39,198 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const matchingBroadcaster = broadcasterInfo.find(info => info.id === redeemChannelId);
 		//#region ChannelPoints
 		if (!matchingBroadcaster) return;
-		if (matchingBroadcaster.id as UserIdResolvable === '31124455') {
-			const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
-				title: 'Shoutout',
-				cost: 2000,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 60,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: 3,
-				maxRedemptionsPerStream: null,
-				prompt: 'shout yourself out with Channel Points',
-				userInputRequired: false
-			});
-			const Hydrate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
-				title: 'Hydrate',
-				cost: 250,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 60,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Make me take a sip of whatever im drinking!',
-				userInputRequired: false
-			});
-			const DropController = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '652b2b71-5903-47bf-bf8c-076a28a1cafc', {
-				title: 'DropController',
-				cost: 1000,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 60,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'put down the controller for 15 seconds!',
-				userInputRequired: false
-			});
-			const IRLVoiceBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '9b59a9d9-69eb-4570-a3df-07080ed21761', {
-				title: 'IRLVoiceBan',
-				cost: 1500,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 60,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'I can\'t say anything for the next 3 minutes!',
-				userInputRequired: false
-			});
-			const IRLWordBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '1bab3478-f2cc-447e-94f4-8de2a28ad975', {
-				title: 'IRLWordBan',
-				cost: 1500,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 30,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'What Word can i not say for 5 minutes!',
-				userInputRequired: true
-			});
-			const MUTEHeadset = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e148d22c-f104-4d5b-9941-8097f79f9179', {
-				title: 'MUTEHeadset',
-				cost: 2000,
-				autoFulfill: true,
-				backgroundColor: '#09CB4C',
-				globalCooldown: 60,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Mute Headset Sounds untel you tell me i can put them back on or encounter ends!',
-				userInputRequired: false
-			});
-			const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e054cc48-edc4-4c01-96d7-856edc9c39b6', {
-				title: 'Instagram',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Click for a link to my Instagram profile',
-				userInputRequired: false
-			});
-			const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '3fa8d533-0d6d-47a3-b1c5-280f1bfb2895', {
-				title: 'TikTok',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Click for a link to my Tik-Tok profile',
-				userInputRequired: false
-			});
-			const discordUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '88a92e0f-4199-4bc8-b555-76d70856b5a4', {
-				title: 'Discord',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 300,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my Discord Server',
-				userInputRequired: false
-			});
-			const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
-				title: 'Facebook',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my facebook page',
-				userInputRequired: false
-			});
-			const youtubeUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '71192c7c-8055-453a-a726-3b095319fed3', {
-				title: 'YouTube',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my youtube channel',
-				userInputRequired: false
-			});
-			const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '5c18b145-5824-4c8c-9419-4c0b4f52f489', {
-				title: 'Snapchat',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: false,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my Snapchat',
-				userInputRequired: false
-			});
-			const merchUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'cd77cc2a-94c9-41e8-8143-8b68d68b4b13', {
-				title: 'Merch',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 30,
-				isEnabled: false,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my Merch Shop',
-				userInputRequired: false
-			});
-			const tipUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'faa9bdc4-ef09-4a32-9e9b-4d2ae84a576f', {
-				title: 'Tip',
-				cost: 1,
-				autoFulfill: true,
-				backgroundColor: '#d0080a',
-				globalCooldown: 5,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'click for a link to my Tipping Page',
-				userInputRequired: false
-			});
-			const Baningameaction = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'ab17d121-b5b7-4df1-94b0-9f2864292e63', {
-				title: 'Ban an in-game action',
-				cost: 1500,
-				autoFulfill: false,
-				backgroundColor: '#d0080a',
-				globalCooldown: 5,
-				isEnabled: true,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Ban an In-Game Action while playing a game only!',
-				userInputRequired: true
-			});
-			const NBJ = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
-				title: 'No Bullet Jumping',
-				cost: 600,
-				autoFulfill: false,
-				backgroundColor: '#32CD32',
-				globalCooldown: 60,
-				isEnabled: false,
-				maxRedemptionsPerUserPerStream: null,
-				maxRedemptionsPerStream: null,
-				prompt: 'Not aloud to bullet jump in warframe for a full mission',
-				userInputRequired: false
-			});
-		}
+		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
+			title: 'Shoutout',
+			cost: 2000,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: 3,
+			maxRedemptionsPerStream: null,
+			prompt: 'shout yourself out with Channel Points',
+			userInputRequired: false
+		});
+		const Hydrate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
+			title: 'Hydrate',
+			cost: 250,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Make me take a sip of whatever im drinking!',
+			userInputRequired: false
+		});
+		const DropController = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '652b2b71-5903-47bf-bf8c-076a28a1cafc', {
+			title: 'DropController',
+			cost: 1000,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'put down the controller for 15 seconds!',
+			userInputRequired: false
+		});
+		const IRLVoiceBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '9b59a9d9-69eb-4570-a3df-07080ed21761', {
+			title: 'IRLVoiceBan',
+			cost: 1500,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'I can\'t say anything for the next 3 minutes!',
+			userInputRequired: false
+		});
+		const IRLWordBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '1bab3478-f2cc-447e-94f4-8de2a28ad975', {
+			title: 'IRLWordBan',
+			cost: 1500,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'What Word can i not say for 5 minutes!',
+			userInputRequired: true
+		});
+		const MUTEHeadset = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e148d22c-f104-4d5b-9941-8097f79f9179', {
+			title: 'MUTEHeadset',
+			cost: 2000,
+			autoFulfill: true,
+			backgroundColor: '#09CB4C',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Mute Headset Sounds untel you tell me i can put them back on or encounter ends!',
+			userInputRequired: false
+		});
+		const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e054cc48-edc4-4c01-96d7-856edc9c39b6', {
+			title: 'Instagram',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Click for a link to my Instagram profile',
+			userInputRequired: false
+		});
+		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '3fa8d533-0d6d-47a3-b1c5-280f1bfb2895', {
+			title: 'TikTok',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Click for a link to my Tik-Tok profile',
+			userInputRequired: false
+		});
+		const discordUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '88a92e0f-4199-4bc8-b555-76d70856b5a4', {
+			title: 'Discord',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 300,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Discord Server',
+			userInputRequired: false
+		});
+		const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
+			title: 'Facebook',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my facebook page',
+			userInputRequired: false
+		});
+		const youtubeUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '71192c7c-8055-453a-a726-3b095319fed3', {
+			title: 'YouTube',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my youtube channel',
+			userInputRequired: false
+		});
+		const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '5c18b145-5824-4c8c-9419-4c0b4f52f489', {
+			title: 'Snapchat',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: false,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Snapchat',
+			userInputRequired: false
+		});
+		const merchUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'cd77cc2a-94c9-41e8-8143-8b68d68b4b13', {
+			title: 'Merch',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 30,
+			isEnabled: false,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Merch Shop',
+			userInputRequired: false
+		});
+		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'faa9bdc4-ef09-4a32-9e9b-4d2ae84a576f', {
+			title: 'Tip',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#d0080a',
+			globalCooldown: 5,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'click for a link to my Tipping Page',
+			userInputRequired: false
+		});
+		const Baningameaction = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'ab17d121-b5b7-4df1-94b0-9f2864292e63', {
+			title: 'Ban an in-game action',
+			cost: 1500,
+			autoFulfill: false,
+			backgroundColor: '#d0080a',
+			globalCooldown: 5,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Ban an In-Game Action while playing a game only!',
+			userInputRequired: true
+		});
+		const NBJ = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
+			title: 'No Bullet Jumping',
+			cost: 600,
+			autoFulfill: false,
+			backgroundColor: '#32CD32',
+			globalCooldown: 60,
+			isEnabled: false,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Not aloud to bullet jump in warframe for a full mission',
+			userInputRequired: false
+		});
 		//#endregion
 
 		const online = eventSubListener.onStreamOnline(info.id as UserIdResolvable, async (o) => {

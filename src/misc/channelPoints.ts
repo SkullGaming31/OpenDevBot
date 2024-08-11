@@ -44,3 +44,19 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 		}
 	} catch (error) { console.error(error); }
 }
+
+export async function DeleteChannelPointsRewards(DeleteReward: boolean = false): Promise<void> {
+	if (!DeleteReward) return;
+	const userApiClient = await getUserApi();
+
+	const broadcasterID = await userApiClient.channels.getChannelInfoById('204831754');
+	if (broadcasterID?.id === undefined) return;
+	console.log('Deleting Channel Points Rewards');
+	try {
+		if (broadcasterID.id === '') {
+			const TBD = await userApiClient.channelPoints.deleteCustomReward('204831754', '27716a8a-496d-4b94-b727-33be94b81611');
+		}
+	} catch (error) {
+		console.error(error);
+	}
+}
