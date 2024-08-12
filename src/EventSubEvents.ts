@@ -1235,13 +1235,13 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		}
 	});
 	eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
-		const Environment = process.env.Environment as string;
+		const Enviroment = process.env.Enviroment as string;
 		
 		try {
-			if (Environment === 'debug' || Environment === 'dev') {
+			if (Enviroment === 'debug' || Enviroment === 'dev') {
 				console.log(`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
 				// await SubscriptionModel.deleteMany({});
-				// console.log('All existing subscriptions deleted in dev environment.');
+				console.log('All existing subscriptions deleted in dev environment.');
 			}
 			// Check if the subscription already exists in MongoDB
 			const existingSubscription = await SubscriptionModel.findOne({
@@ -1267,19 +1267,30 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			console.error('Error saving subscription to database:', error);
 		}
 	});	
-	eventSubListener.onSubscriptionCreateFailure((subscription, error) => {
+	eventSubListener.onSubscriptionCreateFailure(async (subscription, error) => {
 		const Enviroment = process.env.Enviroment as string;
 		if (Enviroment === 'debug' || Enviroment === 'dev') {
 			console.error(`(SCF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
 			// process.exit(1);
 		}
+		if (error instanceof Error && error.message.includes('409')) {
+			console.log('Handling duplicate subscription conflict.');
+			// Here, you could attempt to delete the existing subscription and retry the creation
+			await SubscriptionModel.findOneAndDelete({
+				subscriptionId: subscription.id,
+				authUserId: subscription.authUserId,
+			});
+			// Optionally, attempt to re-create the subscription if necessary
+			// await recreateSubscription(subscription);
+		}
+		console.log('Subscription Object:', subscription);
 	});
 	eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {
-		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug') {
-			console.log(`(SDS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
-		}
 		try {
+			const Enviroment = process.env.Enviroment as string;
+			if (Enviroment === 'debug') {
+				console.log(`(SDS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+			}
 			// Check if the subscription exists in MongoDB
 			const existingSubscription = await SubscriptionModel.findOne({
 				subscriptionId: subscription.id,
@@ -1307,9 +1318,13 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		}
 	});
 	eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
-		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug' || Enviroment === 'dev') {
-			console.error(`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+		try {
+			const Enviroment = process.env.Enviroment as string;
+			if (Enviroment === 'debug' || Enviroment === 'dev') {
+				console.error(`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
+			}
+		} catch (error) {
+			console.error(error);
 		}
 	});
 
