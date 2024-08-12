@@ -643,7 +643,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 			if (broadcasterInfo) { await chatClient.say('31124455', `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
 		});
-		const redeem = eventSubListener.onChannelRedemptionAdd(matchingBroadcaster.id as UserIdResolvable, async (cp) => {
+		const redeem = eventSubListener.onChannelRedemptionAdd(info.id as UserIdResolvable, async (cp) => {
 			if (info.id !== '31124455') return;
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
@@ -1179,7 +1179,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		let previousTitle: string = '';
 		let previousCategory: string = '';
 	
-		const channelUpdates = eventSubListener.onChannelUpdate(matchingBroadcaster.id as UserIdResolvable, async (event) => {
+		const channelUpdates = eventSubListener.onChannelUpdate(info.id as UserIdResolvable, async (event) => {
 			const { streamTitle, categoryName } = event;
 			const chatClient = await getChatClient();
 
