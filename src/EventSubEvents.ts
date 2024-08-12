@@ -27,7 +27,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	//#endregion
 
 	await createChannelPointsRewards(false);
-	await DeleteChannelPointsRewards(true);
+	await DeleteChannelPointsRewards(false);
 
 	// eventSub Stuff
 	if (broadcasterInfo === undefined || moderatorIDs === undefined) return;
