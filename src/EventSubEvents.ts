@@ -37,6 +37,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		// Find the matching broadcaster info based on the channel 
 		const redeemChannelId = '31124455';
 		const matchingBroadcaster = broadcasterInfo.find(info => info.id === redeemChannelId);
+		console.log(matchingBroadcaster?.id);
 		//#region ChannelPoints
 		if (!matchingBroadcaster) return;
 		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
@@ -1276,14 +1277,13 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		if (error instanceof Error && error.message.includes('409')) {
 			console.log('Handling duplicate subscription conflict.');
 			// Here, you could attempt to delete the existing subscription and retry the creation
-			await SubscriptionModel.findOneAndDelete({
+			const tbd = await SubscriptionModel.findOneAndDelete({
 				subscriptionId: subscription.id,
 				authUserId: subscription.authUserId,
 			});
 			// Optionally, attempt to re-create the subscription if necessary
 			// await recreateSubscription(subscription);
 		}
-		console.log('Subscription Object:', subscription);
 	});
 	eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {
 		try {

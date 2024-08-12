@@ -7,8 +7,11 @@ export interface SubscriptionInfo extends Document {
 }
 
 const subscriptionInfoSchema = new Schema<SubscriptionInfo>({
-	subscriptionId: { type: String, required: true, unique: true },
+	subscriptionId: { type: String, required: true },
 	authUserId: { type: String, required: true },
 });
+
+// Create a compound unique index
+subscriptionInfoSchema.index({ subscriptionId: 1, authUserId: 1 }, { unique: true });
 
 export const SubscriptionModel = model<SubscriptionInfo>('eventSubscriptions', subscriptionInfoSchema);
