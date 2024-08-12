@@ -39,7 +39,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const matchingBroadcaster = broadcasterInfo.find(info => info.id === redeemChannelId);
 		//#region ChannelPoints
 		if (!matchingBroadcaster) return;
-		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
+		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
 			title: 'Shoutout',
 			cost: 2000,
 			autoFulfill: true,
@@ -51,7 +51,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'shout yourself out with Channel Points',
 			userInputRequired: false
 		});
-		const Hydrate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
+		const Hydrate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
 			title: 'Hydrate',
 			cost: 250,
 			autoFulfill: true,
@@ -63,7 +63,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Make me take a sip of whatever im drinking!',
 			userInputRequired: false
 		});
-		const DropController = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '652b2b71-5903-47bf-bf8c-076a28a1cafc', {
+		const DropController = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '652b2b71-5903-47bf-bf8c-076a28a1cafc', {
 			title: 'DropController',
 			cost: 1000,
 			autoFulfill: true,
@@ -75,7 +75,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'put down the controller for 15 seconds!',
 			userInputRequired: false
 		});
-		const IRLVoiceBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '9b59a9d9-69eb-4570-a3df-07080ed21761', {
+		const IRLVoiceBan = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '9b59a9d9-69eb-4570-a3df-07080ed21761', {
 			title: 'IRLVoiceBan',
 			cost: 1500,
 			autoFulfill: true,
@@ -87,7 +87,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'I can\'t say anything for the next 3 minutes!',
 			userInputRequired: false
 		});
-		const IRLWordBan = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '1bab3478-f2cc-447e-94f4-8de2a28ad975', {
+		const IRLWordBan = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '1bab3478-f2cc-447e-94f4-8de2a28ad975', {
 			title: 'IRLWordBan',
 			cost: 1500,
 			autoFulfill: true,
@@ -99,7 +99,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'What Word can i not say for 5 minutes!',
 			userInputRequired: true
 		});
-		const MUTEHeadset = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e148d22c-f104-4d5b-9941-8097f79f9179', {
+		const MUTEHeadset = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'e148d22c-f104-4d5b-9941-8097f79f9179', {
 			title: 'MUTEHeadset',
 			cost: 2000,
 			autoFulfill: true,
@@ -111,7 +111,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Mute Headset Sounds untel you tell me i can put them back on or encounter ends!',
 			userInputRequired: false
 		});
-		const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'e054cc48-edc4-4c01-96d7-856edc9c39b6', {
+		const instagramUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'e054cc48-edc4-4c01-96d7-856edc9c39b6', {
 			title: 'Instagram',
 			cost: 1,
 			autoFulfill: true,
@@ -123,7 +123,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Click for a link to my Instagram profile',
 			userInputRequired: false
 		});
-		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '3fa8d533-0d6d-47a3-b1c5-280f1bfb2895', {
+		const tiktokUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '3fa8d533-0d6d-47a3-b1c5-280f1bfb2895', {
 			title: 'TikTok',
 			cost: 1,
 			autoFulfill: true,
@@ -135,7 +135,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Click for a link to my Tik-Tok profile',
 			userInputRequired: false
 		});
-		const discordUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '88a92e0f-4199-4bc8-b555-76d70856b5a4', {
+		const discordUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '88a92e0f-4199-4bc8-b555-76d70856b5a4', {
 			title: 'Discord',
 			cost: 1,
 			autoFulfill: true,
@@ -147,7 +147,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my Discord Server',
 			userInputRequired: false
 		});
-		const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
+		const facebookUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '6dc38904-bf3a-42ae-bb42-01b0d805707b', {
 			title: 'Facebook',
 			cost: 1,
 			autoFulfill: true,
@@ -159,7 +159,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my facebook page',
 			userInputRequired: false
 		});
-		const youtubeUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '71192c7c-8055-453a-a726-3b095319fed3', {
+		const youtubeUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '71192c7c-8055-453a-a726-3b095319fed3', {
 			title: 'YouTube',
 			cost: 1,
 			autoFulfill: true,
@@ -171,7 +171,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my youtube channel',
 			userInputRequired: false
 		});
-		const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, '5c18b145-5824-4c8c-9419-4c0b4f52f489', {
+		const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '5c18b145-5824-4c8c-9419-4c0b4f52f489', {
 			title: 'Snapchat',
 			cost: 1,
 			autoFulfill: true,
@@ -183,7 +183,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my Snapchat',
 			userInputRequired: false
 		});
-		const merchUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'cd77cc2a-94c9-41e8-8143-8b68d68b4b13', {
+		const merchUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'cd77cc2a-94c9-41e8-8143-8b68d68b4b13', {
 			title: 'Merch',
 			cost: 1,
 			autoFulfill: true,
@@ -195,7 +195,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my Merch Shop',
 			userInputRequired: false
 		});
-		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'faa9bdc4-ef09-4a32-9e9b-4d2ae84a576f', {
+		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'faa9bdc4-ef09-4a32-9e9b-4d2ae84a576f', {
 			title: 'Tip',
 			cost: 1,
 			autoFulfill: true,
@@ -207,7 +207,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my Tipping Page',
 			userInputRequired: false
 		});
-		const Baningameaction = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'ab17d121-b5b7-4df1-94b0-9f2864292e63', {
+		const Baningameaction = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'ab17d121-b5b7-4df1-94b0-9f2864292e63', {
 			title: 'Ban an in-game action',
 			cost: 1500,
 			autoFulfill: false,
@@ -219,7 +219,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Ban an In-Game Action while playing a game only!',
 			userInputRequired: true
 		});
-		const NBJ = await userApiClient.channelPoints.updateCustomReward(info.id as UserIdResolvable, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
+		const NBJ = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
 			title: 'No Bullet Jumping',
 			cost: 600,
 			autoFulfill: false,
@@ -642,7 +642,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			console.log(`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`);
 			if (broadcasterInfo) { await chatClient.say('31124455', `${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`); }
 		});
-		const redeem = eventSubListener.onChannelRedemptionAdd('31124455' as UserIdResolvable, async (cp) => {
+		const redeem = eventSubListener.onChannelRedemptionAdd(matchingBroadcaster.id as UserIdResolvable, async (cp) => {
 			if (info.id !== '31124455') return;
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
@@ -1178,7 +1178,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		let previousTitle: string = '';
 		let previousCategory: string = '';
 	
-		const channelUpdates = eventSubListener.onChannelUpdate(info.id as UserIdResolvable, async (event) => {
+		const channelUpdates = eventSubListener.onChannelUpdate(matchingBroadcaster.id as UserIdResolvable, async (event) => {
 			const { streamTitle, categoryName } = event;
 			const chatClient = await getChatClient();
 
