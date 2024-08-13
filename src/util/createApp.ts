@@ -1,6 +1,7 @@
 import axios from 'axios';
 import express from 'express';
 import { TokenModel } from '../database/models/tokenModel';
+import { limiter } from './util';
 
 export default function createApp(): express.Application {
 	const app = express();
@@ -10,6 +11,9 @@ export default function createApp(): express.Application {
 	const clientId = process.env.TWITCH_CLIENT_ID as string;
 	const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 	const redirectUri = process.env.TWITCH_REDIRECT_URL as string;
+
+	app.use(express.json());
+	app.use(limiter);
 
 	// List of scopes
 	const userScopes = [
