@@ -128,12 +128,12 @@ export async function initializeChat(): Promise<void> {
 									{ $inc: { balance: 100 } }
 								);
 								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									// console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
+									console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
 								}
 							} else {
 								const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User', balance: 100 });
 								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									// console.log(`New user added: ${JSON.stringify(result)}`);
+									console.log(`New user added: ${JSON.stringify(result)}`);
 								}
 							}
 						}
