@@ -559,23 +559,23 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	
 				const raidEmbed = new EmbedBuilder()
 					.setTitle('Twitch Event [RAID]')
-					.setAuthor({ name: raidedBroadcaster.displayName, iconURL: raidedBroadcaster.profilePictureUrl})
+					.setAuthor({ name: `${raidedBroadcaster.displayName}`, iconURL: `${raidedBroadcaster.profilePictureUrl}` })
 					.addFields([
-						{ name: 'Raided By: ', value: raidingBroadcaster.displayName, inline: true },
+						{ name: 'Raided By: ', value: `${raidingBroadcaster.displayName}`, inline: true },
 						{ name: 'Viewer Count: ', value: `${raidToEvent.viewers} Viewers`, inline: true },
 					])
 					.setURL(`https://twitch.tv/${raidingBroadcaster.displayName.toLowerCase()}`)
-					.setThumbnail(raidingBroadcaster.profilePictureUrl)
-					.setFooter({ text: `Channel ${info.name}`, iconURL: raidingBroadcaster.offlinePlaceholderUrl})
+					.setThumbnail(`${raidingBroadcaster.profilePictureUrl}`)
+					.setFooter({ text: `Channel ${info.name}`, iconURL: `${raidingBroadcaster.offlinePlaceholderUrl}` })
 					.setTimestamp();
 	
 				const raidMessage = `${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
-				await chatClient.say(info.id, raidMessage);
+				await chatClient.say(info.name, raidMessage);
 				await twitchActivity.send({ embeds: [raidEmbed] });
 	
 				await sleep(1000);
 	
-				await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.name);
+				await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.id);
 			} catch (error) {
 				console.error('Error sending raid notification to Discord:', error);
 			}
@@ -589,7 +589,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				const raidEmbed = new EmbedBuilder()
 					.setTitle('Raid Initiated!')
 					.setColor('Purple') // Adjust color as needed
-					.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl})
+					.setAuthor({ name: `You (as ${raidingBroadcaster.displayName})`, iconURL: raidingBroadcaster.profilePictureUrl })
 					.addFields([
 						{ name: 'Raided Channel:', value: `[${raidedBroadcaster.displayName}](https://twitch.tv/${raidedBroadcaster.displayName.toLowerCase()})`, inline: false },
 						{ name: 'Viewers:', value: `${raidEvent.viewers} viewers`, inline: false },

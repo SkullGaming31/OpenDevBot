@@ -35,6 +35,7 @@ declare global {
 			MONGO_URI_DEV: string;
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;
+			NITRADO_LONGLIFE_TOKEN: string;
 			Enviroment: Enviroment;
 			ENABLE_CHAT: boolean;
 			ENABLE_EVENTSUB: boolean;

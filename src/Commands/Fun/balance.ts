@@ -24,8 +24,15 @@ const balance: Command = {
 			}
 		}
 
+		
+		
 		// Fetch the user's balance
 		const userDoc = await UserModel.findOne({ channelId, username: targetUser });
+		
+		// Log channelId and username
+		console.log('Channel ID:', channelId);
+		console.log('Username:', targetUser);
+		console.log('User Document:', userDoc);
 		const balance = userDoc?.balance || 0;
 
 		// Send the balance message

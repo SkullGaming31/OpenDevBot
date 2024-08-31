@@ -135,7 +135,7 @@ export async function initializeChat(): Promise<void> {
 								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 									// console.log(`New user added: ${JSON.stringify(result)}`);
 								}
-							}					
+							}
 						}
 					} catch (error: any) {
 						if (error.code === 11000) {
