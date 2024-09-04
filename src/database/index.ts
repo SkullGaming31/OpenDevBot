@@ -11,7 +11,7 @@ class Database {
 	public async connect(): Promise<void> {
 		try {
 			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-				mongoose.set('debug', true);
+				mongoose.set('debug', false);
 			} else {
 				mongoose.set('debug', false);
 			}

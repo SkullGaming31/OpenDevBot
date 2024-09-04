@@ -40,6 +40,7 @@ declare global {
 			ENABLE_CHAT: boolean;
 			ENABLE_EVENTSUB: boolean;
 			GUILDED_TOKEN: string;
+			NEXON_API_KEY: string;
 		}
 	}
 }

@@ -6,7 +6,7 @@ export async function getUserApi(): Promise<ApiClient> {
 	const userAuthProvider: RefreshingAuthProvider = await getAuthProvider();
 	const environment = process.env.Enviroment || 'prod';
 	const minLevel: 'ERROR' | 'INFO' | 'CRITICAL' | 'DEBUG' | 'WARNING' | 'TRACE' =
-			environment === 'dev' || environment === 'debug' ? 'INFO' : 'ERROR';
+			environment === 'dev' || environment === 'debug' ? 'ERROR' : 'CRITICAL';
 
 	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel } });
 

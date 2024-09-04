@@ -19,9 +19,10 @@ const feature: Command = {
 			const featureWebhook = new WebhookClient({ id: FEATURE_REQUEST_ID, token: FEATURE_REQUEST_TOKEN });
 
 			const usersSearch = await userApiClient.users.getUserById(msg.userInfo.userId);
+			if (channel !== 'canadiendragon') return chatClient.say(channel, 'This command is for CanadienDragons Channel Only');
 			
 			const name: string = args[0];
-			const description: string = args.slice(1).join(' '); // Combine args starting from index 1 into a single string
+			const description: string = args.slice(1).join(' ');
 
 			if (!name || !description) return chatClient.say(channel, 'You must provide a name and description for the feature.');
 
