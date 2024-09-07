@@ -9,6 +9,7 @@
     "start": "ts-node ./src/index.ts",
     "dev": "nodemon ./src/index.ts",
     "prod": "tsc && node ./dist/index.js",
+    "build": "tsc",
     "seed": "npx ts-node seedDatabase.ts",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
