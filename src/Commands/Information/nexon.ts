@@ -55,7 +55,7 @@ function getExternalComponentNameById(id: string): string {
 const nexonApi = axios.create({
 	baseURL: 'https://open.api.nexon.com/tfd/v1',
 	headers: {
-		'x-nxopen-api-key': `${process.env.NEXON_API_KEY}`,
+		Authorization: `Bearer ${process.env.NEXON_API_KEY}`,
 	},
 });
 
@@ -118,14 +118,14 @@ interface ExternalComponentResponse {
 const nexon: Command = {
 	name: 'nexon',
 	description: 'Interacting with the Nexon API for The First Descendant',
-	usage: '!nexon <subcommand> <user_name>',
+	usage: '!nexon [get-ouid | get-user-(info,basic,descendant,weapon,reactor,ec)] [nexonname]',
 	devOnly: false,
 	cooldown: 30000,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 
 		if (args.length < 1) {
-			await chatClient.say(channel, `@${user}, please provide a subcommand !nexon [get-ouid | get-user-(info,basic,descendant,weapon,reactor,ec)]`);
+			await chatClient.say(channel, `@${user}, please provide a subcommand ${nexon.usage}`);
 			return;
 		}
 

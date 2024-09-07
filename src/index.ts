@@ -48,8 +48,8 @@ class OpenDevBot {
 	}
 	async start() {
 		try {
-			const EventSub = process.env.ENABLE_EVENTSUB as boolean;
-			const chatIIRC = process.env.ENABLE_CHAT as boolean;
+			const EventSub = process.env.ENABLE_EVENTSUB;
+			const chatIIRC = process.env.ENABLE_CHAT;
 			// Initialize database connection
 			const environment = process.env.Enviroment as string;
 			let mongoURI = '';

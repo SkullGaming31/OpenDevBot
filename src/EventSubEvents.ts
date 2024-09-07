@@ -1239,7 +1239,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		const Enviroment = process.env.Enviroment as string;
 		
 		try {
-			if (Enviroment === 'debug' || Enviroment === 'dev') {
+			if (Enviroment === 'debug') {
 				console.log(`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
 				// await SubscriptionModel.deleteMany({});
 				console.log('All existing subscriptions deleted in dev environment.');
@@ -1251,8 +1251,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 				
 			if (existingSubscription) {
-				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-					// console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				if (process.env.Enviroment === 'debug') {
+					console.log(`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
 				}
 				return; // Exit early if subscription already exists
 			}
@@ -1270,7 +1270,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	});	
 	eventSubListener.onSubscriptionCreateFailure(async (subscription, error) => {
 		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug' || Enviroment === 'dev') {
+		if (Enviroment === 'debug') {
 			console.error(`(SCF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
 			// process.exit(1);
 		}
@@ -1320,7 +1320,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
 		try {
 			const Enviroment = process.env.Enviroment as string;
-			if (Enviroment === 'debug' || Enviroment === 'dev') {
+			if (Enviroment === 'debug') {
 				console.error(`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`, error);
 			}
 		} catch (error) {
