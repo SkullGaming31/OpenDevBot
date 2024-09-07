@@ -47,7 +47,8 @@ class OpenDevBot {
 	}
 	async start() {
 		try {
-			const EventSub = process.env.ENABLE_EVENTSUB;
+			const EventSub = process.env.ENABLE_EVENTSUB as boolean;
+			const chatIIRC = process.env.ENABLE_CHAT as boolean;
 			// Initialize database connection
 			const environment = process.env.Enviroment as string;
 			let mongoURI = '';
@@ -86,7 +87,7 @@ class OpenDevBot {
 			}
 
 			// Initialize chat client for Twitch IRC
-			if (EventSub) {
+			if (chatIIRC) {
 				const message = process.env.Enviroment === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
 				console.time(message);
 				await initializeChat();

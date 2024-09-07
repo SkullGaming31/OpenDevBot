@@ -37,7 +37,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		// Find the matching broadcaster info based on the channel 
 		const redeemChannelId = '31124455';
 		const matchingBroadcaster = broadcasterInfo.find(info => info.id === redeemChannelId);
-		console.log(matchingBroadcaster?.id);
+		// console.log(matchingBroadcaster?.id);
 		//#region ChannelPoints
 		if (!matchingBroadcaster) return;
 		const shoutoutUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '27716a8a-496d-4b94-b727-33be94b81611', {
