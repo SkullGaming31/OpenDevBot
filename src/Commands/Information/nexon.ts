@@ -1,5 +1,5 @@
 import { ChatClient, ChatMessage } from '@twurple/chat/lib';
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import path from 'path';
 import fs from 'fs';
 
@@ -23,57 +23,75 @@ const reactorData = JSON.parse(fs.readFileSync(reactorDataPath, 'utf-8'));
 const externalComponentDataPath = path.join(__dirname, '../../TFD_metadata', 'nexon_external-component.json');
 const externalComponentData = JSON.parse(fs.readFileSync(externalComponentDataPath, 'utf-8'));
 
+const titleDataPath = path.join (__dirname, '../../TFD_metadata', 'nexon_title.json');
+const titleData = JSON.parse(fs.readFileSync(titleDataPath, 'utf-8'));
+
 // Function to get module name by ID
-function getModuleNameById(id: string): string {
+export function getModuleNameById(id: string): string {
 	const module = moduleData.find((mod: { module_id: string; module_name: string }) => mod.module_id === id);
 	return module ? module.module_name : 'Unknown Module';
 }
 
 // Function to get descendant name by ID
-function getDescendantNameById(id: string): string {
+export function getDescendantNameById(id: string): string {
 	const descendant = descendantData.find((desc: { descendant_id: string; descendant_name: string }) => desc.descendant_id === id);
 	return descendant ? descendant.descendant_name : 'Unknown Descendant';
 }
 
 // Function to get weapon name by ID
-function getWeaponNameById(id: string): string {
+export function getWeaponNameById(id: string): string {
 	const weapon = weaponData.find((wep: { weapon_id: string; weapon_name: string }) => wep.weapon_id === id);
 	return weapon ? weapon.weapon_name : 'Unknown Weapon';
 }
 // Function to get weapon name by ID
-function getReactorNameById(id: string): string {
+export function getReactorNameById(id: string): string {
 	const reactor = reactorData.find((rea: { reactor_id: string; reactor_name: string }) => rea.reactor_id === id);
 	return reactor ? reactor.reactor_name : 'Unknown Reactor';
 }
 
 // Function to get weapon name by ID
-function getExternalComponentNameById(id: string): string {
+export function getExternalComponentNameById(id: string): string {
 	const externalcomponent = externalComponentData.find((ec: { external_component_id: string; external_component_name: string }) => ec.external_component_id === id);
 	return externalcomponent ? externalcomponent.external_component_name : 'Unknown External Component';
 }
 
-const nexonApi = axios.create({
-	baseURL: 'https://open.api.nexon.com/tfd/v1',
-	headers: {
-		Authorization: `Bearer ${process.env.NEXON_API_KEY}`,
-	},
-});
+export function getDescendantTitleNameById(id: string): string {
+	const DesTitle = titleData.find((dt: Title) => dt.title_id === id);
+	return DesTitle ? DesTitle.title_name : 'Unknown Descendant Title';
+}
+
+export let nexonApi: AxiosInstance;
+if (process.env.Enviroment === 'dev') {
+	nexonApi = axios.create({
+		baseURL: 'https://open.api.nexon.com/tfd/v1',
+		headers: {
+			'x-nxopen-api-key': `${process.env.NEXON_API_KEY}`,
+		},
+	});
+} else {
+	nexonApi = axios.create({
+		baseURL: 'https://open.api.nexon.com/tfd/v1',
+		headers: {
+			'x-nxopen-api-key': `${process.env.NEXON_API_KEY}`,
+		},
+	});
+}
 
 // Define the type for the module
-interface Module {
+export interface Module {
   module_slot_id: string;
   module_id: string;
   module_enchant_level: number;
 }
 
 // Define the type for the descendant
-interface Descendant {
+export interface Descendant {
   descendant_id: string;
   descendant_name: string;
 }
 
 // Define the type for the weapon
-interface Weapon {
+export interface Weapon {
   module_max_capacity: number;
   module_capacity: number;
   weapon_slot_id: string;
@@ -84,12 +102,12 @@ interface Weapon {
   module: Array<Module>;
 }
 
-interface ReactorAdditionalStat {
+export interface ReactorAdditionalStat {
   additional_stat_name: string;
   additional_stat_value: string;
 }
 
-interface Reactor {
+export interface Reactor {
   reactor_id: string;
   reactor_slot_id: string;
   reactor_level: number;
@@ -97,22 +115,27 @@ interface Reactor {
   reactor_enchant_level: number;
 }
 
-interface ExternalComponentAdditionalStat {
+export interface ExternalComponentAdditionalStat {
   additional_stat_name: string;
   additional_stat_value: string;
 }
 
-interface ExternalComponent {
+export interface ExternalComponent {
   external_component_slot_id: string;
   external_component_id: string;
   external_component_level: number;
   external_component_additional_stat: ExternalComponentAdditionalStat[];
 }
 
-interface ExternalComponentResponse {
+export interface ExternalComponentResponse {
   ouid: string;
   user_name: string;
   external_component: ExternalComponent[];
+}
+
+export interface Title {
+	title_id: string;
+	title_name: string;
 }
 
 const nexon: Command = {
@@ -136,7 +159,7 @@ const nexon: Command = {
 			switch (subcommand) {
 				case 'get-ouid':
 					try {
-						const userName = args[1] || 'GamingDragon688#7080';
+						const userName = args[1];
 						let ouidEntry = await tfd.findOne({ username: userName });
 						if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
 
@@ -146,6 +169,7 @@ const nexon: Command = {
 							});
 
 							const ouid = response.data.ouid;
+							console.log('Nexon Response: ', response.data);
 
 							ouidEntry = new tfd({ OUID: ouid, username: userName });
 							await ouidEntry.save();
@@ -163,11 +187,11 @@ const nexon: Command = {
 				case 'get-user-info':
 					try {
 						const userName = args[1] || 'GamingDragon688#7080';
-						if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
+						// if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
 						const ouidEntry = await tfd.findOne({ username: userName });
 
 						if (!ouidEntry) {
-							await chatClient.say(channel, `No OUID found for ${userName}. Please use the 'get-ouid' subcommand first.`);
+							await chatClient.say(channel, `No OUID found for ${userName}. Please use the '!nexon [get-ouid] (nexonname)' subcommand first.`);
 							return;
 						}
 
@@ -188,15 +212,13 @@ const nexon: Command = {
 						} = userResponse.data;
 
 						const userMessage = `
-						**${user_name}'s User Info**\n
-						- **OUID:** ${ouid}
-						- **Platform Type:** ${platform_type}
-						- **Mastery Rank Level:** ${mastery_rank_level}
-						- **Mastery Rank EXP:** ${mastery_rank_exp}
-						- **Title Prefix ID:** ${title_prefix_id || 'None'}
-						- **Title Suffix ID:** ${title_suffix_id || 'None'}
-						- **OS Language:** ${os_language}
-						- **Game Language:** ${game_language}`;
+						${user_name}'s User Info\n
+						- Platform Type: ${platform_type}\n
+						- Mastery Rank Level: ${mastery_rank_level}\n
+						- Mastery Rank EXP: ${mastery_rank_exp}\n
+						- Title Name: ${getDescendantTitleNameById(title_prefix_id) + getDescendantTitleNameById(title_suffix_id)}
+						- OS Language: ${os_language}\n
+						- Game Language: ${game_language}`;
 
 						await chatClient.say(channel, userMessage.trim().replace(/\n\s+/g, ' '));
 					} catch (error) {
@@ -206,12 +228,12 @@ const nexon: Command = {
 					break;
 				case 'get-user-descendant':
 					try {
-						const userName = args[1];
-						if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
+						const userName = args[1] || 'GamingDragon688#7080';
+						// if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
 						const ouidEntry = await tfd.findOne({ username: userName });
 	
 						if (!ouidEntry) {
-							return chatClient.say(channel, `No OUID found for username: ${userName}. Please use the \`get-ouid\` command first.`);
+							return chatClient.say(channel, `No OUID found for username: ${userName}. Please use the \`!nexon (get-ouid) [nexonname]\` command first.`);
 						}
 	
 						const descendantResponse = await nexonApi.get('/user/descendant', {

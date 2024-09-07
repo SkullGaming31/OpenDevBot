@@ -14,6 +14,8 @@ import { PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchA
 import { sleep } from './util/util';
 import { SubscriptionInfo, SubscriptionModel } from './database/models/eventSubscriptions';
 import FollowMessage from './database/models/followMessages';
+import tfd from './database/models/tfd_ouid';
+import { ExternalComponent, ExternalComponentAdditionalStat, ExternalComponentResponse, getDescendantNameById, getDescendantTitleNameById, getExternalComponentNameById, getModuleNameById, getReactorNameById, getWeaponNameById, Module, nexonApi, ReactorAdditionalStat, Weapon } from './Commands/Information/nexon';
 
 
 export async function initializeTwitchEventSub(): Promise<void> {
@@ -50,18 +52,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			maxRedemptionsPerUserPerStream: 3,
 			maxRedemptionsPerStream: null,
 			prompt: 'shout yourself out with Channel Points',
-			userInputRequired: false
-		});
-		const Hydrate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'c033cf9f-28a5-4cd4-86d9-7e48158c83a5', {
-			title: 'Hydrate',
-			cost: 250,
-			autoFulfill: true,
-			backgroundColor: '#09CB4C',
-			globalCooldown: 60,
-			isEnabled: true,
-			maxRedemptionsPerUserPerStream: null,
-			maxRedemptionsPerStream: null,
-			prompt: 'Make me take a sip of whatever im drinking!',
 			userInputRequired: false
 		});
 		const DropController = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '652b2b71-5903-47bf-bf8c-076a28a1cafc', {
@@ -172,30 +162,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'click for a link to my youtube channel',
 			userInputRequired: false
 		});
-		const snapchatUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '5c18b145-5824-4c8c-9419-4c0b4f52f489', {
-			title: 'Snapchat',
-			cost: 1,
-			autoFulfill: true,
-			backgroundColor: '#d0080a',
-			globalCooldown: 30,
-			isEnabled: false,
-			maxRedemptionsPerUserPerStream: null,
-			maxRedemptionsPerStream: null,
-			prompt: 'click for a link to my Snapchat',
-			userInputRequired: false
-		});
-		const merchUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'cd77cc2a-94c9-41e8-8143-8b68d68b4b13', {
-			title: 'Merch',
-			cost: 1,
-			autoFulfill: true,
-			backgroundColor: '#d0080a',
-			globalCooldown: 30,
-			isEnabled: false,
-			maxRedemptionsPerUserPerStream: null,
-			maxRedemptionsPerStream: null,
-			prompt: 'click for a link to my Merch Shop',
-			userInputRequired: false
-		});
 		const tipUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'faa9bdc4-ef09-4a32-9e9b-4d2ae84a576f', {
 			title: 'Tip',
 			cost: 1,
@@ -220,17 +186,77 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			prompt: 'Ban an In-Game Action while playing a game only!',
 			userInputRequired: true
 		});
-		const NBJ = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, 'a9396656-be55-40f9-b46f-e5e97fd2bf14', {
-			title: 'No Bullet Jumping',
-			cost: 600,
-			autoFulfill: false,
-			backgroundColor: '#32CD32',
+		const TFDOuidUpdate = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id as UserIdResolvable, '8aa568e4-610a-4ba0-b6bc-1c6a004bda67', {
+			title: 'TFD OUID',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
 			globalCooldown: 60,
-			isEnabled: false,
+			isEnabled: true,
 			maxRedemptionsPerUserPerStream: null,
 			maxRedemptionsPerStream: null,
-			prompt: 'Not aloud to bullet jump in warframe for a full mission',
-			userInputRequired: false
+			prompt: 'Get your OUID for TFD Data, Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
+		});
+		const TFDUserInfo = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id, '65d7be8c-075a-4b24-a641-76c09e70ec15', {
+			title: 'TFD UserInfo',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
+		});
+		const TFDUserDescendant = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id, '463460dd-4b9a-446d-a10f-9c5c7dd5a477', {
+			title: 'TFD UserDescendant',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
+		});
+		const TFDUserWeapon = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id, '0dc16409-2cff-4561-ad5c-7f999f90e319', {
+			title: 'TFD UserWeapon',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
+		});
+		const TFDUserReactor = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id, 'bc46b9ff-d30b-4d43-b48d-10126792f34b', {
+			title: 'TFD UserReactor',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
+		});
+		const TFDUserEC = await userApiClient.channelPoints.updateCustomReward(matchingBroadcaster.id, 'e9a181df-696e-4a86-a980-e54f9ed18723', {
+			title: 'TFD UserEC',
+			cost: 1,
+			autoFulfill: true,
+			backgroundColor: '#FFD700',
+			globalCooldown: 60,
+			isEnabled: true,
+			maxRedemptionsPerUserPerStream: null,
+			maxRedemptionsPerStream: null,
+			prompt: 'Nexon Account Name (ex GamingDragon688#7080)',
+			userInputRequired: true
 		});
 		//#endregion
 
@@ -795,39 +821,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						console.error(error);
 					}
 					break;
-				case 'Snapchat':
-					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-					const snapchatEmbed = new EmbedBuilder()
-						.setTitle('REDEEM EVENT')
-						.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}`})
-						.setColor('Random')
-						.addFields([
-							{
-								name: 'User',
-								value: `${cp.userDisplayName}`,
-								inline: true
-							},
-							{
-								name: 'Redeemed',
-								value: `${cp.rewardTitle}`,
-								inline: true
-							},
-							{
-								name: 'DragonFire Coins',
-								value: `${cp.rewardCost}`,
-								inline: true
-							}
-						])
-						.setThumbnail(`${streamer.profilePictureUrl}`)
-						.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}`})
-						.setTimestamp();
-					try {
-						if (broadcasterInfo) { await chatClient.say('canadiendragon', `@${cp.broadcasterDisplayName}'s Snapchat: https://snapchat.com/add/canadiendragon`); }
-						await twitchActivity.send({ embeds: [snapchatEmbed] });
-					} catch (error) {
-						console.error(error);
-					}
-					break;
 				case 'Facebook':
 					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
 					const facebookEmbed = new EmbedBuilder()
@@ -893,40 +886,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						console.error(error);
 					}
 					await twitchActivity.send({ embeds: [discordEmbed] });
-					break;
-				case 'Merch':
-					console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
-					const merchEmbed = new EmbedBuilder()
-						.setTitle('REDEEM EVENT')
-						.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}`})
-						.setColor('Random')
-						.addFields([
-							{
-								name: 'User',
-								value: `${cp.userDisplayName}`,
-								inline: true
-							},
-							{
-								name: 'Redeemed',
-								value: `${cp.rewardTitle}`,
-								inline: true
-							},
-							{
-								name: 'DragonFire Coins',
-								value: `${cp.rewardCost}`,
-								inline: true
-							}
-						])
-						.setThumbnail(`${streamer.profilePictureUrl}`)
-						.setURL(`https://twitch.tv/${userInfo.name}`)
-						.setFooter({ text: 'Click the event name to go to the Redeemers Twitch Channel', iconURL: `${userInfo.profilePictureUrl}`})
-						.setTimestamp();
-					try {
-						if (broadcasterInfo) { await chatClient.say('canadiendragon', `@${cp.broadcasterDisplayName}'s Merch: https://canadiendragon-merch.creator-spring.com`); }
-						await twitchActivity.send({ embeds: [merchEmbed] });
-					} catch (error) {
-						console.error(error);
-					}
 					break;
 				case 'Hydrate':
 					// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -1135,8 +1094,8 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						console.error(error);
 					}
 					break;
-				case 'No Bullet Jumping':
-					const nbjEmbed = new EmbedBuilder()
+				case 'TFD OUID':
+					const tfdOuidEmbed = new EmbedBuilder()
 						.setTitle('REDEEM EVENT')
 						.setAuthor({ name: `${cp.userDisplayName}`, iconURL: `${userInfo.profilePictureUrl}`})
 						.setColor('Random')
@@ -1161,10 +1120,233 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						.setFooter({ text: 'DragonFire Lair', iconURL: `${userInfo.profilePictureUrl}`})
 						.setTimestamp(cp.redemptionDate);
 					try {
-						if (broadcasterInfo) { chatClient.say('canadiendragon', 'No Bullet Jumping for you'); }
-						await twitchActivity.send({ embeds: [nbjEmbed] });
+						if (broadcasterInfo) { 
+							try {
+								const userName = cp.input;
+								let ouidEntry = await tfd.findOne({ username: userName });
+								if (!cp.input) return chatClient.say('canadiendragon', 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
+		
+								if (!ouidEntry) {
+									const response = await nexonApi.get('/id', {
+										params: { user_name: userName },
+									});
+		
+									const ouid = response.data.ouid;
+									console.log('Nexon Response: ', response.data);
+		
+									ouidEntry = new tfd({ OUID: ouid, username: userName });
+									await ouidEntry.save();
+		
+									await chatClient.say('canadiendragon', `OUID saved for ${userName}`);
+								} else {
+									await chatClient.say('canadiendragon', `OUID already exists for ${userName}`);
+								}
+							} catch (error) {
+								console.error('Error fetching OUID:', error);
+								await chatClient.say('canadiendragon', 'An error occurred while retrieving the OUID');
+							}
+						}
+						await twitchActivity.send({ embeds: [tfdOuidEmbed] });
 					} catch (error) {
 						console.error(error);
+					}
+					break;
+				case 'TFD UserInfo':
+					try {
+						const userName = cp.input;
+						const ouidEntry = await tfd.findOne({ username: userName });
+
+						if (!ouidEntry) {
+							await chatClient.say('canadiendragon', `No OUID found for ${userName}. Please use the '!nexon [get-ouid] (nexonname)' subcommand first or use the channelpoints TFD OUID`);
+							return;
+						}
+
+						const userResponse = await nexonApi.get('/user/basic', {
+							params: { ouid: ouidEntry.OUID },
+						});
+
+						const {
+							user_name,
+							platform_type,
+							mastery_rank_level,
+							mastery_rank_exp,
+							title_prefix_id,
+							title_suffix_id,
+							os_language,
+							game_language,
+						} = userResponse.data;
+
+						const userMessage = `
+						${user_name}'s User Info\n
+						- Platform Type: ${platform_type}\n
+						- Mastery Rank Level: ${mastery_rank_level}\n
+						- Mastery Rank EXP: ${mastery_rank_exp}\n
+						- Title Name: ${getDescendantTitleNameById(title_prefix_id) + getDescendantTitleNameById(title_suffix_id)}
+						- OS Language: ${os_language}\n
+						- Game Language: ${game_language}`;
+
+						await chatClient.say('canadiendragon', userMessage.trim().replace(/\n\s+/g, ' '));
+					} catch (error) {
+						console.error('Error fetching user data:', error);
+						await chatClient.say('canadiendragon', 'An error occurred while retrieving data');
+					}
+					break;
+				case 'TFD UserDescendant':
+					try {
+						const userName = cp.input;
+						// if (!args[1]) return chatClient.say(channel, 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
+						const ouidEntry = await tfd.findOne({ username: userName });
+	
+						if (!ouidEntry) {
+							return chatClient.say('canadiendragon', `No OUID found for username: ${userName}. Please use the \`!nexon (get-ouid) [nexonname]\` command first.`);
+						}
+	
+						const descendantResponse = await nexonApi.get('/user/descendant', {
+							params: { ouid: ouidEntry.OUID },
+						});
+	
+						const {
+							ouid,
+							user_name,
+							descendant_id,
+							descendant_slot_id,
+							descendant_level,
+							module_max_capacity,
+							module_capacity,
+							module,
+						} = descendantResponse.data;
+	
+						// const descendantImageUrl = descendantData.find((desc: { descendant_id: string }) => desc.descendant_id === descendant_id)?.descendant_image_url || '';
+	
+						const descendantInfo = `
+						${user_name}'s Descendant Info:\n
+						Descendant Name: ${getDescendantNameById(descendant_id)}/n
+						Descendant Slot ID: ${descendant_slot_id || 'None'}\n
+						Descendant Level: ${descendant_level}\n
+						Module Max Capacity: ${module_max_capacity}\n
+						Module Capacity: ${module_capacity}\n
+						${module.length > 0 ? module.map((mod: Module) => 
+		`Module ${mod.module_slot_id}: Name: ${getModuleNameById(mod.module_id)}, Enchantment Level: ${mod.module_enchant_level}`).join('\n')
+		: 'Modules: No modules equipped'}`;
+	
+						await chatClient.say('canadiendragon', descendantInfo.trim());
+					} catch (error) {
+						console.error('Error fetching user descendant data:', error);
+						await chatClient.say('canadiendragon', 'An error occurred while trying to retrieve the user descendant data.');
+					}
+					break;
+				case 'TFD UserWeapon':
+					try {
+						const userName = cp.input;
+						if (!cp.input) return chatClient.say('canadiendragon', 'You Must Provide your full Nexon Account Name (Nexonname123#456)');
+				
+						const ouidEntry = await tfd.findOne({ username: userName });
+						if (!ouidEntry) {
+							return chatClient.say('canadiendragon', `No OUID found for username: ${userName}. Please use the \`get-ouid\` command first.`);
+						}
+				
+						const weaponResponse = await nexonApi.get('/user/weapon', {
+							params: {
+								ouid: ouidEntry.OUID,
+								language_code: 'en'
+							},
+						});
+				
+						const { weapon } = weaponResponse.data;
+						let currentMessage = `${userName}'s Weapon Info:\n`;
+				
+						weapon.forEach((weap: Weapon) => {
+							const weaponInfo =
+												`Weapon Slot ${weap.weapon_slot_id}:\n` +
+												`- Name: ${getWeaponNameById(weap.weapon_id)}\n` +
+												`- Level: ${weap.weapon_level}\n` +
+												`- Perk Ability Enchant Level: ${weap.perk_ability_enchant_level || 'N/A'}\n` +
+												`- Module Max Capacity: ${weap.module_max_capacity}\n` +
+												`- Module Capacity: ${weap.module_capacity}\n` +
+												`- Additional Stats: ${weap.weapon_additional_stat.map(stat => `${stat.additional_stat_name}: ${stat.additional_stat_value}`).join(', ')}\n`;
+				
+							if ((currentMessage + weaponInfo).length > 500) {
+								chatClient.say('canadiendragon', currentMessage.trim());
+								currentMessage = '';
+							}
+				
+							currentMessage += weaponInfo;
+						});
+				
+						if (currentMessage.trim().length > 0) {
+							chatClient.say('canadiendragon', currentMessage.trim());
+						}
+				
+					} catch (error) {
+						console.error('Error fetching user weapon data:', error);
+						chatClient.say('canadiendragon', 'An error occurred while trying to retrieve the user weapon data.');
+					}
+					break;
+				case 'TFD UserReactor':
+					try {
+						const userName = cp.input;
+						const ouidEntry = await tfd.findOne({ username: userName });
+
+						if (!ouidEntry) {
+							return chatClient.say('canadiendragon', `No OUID found for username: ${userName}. Please use the \`!nexon get-ouid nexonname\` command first or use the TFD OUID channelpoint`);
+						}
+
+						const reactorResponse = await nexonApi.get('/user/reactor', {
+							params: {
+								ouid: ouidEntry.OUID,
+								language_code: 'en',
+							},
+						});
+
+						const { reactor_id, reactor_slot_id, reactor_level, reactor_additional_stat, reactor_enchant_level } = reactorResponse.data;
+
+						const reactorInfo = 
+			`${userName}'s Reactor Info:\n` +
+			`- Reactor ID: ${reactor_id}\n` +
+			`- Reactor Name: ${getReactorNameById(reactor_id)}\n` +
+			`- Reactor Slot ID: ${reactor_slot_id || 'None'}\n` +
+			`- Reactor Level: ${reactor_level}\n` +
+			`- Reactor Enchant Level: ${reactor_enchant_level}\n` +
+			`- Additional Stats: ${reactor_additional_stat.length > 0 
+				? reactor_additional_stat.map((stat: ReactorAdditionalStat) => `${stat.additional_stat_name}: ${stat.additional_stat_value}`).join(', ') 
+				: 'No additional stats'}`;
+
+						await chatClient.say('canadiendragon', reactorInfo.trim());
+					} catch (error) {
+						console.error('Error fetching user reactor data:', error);
+						await chatClient.say('canadiendragon', 'An error occurred while trying to retrieve the user reactor data.');
+					}
+					break;
+				case 'TFD UserEC':
+					try {
+						const userName = cp.input;
+						const ouidEntry = await tfd.findOne({ username: userName });
+				
+						if (!ouidEntry) {
+							return chatClient.say('canadiendragon', `No OUID found for username: ${userName}. Please use the \`!nexon get-ouid nexonname\` command first or use the TFD OUID channelpoint`);
+						}
+				
+						const externalComponentResponse = await nexonApi.get('/user/external-component', {
+							params: { ouid: ouidEntry.OUID, language_code: 'en' },
+						});
+				
+						const {
+							external_component,
+						}: ExternalComponentResponse = externalComponentResponse.data;
+
+						let externalComponentMessage = `${userName}'s External Components:\n`;
+
+						external_component.forEach((component: ExternalComponent, index: number) => {
+							externalComponentMessage += 
+        `\nComponent ${index + 1} - Slot ID: ${component.external_component_slot_id}\n` +
+        `Component Name: ${getExternalComponentNameById(component.external_component_id)}\n` +
+        `Component Level: ${component.external_component_level}\n` +
+        `Additional Stats: ${component.external_component_additional_stat.length > 0 ? component.external_component_additional_stat.map((stat: ExternalComponentAdditionalStat) => `${stat.additional_stat_name}: ${stat.additional_stat_value}`).join('\n'):'No additional stats'}\n`;});
+				
+						await chatClient.say('canadiendraon', externalComponentMessage.trim());
+					} catch (error) {
+						console.error('Error fetching external component data:', error);
+						await chatClient.say('canadiendragon', 'An error occurred while trying to retrieve the external component data.');
 					}
 					break;
 				default:
