@@ -9,6 +9,7 @@ import createApp from './util/createApp';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
+import path from 'path';
 
 export async function deleteAllInjuries(): Promise<void> {
 	try {
@@ -65,6 +66,32 @@ class OpenDevBot {
 				default:
 					throw new Error(`Unknown environment: ${environment}`);
 			}
+			//#region Copy Files from src -> TFD_metadata
+			const sourceDir = './src/TFD_metadata';
+			const destDir = './dist/TFD_metadata';
+
+			// Check if the source directory exists
+			if (fs.existsSync(sourceDir)) {
+				// Ensure the destination directory exists
+				if (!fs.existsSync(destDir)) {
+					fs.mkdirSync(destDir, { recursive: true });
+				}
+
+				// Read the files in the source directory
+				const files = fs.readdirSync(sourceDir);
+
+				// Copy each file to the destination directory
+				files.forEach((file) => {
+					const sourceFile = path.join(sourceDir, file);
+					const destFile = path.join(destDir, file);
+					fs.copyFileSync(sourceFile, destFile);
+				});
+
+				console.log('Files copied successfully!');
+			} else {
+				console.log('Source directory does not exist.');
+			}
+			//#endregion
 
 			// Initialize database connection
 			const database = new Database(mongoURI);
