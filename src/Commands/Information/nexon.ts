@@ -169,7 +169,7 @@ const nexon: Command = {
 							});
 
 							const ouid = response.data.ouid;
-							console.log('Nexon Response: ', response.data);
+							// console.log('Nexon Response: ', response.data);
 
 							ouidEntry = new tfd({ OUID: ouid, username: userName });
 							await ouidEntry.save();

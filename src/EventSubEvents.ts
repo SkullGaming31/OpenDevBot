@@ -673,7 +673,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			if (info.id !== '31124455') return;
 			const userInfo = await cp.getUser();
 			const streamer = await cp.getBroadcaster();
-			console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, Channel: ${info.id}`);
+			if (process.env.Enviroment === 'debug') {
+				console.log(`${cp.userDisplayName}: Reward Name: ${cp.rewardTitle}, rewardId: ${cp.rewardId}, Channel: ${info.id}`);
+			}
 			// const reward = await userApiClient.channelPoints.getRedemptionById(broadcasterInfo[0].id!, `${cp.rewardId}`, `${cp.id}`);
 			switch (cp.rewardTitle || cp.rewardId) {
 				case 'Shoutout':
@@ -1132,7 +1134,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									});
 		
 									const ouid = response.data.ouid;
-									console.log('Nexon Response: ', response.data);
+									// console.log('Nexon Response: ', response.data);
 		
 									ouidEntry = new tfd({ OUID: ouid, username: userName });
 									await ouidEntry.save();
