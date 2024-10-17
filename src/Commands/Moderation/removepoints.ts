@@ -11,6 +11,19 @@ const removepoints: Command = {
 	name: 'removepoints',
 	description: 'Remove points from a viewer',
 	usage: '!removepoints <user> <amount>',
+	/**
+	 * Execute the removepoints command to subtract points from a user's balance.
+	 * 
+	 * This function checks if the user is authorized to use the command and extracts the target user and amount 
+	 * from the command arguments. It then subtracts the specified amount from the user's balance in the database and 
+	 * sends a message to the chat confirming the points removed.
+	 * 
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, including the target user and the amount of points to remove.
+	 * @param text - The full text of the chat message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();

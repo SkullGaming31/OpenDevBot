@@ -15,7 +15,8 @@ const tokenSchema = new Schema<ITwitchToken>({
 	user_id: {
 		type: String,
 		unique: true,
-		required: true
+		required: true,
+		index: true
 	},
 	login: {
 		type: String,

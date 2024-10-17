@@ -32,7 +32,7 @@ declare global {
 			MONGO_PASS: string;
 			MONGO_DB: string;
 			MONGO_URI: string;
-			MONGO_URI_DEV: string;
+			DOCKER_URI: string;
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;
 			NITRADO_LONGLIFE_TOKEN: string;

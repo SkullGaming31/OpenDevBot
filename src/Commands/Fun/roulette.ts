@@ -28,6 +28,18 @@ const roulette: Command = {
 	name: 'roulette',
 	description: 'Play a game of roulette!',
 	usage: '!roulette',
+	/**
+	 * Executes the roulette command, allowing users to play a game of roulette.
+	 * Users have a chance to win or lose gold based on the outcome of the game.
+	 *
+	 * @param {string} channel The channel where the command was triggered.
+	 * @param {string} user The user who triggered the command.
+	 * @param {string[]} args The arguments passed to the command.
+	 * @param {string} text The full text of the message that triggered the command.
+	 * @param {ChatMessage} msg The message instance that triggered the command.
+	 *
+	 * @returns {Promise<void>} The result of the command execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -60,7 +72,7 @@ const roulette: Command = {
 			if (bulletInChamber) {
 				// Bullet is fired, user loses
 				if (!msg.userInfo.isBroadcaster || !msg.userInfo.isMod) {
-					await chatClient.say(channel, `@${msg.userInfo.displayName} Your lucky i dont have the power to time you out, YOU FAILED`);  
+					await chatClient.say(channel, `@${msg.userInfo.displayName} Your lucky i dont have the power to time you out, YOU FAILED`);
 					chamberState.bullets = 1; // Reset the chamber to 1 bullet
 				} else {
 					await userApiClient.moderation.banUser(broadcasterID.id as UserIdResolvable, {

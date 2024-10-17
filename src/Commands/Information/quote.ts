@@ -2,15 +2,25 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import QuoteModel, { IQuote } from '../../database/models/Quote';
 import { Command } from '../../interfaces/Command';
+import { MongooseError } from 'mongoose';
 
 const quoteCommand: Command = {
 	name: 'quote',
 	description: 'Add Delete or list quotes',
 	usage: '!quote [add|remove|list] [quote]',
+	/**
+	 * Executes the quote command based on the specified action.
+	 * 
+	 * @param channel The channel where the command was invoked.
+	 * @param user The user who invoked the command.
+	 * @param args The arguments passed to the command.
+	 * @param text The full text of the message.
+	 * @param msg The chat message object containing metadata and user information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		try {
-			if (channel !== '#canadiendragon') return;
+			if (channel !== '#skullgaminghq') return;
 			switch (args[0]) {
 				case 'add':
 					if (!args[1]) return chatClient.say(channel, '!quote add [quote]');
@@ -20,16 +30,15 @@ const quoteCommand: Command = {
 						const savedQuote = await quote.save();
 						console.log(`Quote added: "${savedQuote.content}"`);
 						await chatClient.say(channel, 'Quote Added to database');
-						// handle success
 					} catch (error) {
 						console.error(error);
 						// handle error
 					}
-	
+
 					break;
 				case 'remove':
 					const quoteId = args[1]; // extract the quote ID from the arguments
-					QuoteModel.findByIdAndDelete(quoteId, async (err: any, removedQuote: IQuote | null) => {
+					QuoteModel.findByIdAndDelete(quoteId, async (err: MongooseError, removedQuote: IQuote | null) => {
 						if (err) {
 							console.error(err);
 							await chatClient.say(channel, 'An Error has Occured');
@@ -49,7 +58,7 @@ const quoteCommand: Command = {
 					if (args[1]) {
 						// list specific quote by ID
 						const quoteId = args[1];
-						QuoteModel.findById(quoteId, (err: any, quote: IQuote | null) => {
+						QuoteModel.findById(quoteId, (err: MongooseError, quote: IQuote | null) => {
 							if (err) {
 								console.error(err);
 								// handle error
@@ -65,7 +74,7 @@ const quoteCommand: Command = {
 						// list a random quote
 						QuoteModel.countDocuments().exec().then((count: number) => {
 							const randomIndex = Math.floor(Math.random() * count);
-	
+
 							QuoteModel.findOne().skip(randomIndex).exec().then(async (quote: IQuote | null) => {
 								if (!quote) {
 									await chatClient.say(channel, 'No quotes found');
@@ -81,7 +90,7 @@ const quoteCommand: Command = {
 				default:
 					await chatClient.say(channel, `Usage: ${quoteCommand.usage}`);
 					break;
-			}	
+			}
 		} catch (error) {
 			console.error('Error with Quotes', error);
 		}

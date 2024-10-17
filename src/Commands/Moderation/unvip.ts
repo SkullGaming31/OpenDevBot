@@ -35,7 +35,7 @@ const unvip: Command = {
 
 			const unVIPEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[VIP Removed]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
@@ -50,7 +50,7 @@ const unvip: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${display} just Unviped ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 			try {
 				if (userSearch && stream === null && isStaff) {
@@ -60,10 +60,24 @@ const unvip: Command = {
 					console.error('Something happened while searching for user');
 				}
 				await commandUsage.send({ embeds: [unVIPEmbed] });
-			} catch (error) {
-				console.error(error);
+			} catch (error: unknown) {
+				if (error instanceof Error) {
+					console.error(error.name + ': ' + error.message, error.stack);
+					await chatClient.say(channel, `${error.message}`);
+				} else {
+					console.error('Unknown error');
+					await chatClient.say(channel, 'An unknown error occurred');
+				}
 			}
-		} catch (error) { console.error(error); }
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error(error.name + ': ' + error.message, error.stack);
+				await chatClient.say(channel, `${error.message}`);
+			} else {
+				console.error('Unknown error');
+				await chatClient.say(channel, 'An unknown error occurred');
+			}
+		}
 	}
 };
 export default unvip;

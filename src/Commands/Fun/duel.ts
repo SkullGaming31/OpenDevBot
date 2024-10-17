@@ -8,6 +8,17 @@ const duel: Command = {
 	name: 'duel',
 	description: 'Challenge another user to a duel for x amount of skulls',
 	usage: '!duel [user] [amount]',
+	/**
+	 * Executes a duel command where a user can challenge another user to a duel for a specified amount of gold.
+	 * 
+	 * @param {string} channel The channel where the command was triggered.
+	 * @param {string} user The user who initiated the duel.
+	 * @param {string[]} args The arguments passed to the command (challenged user and duel amount).
+	 * @param {string} text The full text of the message that triggered the command.
+	 * @param {ChatMessage} msg The message instance that triggered the command.
+	 * 
+	 * @returns {Promise<void>} The result of the duel execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 

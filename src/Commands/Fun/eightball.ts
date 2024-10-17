@@ -7,6 +7,17 @@ const eightball: Command = {
 	name: '8ball',
 	description: 'ask a yes or no question',
 	usage: '!8ball <question>',
+	/**
+	 * Executes the 8ball command.
+	 *
+	 * @param channel The channel that the command was triggered in.
+	 * @param user The user that triggered the command.
+	 * @param args The arguments that were passed to the command.
+	 * @param text The full text of the message that triggered the command.
+	 * @param msg The message instance that triggered the command.
+	 *
+	 * @returns {Promise<void>} The result of the command execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		console.log('hit 8ball');
 		const chatClient = await getChatClient();

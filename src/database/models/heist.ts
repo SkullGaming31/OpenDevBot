@@ -8,7 +8,7 @@ interface IHeist extends Document {
 }
 
 const heistSchema = new Schema<IHeist>({
-	id: { type: String, unique: true },
+	id: { type: String, unique: true, index: true },
 	username: { type: String, required: true },
 	severity: { type: String, required: true },
 	duration: { type: Number, required: true },

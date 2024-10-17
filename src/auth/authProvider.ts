@@ -8,14 +8,19 @@ const clientId = process.env.TWITCH_CLIENT_ID as string;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 
 
+/**
+ * Creates a RefreshingAuthProvider that automatically refreshes tokens when they expire
+ * and updates the tokens in the database. The provider is pre-populated with the tokens
+ * from the database, and the user with id 659523613 is added as a user that can be used
+ * for requests that require the chat scope.
+ * @returns The RefreshingAuthProvider
+ */
 export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 	const tokenDataList: (ITwitchToken & { user_id: string })[] = await TokenModel.find();
 
 	const authProvider = new RefreshingAuthProvider({ clientId, clientSecret });
 
 	authProvider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
-		// console.log('Refreshing tokens for user', userId);
-		// console.log('New token data:', newTokenData);
 		const tbd = await TokenModel.findOneAndUpdate(
 			{ user_id: userId },
 			{

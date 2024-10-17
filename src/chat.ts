@@ -27,6 +27,11 @@ if (process.env.Enviroment === 'prod') {
 }
 
 export const commands: Set<string> = new Set<string>();
+/**
+ * Recursively loads all commands in a given directory and its subdirectories.
+ * @param commandsDir The directory to load commands from
+ * @param commands The object to store the loaded commands in
+ */
 async function loadCommands(commandsDir: string, commands: Record<string, Command>): Promise<void> {
 	const commandModules = fs.readdirSync(commandsDir);
 
@@ -64,6 +69,21 @@ interface ViewerWatchTime {
 	intervalId: NodeJS.Timeout;
 }
 
+/**
+ * Initializes the Twitch chat client and sets up event listeners for commands.
+ *
+ * The function loads commands from the Commands directory and sets up an event
+ * listener for the onMessage event. The event listener checks if the message
+ * starts with a valid command and executes the corresponding command if it does.
+ * The function also checks if the user is a moderator or broadcaster and
+ * restricts access to moderator-only commands.
+ *
+ * The function also sets up an interval to send a message every 10 minutes with
+ * a link to the social media profiles.
+ *
+ * @returns {Promise<void>} A promise that resolves when the chat client is
+ * initialized and the event listeners are set up.
+ */
 export async function initializeChat(): Promise<void> {
 	// Load commands
 	const chatClient = await getChatClient();
@@ -88,21 +108,21 @@ export async function initializeChat(): Promise<void> {
 			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
 			const chatters = chattersResponse.data; // Retrieve the array of chatters
 			const chunkSize = 100; // Desired number of chatters per chunk
-	
+
 			let intervalDuration: number;
 			if (process.env.Env === 'dev' || process.env.Env === 'debug') {
 				intervalDuration = 30 * 1000; // 30 seconds in milliseconds
 			} else {
 				intervalDuration = 60 * 1000; // 1 minutes in milliseconds
 			}
-	
+
 			const requestsPerInterval = 800; // Maximum number of requests allowed per interval
-	
+
 			const totalChunks = Math.ceil(chatters.length / chunkSize); // Total number of chunks
-	
+
 			let chunkIndex = 0; // Counter for tracking the current chunk index
 			let requestIndex = 0; // Counter for tracking the current request index
-	
+
 			const channelId = msg.channelId;
 			// console.log('Broadcaster Channel ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {// TODO: Only allow points/gold/coins to be collected while the stream is live
@@ -154,10 +174,17 @@ export async function initializeChat(): Promise<void> {
 				if (chunkIndex === totalChunks) {
 					chunkIndex = 0;
 				}
-			};						
-	
+			};
+
 			const isIntervalRunning = true;
-	
+
+			/**
+			 * This function is the interval handler for the periodic updating of viewers in the database.
+			 * It checks if the number of requests made is less than the maximum allowed per interval.
+			 * If so, it gets the stream of the given channel and fetches the chatters for that channel.
+			 * The chatters are then processed and added to the database.
+			 * If the number of requests made reaches the maximum allowed per interval, the request index is reset.
+			 */
 			const intervalHandler = async () => {
 				if (requestIndex < requestsPerInterval) {
 					const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
@@ -170,28 +197,28 @@ export async function initializeChat(): Promise<void> {
 					requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
 				}
 			};
-	
+
 			const interval = setInterval(async () => {
 				if (isIntervalRunning) {
 					await intervalHandler();
 				}
 			}, intervalDuration);
-	
+
 		} catch (error) {
 			console.error(error);
-		}	
+		}
 
-		if (text.includes('overlay expert') && channel === '#canadiendragon') {
+		if (text.includes('overlay expert') && channel === '#skullgaminghq') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
 		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
 		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
 			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
 		}
-		if (text.includes('overlay designer') && channel === '#canadiendragon') {
+		if (text.includes('overlay designer') && channel === '#skullgaminghq') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
 		}
-		if (text.includes('wl') && channel === '#canadiendragon') {
+		if (text.includes('wl') && channel === '#skullgaminghq') {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
 			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
@@ -278,12 +305,12 @@ export async function initializeChat(): Promise<void> {
 					}
 
 					// If the command is marked as devOnly and the user is NOT a moderator or broadcaster in the specific channel, restrict access
-					if (command.devOnly && msg.channelId !== '31124455' && !(msg.userInfo.isBroadcaster || msg.userInfo.isMod)) {
-						return chatClient.say(channel, 'This command is a devOnly command and can only be used in CanadienDragon\'s Channel, https://twitch.tv/canadiendragon');
+					if (command.devOnly && msg.channelId !== '1155035316' && !(msg.userInfo.isBroadcaster || msg.userInfo.isMod)) {
+						return chatClient.say(channel, 'This command is a devOnly command and can only be used in skullgaminghq\'s Channel, https://twitch.tv/skullgaminghq');
 					}
 
 					// If the command is restricted to the broadcaster and moderators, enforce the restriction
-					if (msg.channelId === '31124455' && (command.moderator && !isStaff)) {
+					if (msg.channelId === '1155035316' && (command.moderator && !isStaff)) {
 						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
 					}
 
@@ -305,7 +332,7 @@ export async function initializeChat(): Promise<void> {
 
 		// const sendMessageEvery10Minutes = async () => {
 		// 	try {
-		// 		await chatClient.say('canadiendragon', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+		// 		await chatClient.say('skullgaminghq', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
 		// 	} catch (error) {
 		// 		console.error(error);
 		// 	} finally {
@@ -313,7 +340,7 @@ export async function initializeChat(): Promise<void> {
 		// 		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
 		// 	}
 		// };
-	
+
 		// // Initiate the first call with a delay
 		// setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
 	};
@@ -321,6 +348,12 @@ export async function initializeChat(): Promise<void> {
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
+/**
+ * Registers a command with the given name and optional aliases.
+ * The command will be available to be executed by users in the chat.
+ * @param newCommand The command to be registered.
+ * @param name The name of the command.
+ */
 function registerCommand(newCommand: Command, name: string) {
 	// Register the command with the provided name
 	commands.add(name);
@@ -339,6 +372,12 @@ function registerCommand(newCommand: Command, name: string) {
 
 // holds the ChatClient
 let chatClientInstance: ChatClient;
+/**
+ * Returns the ChatClient instance which is used to interact with the Twitch chat.
+ * If the instance does not exist, it is created and connected to the channels
+ * specified in the database.
+ * @returns {Promise<ChatClient>} The ChatClient instance.
+ */
 export async function getChatClient(): Promise<ChatClient> {
 	// const TBD = await UserModel.deleteMany({});
 	// console.log('User Collection: ', TBD.deletedCount);
@@ -363,33 +402,33 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 					console.log(`${user} has joined ${channel}'s channel`);
 				}
-							
+
 				// Check if the channel is currently streaming
 				const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
 				if (stream === null) return; // Exit if the channel is not live
-	
+
 				// Fetch user ID by their username
 				const userId = await userApiClient.users.getUserByName(user as UserNameResolvable);
 				if (!userId) {
 					throw new Error(`User ID for ${user} not found`);
 				}
-	
+
 				// Fetch existing watch times from the database for all channels
 				const userRecords = await UserModel.find({ id: userId.id });
 				const existingWatchTimesMap = new Map<string, number>(); // Map to store watch times by channelId
 				userRecords.forEach(record => {
 					existingWatchTimesMap.set(record.channelId, record.watchTime || 0);
 				});
-	
+
 				// Initialize or update watch time tracking for the current channel
 				const channelInfo = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 				if (!channelInfo || channelInfo.id === undefined) return;
-	
+
 				const channelId = channelInfo.id as string;
 				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
 					console.log(`User ${user} joined channel ${channel} (${channelId})`);
 				}
-	
+
 				// Initialize the map with existing watch time and start an interval to update it
 				const intervalId = setInterval(async () => {
 					const viewer = viewerWatchTimes.get(user);
@@ -398,15 +437,15 @@ export async function getChatClient(): Promise<ChatClient> {
 						const totalWatchTime = viewer.watchTime + watchTime;
 						viewer.joinedAt = Date.now();
 						viewer.watchTime = totalWatchTime;
-	
+
 						try {
 							// Update or create user record in the database for the current channel
 							const filter = { id: userId.id, channelId };
 							const update = { $set: { watchTime: totalWatchTime } };
 							const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-	
+
 							const updatedUser = await UserModel.findOneAndUpdate(filter, update, options);
-											
+
 							if (updatedUser) {
 								if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
 									console.log(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
@@ -426,11 +465,11 @@ export async function getChatClient(): Promise<ChatClient> {
 						}
 					}
 				}, UPDATE_INTERVAL);
-				
+
 				// Store viewer's data in the map
 				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTimesMap.get(channelId) || 0, intervalId });
 				if (stream === null) clearInterval(intervalId);
-	
+
 				// Ensure bot is a moderator in the channel if required
 				if (chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
 					const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo[0].id as UserIdResolvable, openDevBotID as UserIdResolvable);
@@ -446,29 +485,29 @@ export async function getChatClient(): Promise<ChatClient> {
 				console.error('Error handling onJoin event:', error);
 			}
 		});
-		
+
 		chatClientInstance.onPart(async (channel: string, user: string) => {
 			if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 				console.log(`${user} has left ${channel}'s channel`);
 			}
-	
+
 			const viewer = viewerWatchTimes.get(user);
-	
+
 			if (viewer) {
 				clearInterval(viewer.intervalId); // Clear the interval to stop periodic updates
 				const watchTime = Date.now() - viewer.joinedAt;
 				const totalWatchTime = viewer.watchTime + watchTime;
 				viewerWatchTimes.delete(user); // Remove user from the map once their watch time is updated
-	
+
 				try {
 					const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);
 					const userId = await userApiClient.users.getUserByName(user as UserNameResolvable);
 					if (!userId) {
 						throw new Error(`User ID for ${user} not found`);
 					}
-			
+
 					const channelId = streamerChannel?.id;
-			
+
 					const userRecord = await UserModel.findOne({ id: userId.id, channelId });
 					if (userRecord) {
 						userRecord.watchTime = totalWatchTime;
@@ -484,7 +523,7 @@ export async function getChatClient(): Promise<ChatClient> {
 					}
 				} catch (error) {
 					console.error('Error updating watch time:', error);
-				}			
+				}
 			}
 		});
 
@@ -523,7 +562,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				// Fetch the channel info for the specific broadcaster ID
 				const broadcasterId = broadcasterInfo[0].id as UserIdResolvable; // Assuming you want the first broadcaster in the array
 				const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterId);
-							
+
 				if (!streamerChannel || !streamerChannel.id) {
 					console.error(`Streamer channel not found for user ${user}`);
 					continue;

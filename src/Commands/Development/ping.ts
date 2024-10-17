@@ -16,6 +16,17 @@ const ping: Command = {
 	moderator: true,
 	devOnly: true,
 	cooldown: 30000,
+	/**
+	 * Executes the ping command.
+	 *
+	 * @param channel The channel that the command was triggered in.
+	 * @param user The user that triggered the command.
+	 * @param args The arguments that were passed to the command.
+	 * @param text The full text of the message that triggered the command.
+	 * @param msg The message instance that triggered the command.
+	 *
+	 * @returns {Promise<void>} The result of the command execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -35,7 +46,7 @@ const ping: Command = {
 			if (!args[0]) return chatClient.say(channel, 'Please Provide a Game to search the GameID for');
 			const gameName = args.join(' '); // Join the args array into a string with a space separator
 			const game = await userApiClient.games.getGameByName(gameName);
-	
+
 			await chatClient.say(channel, `${game?.name} Id is ${game?.id}`);
 			console.log(`${game?.name} Id is ${game?.id}`);
 			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
@@ -48,12 +59,17 @@ const ping: Command = {
 	},
 };
 
+/**
+ * Checks the ping to the Twitch API.
+ *
+ * @returns {Promise<number>} The ping in milliseconds to the Twitch API.
+ */
 async function checkTwitchApiPing() {
 	const apiEndpoint = 'https://api.twitch.tv/helix/streams';
 	const start = Date.now();
 
 	try {
-		const tbd = await TokenModel.findOne({ user_id: '31124455' });
+		const tbd = await TokenModel.findOne({ user_id: '1155035316' });
 		await axios.get(apiEndpoint, {
 			headers: {
 				Authorization: `Bearer ${tbd?.access_token}`,
@@ -71,6 +87,11 @@ async function checkTwitchApiPing() {
 	}
 }
 
+/**
+ * Calculates the uptime of the bot based on the process uptime.
+ * 
+ * @returns {string} The formatted uptime string in the format "X days Y hours Z minutes W seconds".
+ */
 function getBotUptime() {
 	const uptimeMilliseconds = process.uptime() * 1000;
 	const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);

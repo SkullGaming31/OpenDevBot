@@ -133,6 +133,14 @@ const heist: Command = {
 	name: 'heist',
 	description: 'start a heist with friends',
 	usage: '!heist <amount> <zone>',
+	/**
+	 * Handles the !heist command. Allows users to start a heist.
+	 * @param {string} channel The channel the command was sent in.
+	 * @param {string} user The user who sent the command.
+	 * @param {string[]} args The arguments provided with the command.
+	 * @param {string} text The text of the command.
+	 * @param {ChatMessage} msg The message object.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		// Extract the amount from the command arguments
@@ -143,14 +151,14 @@ const heist: Command = {
 		// Function to load injury data from MongoDB
 		async function loadInjuryDataFromMongoDB(): Promise<InjuryData> {
 			try {
-			// Retrieve all injury data from MongoDB
+				// Retrieve all injury data from MongoDB
 				const injuryData = await InjuryModel.find().lean().exec();
-			
+
 				// Convert the retrieved data to the desired format
 				const formattedData: InjuryData = {};
 				injuryData.forEach((entry) => {
 					const participantName = entry.participantName;
-					const injuries = entry.injuries.map((injury: any) => ({
+					const injuries = entry.injuries.map((injury: Injury) => ({
 						severity: injury.severity,
 						duration: injury.duration,
 						description: injury.description,
@@ -352,10 +360,10 @@ const heist: Command = {
 				// Check for 50/50 chance of injury
 				if (Math.random() <= 0.9) {
 					const injurySeverity = determineInjurySeverity();
-		
+
 					// Assign the injury and get the injury details
 					const injury = assignInjury(participant, injurySeverity);
-		
+
 					// Update participantData with the new injury
 					if (participantData[participant]) {
 						participantData[participant].injuries.push(injury);
@@ -365,10 +373,10 @@ const heist: Command = {
 
 					// Save updated injury data to MongoDB
 					await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
-		
+
 					// Log the updated participantData
 					// console.log('Updated ParticipantData:', participantData);
-		
+
 					// Construct the result message with injury details
 					resultMessage += ` ${participant} received a ${injury.severity} injury and needs to recover for ${Math.floor(injury.duration / 60)} minutes. ${injury.description}`;
 				}
@@ -473,6 +481,11 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 	}
 }
 
+/**
+ * Returns the duration of an injury in seconds, given its severity.
+ * @param severity The severity of the injury, one of 'minor', 'moderate', or 'severe'.
+ * @returns The duration of the injury in seconds.
+ */
 function getInjuryDuration(severity: string): number {
 	switch (severity) {
 		case 'minor':
@@ -488,6 +501,15 @@ function getInjuryDuration(severity: string): number {
 }
 
 let descriptions: string[];
+/**
+ * Returns a random injury description based on the given severity.
+ * @param severity The severity of the injury, one of 'minor', 'moderate', or 'severe'.
+ * @returns A random injury description as a string.
+ * @description
+ * If the severity is unknown, the function will return an empty string.
+ * If there are no descriptions available for the given severity,
+ * the function will return a default message.
+ */
 function getRandomDescription(severity: string): string {
 	// Choose the appropriate description array based on severity
 	switch (severity) {
@@ -515,18 +537,27 @@ function getRandomDescription(severity: string): string {
 		return 'An unexpected injury occurred.'; // Example: default message for unknown severity
 	}
 }
+/**
+ * Calculates the probability of a given severity of injury occurring.
+ * @param severity The severity of the injury to calculate the probability for.
+ * @returns The probability of the given severity of injury occurring.
+ * @description
+ * The probability is based on the severity of the injury and adjusted by the
+ * difficulty of the heist. The higher the difficulty, the higher the probability
+ * of a higher severity injury occurring.
+ */
 function getInjuryProbability(severity: string, /* difficulty: number */): number {
 	// Set base probabilities based on severity (example)
 	const baseProbabilities: {
-    minor: number;
-    moderate: number;
-    severe: number;
-    [key: string]: number;
-} = {
-	minor: 0.4,   // Adjusted probabilities
-	moderate: 0.2,
-	severe: 0.9,
-};
+		minor: number;
+		moderate: number;
+		severe: number;
+		[key: string]: number;
+	} = {
+		minor: 0.4,   // Adjusted probabilities
+		moderate: 0.2,
+		severe: 0.9,
+	};
 
 	// Adjust probabilities based on difficulty (example)
 	// const difficultyModifier = difficulty / 10; // Increase chance of higher severity with higher difficulty
@@ -534,6 +565,12 @@ function getInjuryProbability(severity: string, /* difficulty: number */): numbe
 	return baseProbabilities[severity] /* + difficultyModifier */;
 }
 
+/**
+ * Determines the severity of an injury based on cumulative probabilities for each severity.
+ * 
+ * @param difficulty The difficulty level affecting the injury severity calculation.
+ * @returns The determined severity of the injury ('minor', 'moderate', or 'severe').
+ */
 function determineInjurySeverity(/* difficulty: number */): string {
 	const randomValue = Math.random();
 
@@ -557,6 +594,20 @@ function determineInjurySeverity(/* difficulty: number */): string {
 	return 'minor'; // Example: return "minor" in case of unexpected behavior
 }
 
+/**
+ * Calculates the success rate for a heist based on the number of participants and the difficulty of the zone.
+ * 
+ * The success rate is calculated as follows:
+ * 1. A factor is calculated based on the number of participants, with a maximum of 10 participants.
+ * 2. The rate of increase per participant is calculated.
+ * 3. The adjusted success rate is calculated by multiplying the factor by the rate of increase.
+ * 4. The adjusted success rate is then adjusted based on the difficulty of the zone.
+ * 5. The success rate is limited to a maximum of 90%.
+ * 
+ * @param zoneDifficulty The difficulty level of the zone ('low', 'moderate', or 'high').
+ * @param participants The number of participants in the heist.
+ * @returns The calculated success rate for the heist.
+ */
 function calculateSuccessRate(zoneDifficulty: string, participants: string[]) {
 	const maxSuccessRate = 0.9; // Maximum success rate (90%)
 	const maxParticipants = 10; // Maximum number of participants that influence the success rate
@@ -589,6 +640,14 @@ function calculateSuccessRate(zoneDifficulty: string, participants: string[]) {
 	return adjustedRate;
 }
 
+/**
+ * Calculates the loot obtained from a successful heist.
+ * 
+ * @param amount The amount of loot available to be stolen.
+ * @param zoneDifficulty The difficulty level of the zone ('low', 'moderate', or 'high').
+ * @param playerInjury Optional. The injury sustained by the player while performing the heist.
+ * @returns An object containing the total loot amount, the items obtained, and a message to be displayed to the player.
+ */
 function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: Injury): LootResult {
 	const lootItems = Object.entries(lootValues);
 	const numItems = randomInt(1, 9);
@@ -604,7 +663,7 @@ function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: In
 		case 'moderate':
 			bonusMultiplier = 1.2; // Moderate difficulty grants a 20% bonus
 			break;
-			// Low difficulty has no bonus multiplier
+		// Low difficulty has no bonus multiplier
 		default:
 			break;
 	}
@@ -658,6 +717,18 @@ function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: In
 	};
 }
 
+/**
+ * Gets the total value of a loot item.
+ *
+ * If the item is a number, it's returned directly.
+ * If the item is an array, its elements are summed up.
+ * If the item is an object, its property values are summed up.
+ *
+ * @throws {Error} If the item is not one of the above types.
+ *
+ * @param {number | Gems | Antique | Artwork | Cash} item
+ * @returns {number}
+ */
 function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 	if (typeof item === 'number') {
 		return item;
@@ -674,6 +745,13 @@ function getValue(item: number | Gems | Antique | Artwork | Cash): number {
 		throw new Error('Invalid loot item type.');
 	}
 }
+/**
+ * Deletes the entry for a given user from the injuries collection in the database.
+ *
+ * @param {string} user The user to delete the entry for.
+ * @returns {Promise<void>}
+ * @throws {Error} If there is an error deleting the entry from the database.
+ */
 async function deleteEntryFromDatabase(user: string): Promise<void> {
 	try {
 		// Find and delete the entry corresponding to the user from the database

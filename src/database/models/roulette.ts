@@ -6,7 +6,7 @@ interface ChamberState extends Document {
 }
 
 const chamberStateSchema = new Schema<ChamberState>({
-	userId: { type: String, required: true, unique: true },
+	userId: { type: String, required: true, unique: true, index: true },
 	bullets: { type: Number, required: true, default: 1 },
 });
 

@@ -14,6 +14,20 @@ const gamble: Command = {
 	name: 'gamble',
 	description: 'Gamble your coins and have a chance to win more',
 	usage: '!gamble <amount>',
+	/**
+	 * Executes the gamble command.
+	 * 
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, which may include an amount to gamble.
+	 * @param text - The full text of the chat message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 * 
+	 * The function retrieves the user from the database, checks if the user has enough coins to gamble,
+	 * performs the gambling logic, and updates the user's balance accordingly. If the user wins, the function
+	 * sends a message to the chat with the winnings. If the user loses, the function sends a message with the
+	 * amount lost. The function also saves the updated user information back to the database.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 

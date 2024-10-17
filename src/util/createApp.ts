@@ -1,8 +1,18 @@
 import axios from 'axios';
 import express from 'express';
-import { TokenModel } from '../database/models/tokenModel';
+import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import { limiter } from './util';
 
+/**
+ * Creates an Express.js app that handles the OAuth2 flow for getting an access token from Twitch.
+ *
+ * The app has two endpoints:
+ * - `/api/v1/twitch`: Redirects to the Twitch authorization URL with the correct scopes and redirect URI.
+ * - `/api/v1/auth/twitch/callback`: Handles the OAuth2 callback from Twitch and exchanges the authorization code for an access token and refresh token.
+ *   It then uses the access token to get the user ID and saves the access token, refresh token, and user ID to the database.
+ *
+ * @returns {express.Application} The Express.js app.
+ */
 export default function createApp(): express.Application {
 	const app = express();
 
@@ -140,7 +150,7 @@ export default function createApp(): express.Application {
 		if (code) {
 			try {
 				// Exchange authorization code for access token and refresh token
-				const tokenResponse = await axios.post('https://id.twitch.tv/oauth2/token', null, {
+				const tokenResponse = await axios.post<ITwitchToken>('https://id.twitch.tv/oauth2/token', null, {
 					params: {
 						client_id: clientId,
 						client_secret: clientSecret,
@@ -181,6 +191,7 @@ export default function createApp(): express.Application {
 						obtainmentTimestamp,
 						broadcaster_type
 					});
+					console.log('Token Saved');
 				} else {
 					// If token is found, update it
 					tokenDoc.login = username;
@@ -194,14 +205,16 @@ export default function createApp(): express.Application {
 
 				// Save the token document
 				await tokenDoc.save();
-				console.log('Token Saved/Updated');
+				console.log('Token Updated');
 
-				res.json({ 
+				res.json({
+					UserID: userId,
 					username: username,
-					access_token, 
+					access_token,
 					refresh_token,
 					expires_in,
-					broadcaster_type: broadcaster_type === '' ? 'streamer' : broadcaster_type 
+					broadcaster_type: broadcaster_type === '' ? 'streamer' : broadcaster_type,
+					scopes: userScopes.split('\n')
 				});
 			} catch (error) {
 				console.error('Error during OAuth2 process:', error);

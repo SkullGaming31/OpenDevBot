@@ -3,22 +3,27 @@ import { getUserApi } from '../api/userApiClient';
 import { TokenModel, ITwitchToken } from '../database/models/tokenModel';
 
 interface ChannelInfo {
-  delay: number;
-  displayName: string;
-  gameId: string;
-  gameName: string;
-  id: string;
-  language: string;
-  name: string;
-  tags: string[];
-  title: string;
-  getBroadcaster(): Promise<HelixUser>;
-  getGame(): Promise<HelixGame | null>;
+	delay: number;
+	displayName: string;
+	gameId: string;
+	gameName: string;
+	id: string;
+	language: string;
+	name: string;
+	tags: string[];
+	title: string;
+	getBroadcaster(): Promise<HelixUser>;
+	getGame(): Promise<HelixGame | null>;
 }
 
 export const broadcasterInfo: ChannelInfo[] = [];
 export const moderatorIDs: ChannelInfo[] = [];
 
+/**
+ * Initializes the `broadcasterInfo` and `moderatorIDs` arrays.
+ * This function is called during the startup process and is responsible for populating the `broadcasterInfo` and `moderatorIDs` arrays with data from the database.
+ * If there is an error during the initialization process, the error is caught and logged, then re-thrown to propagate the error further if needed.
+ */
 export async function initializeConstants() {
 	const userApiClient = await getUserApi();
 
@@ -26,17 +31,17 @@ export async function initializeConstants() {
 		// Exclude the entry with user_id '659523613'
 		const userTokens = await TokenModel.find<ITwitchToken>({ user_id: { $ne: '659523613' } }).lean();
 
-		if (userTokens.length === 0) {
-			throw new Error('No Twitch tokens found in the database');
-		}
+		// if (userTokens.length === 0) {
+		// 	throw new Error('No Twitch tokens found in the database');
+		// }
 
 		for (const userToken of userTokens) {
 			const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
 			// if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
 			// 	console.log(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
 			// }
-			const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id); 
-      
+			const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
+
 			if (helixBroadcaster === null || helixModerator === null) {
 				throw new Error(`Failed to retrieve info for user ${userToken.user_id}`);
 			}

@@ -9,6 +9,20 @@ const feature: Command = {
 	cooldown: 10000,
 	description: 'Let me know what feature you would like me to add to the twitch bot',
 	usage: '!feature [name] <description>',
+	/**
+	 * Handles the '!feature' command to submit a feature request for the Twitch bot.
+	 * 
+	 * @param channel - The Twitch channel where the command was invoked.
+	 * @param user - The user who invoked the command.
+	 * @param args - The arguments passed with the command, where the first argument is the feature name and the rest is the description.
+	 * @param text - The full text of the message.
+	 * @param msg - The chat message object containing user and channel information.
+	 * 
+	 * Sends a feature request to a Discord channel via webhook if the command is invoked in the specified channel.
+	 * The feature request includes the feature name, description, and the user's Twitch profile information.
+	 * 
+	 * Note: This command is restricted to the 'skullgaminghq' channel.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		try {
 			const chatClient = await getChatClient();
@@ -19,8 +33,8 @@ const feature: Command = {
 			const featureWebhook = new WebhookClient({ id: FEATURE_REQUEST_ID, token: FEATURE_REQUEST_TOKEN });
 
 			const usersSearch = await userApiClient.users.getUserById(msg.userInfo.userId);
-			if (channel !== 'canadiendragon') return chatClient.say(channel, 'This command is for CanadienDragons Channel Only');
-			
+			if (channel !== 'skullgaminghq') return chatClient.say(channel, 'This command is for skullgaminghqs Channel Only');
+
 			const name: string = args[0];
 			const description: string = args.slice(1).join(' ');
 
@@ -34,7 +48,7 @@ const feature: Command = {
 
 			featureEmbed.setDescription(description);
 			featureEmbed.setURL(`https://twitch.tv/${usersSearch?.name.toLowerCase()}`);
-			featureEmbed.setFooter({ text: `Feature request from ${msg.userInfo.userName}, userID: ${msg.userInfo.userId}`});
+			featureEmbed.setFooter({ text: `Feature request from ${msg.userInfo.userName}, userID: ${msg.userInfo.userId}` });
 			featureEmbed.setTimestamp();
 
 			await chatClient.say(channel, 'Feature request recorded.');

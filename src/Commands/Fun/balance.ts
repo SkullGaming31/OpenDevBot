@@ -8,6 +8,19 @@ const balance: Command = {
 	description: 'Get the balance for your account or another user\'s account if you are a mod or broadcaster',
 	usage: '!balance [@username]',
 	aliases: ['bal', 'points', 'coins'],
+	/**
+	 * Execute the balance command to fetch and display the balance of a user.
+	 * 
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, which may include a target username.
+	 * @param text - The full text of the chat message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 * 
+	 * The function retrieves the balance for the requesting user or another specified user
+	 * if the requester has mod or broadcaster privileges. It then sends a message to the 
+	 * chat with the balance information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const channelId = msg.channelId;
@@ -24,11 +37,11 @@ const balance: Command = {
 			}
 		}
 
-		
-		
+
+
 		// Fetch the user's balance
 		const userDoc = await UserModel.findOne({ channelId, username: targetUser });
-		
+
 		// Log channelId and username
 		console.log('Channel ID:', channelId);
 		console.log('Username:', targetUser);

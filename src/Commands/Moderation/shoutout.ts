@@ -11,6 +11,17 @@ const shoutout: Command = {
 	name: 'shoutout',
 	description: 'Shout out a user from the chat',
 	usage: '!shoutout [@name]',
+	/**
+	 * Executes the shoutout command.
+	 *
+	 * @param channel The channel that the command was triggered in.
+	 * @param user The user that triggered the command.
+	 * @param args The arguments that were passed to the command.
+	 * @param text The full text of the message that triggered the command.
+	 * @param msg The message instance that triggered the command.
+	 *
+	 * @returns {Promise<void>} The result of the command execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -30,7 +41,7 @@ const shoutout: Command = {
 
 			const commandUsageEmbed = new EmbedBuilder()
 				.setTitle('CommandUsage[Shoutout]')
-				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl})
+				.setAuthor({ name: msg.userInfo.displayName, iconURL: userSearch.profilePictureUrl })
 				.setColor('Yellow')
 				.addFields([
 					{ name: 'Executer', value: msg.userInfo.displayName, inline: true },
@@ -42,16 +53,16 @@ const shoutout: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			const shoutoutEmbed = new EmbedBuilder()
 				.setTitle('Twitch Shoutout')
-				.setAuthor({ name: user, iconURL: userSearch.profilePictureUrl})
+				.setAuthor({ name: user, iconURL: userSearch.profilePictureUrl })
 				.setColor('Green')
 				.setDescription(shoutoutMessage)
 				.setURL(`https://twitch.tv/${userChannelInfo?.name}`)
-				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just shouted out ${userSearch.displayName} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			if (userSearch.profilePictureUrl) {
@@ -68,8 +79,11 @@ const shoutout: Command = {
 			await commandUsage.send({ embeds: [commandUsageEmbed] });
 			await sleep(5000);
 			await TwitchActivity.send({ embeds: [shoutoutEmbed] });
-		} catch (error) {
-			console.error(error);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error(error.name + ': ' + error.message, error.stack);
+				await chatClient.say(channel, `An error occurred: ${error.message}`);
+			}
 		}
 	}
 };

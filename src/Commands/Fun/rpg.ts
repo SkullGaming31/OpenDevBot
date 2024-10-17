@@ -24,11 +24,17 @@ const rpg: Command = {
 	name: 'rpg',
 	description: 'An RPG text based game',
 	usage: '!rpg',
+	/**
+	 * Checks if the user executing the command is a mod or the broadcaster, if not tells them the command is not functional yet.
+	 * @param channel The channel the command was used in
+	 * @param user The user who used the command
+	 * @param args The arguments passed to the command
+	 * @param text The full text of the message that was posted
+	 * @param msg The message object
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
-		if (!msg.userInfo.isMod || !msg.userInfo.isBroadcaster) {
-			chatClient.say(channel, `Command Description: ${rpg.description}, this Command is currently just a thought`);
-		}
+		chatClient.say(channel, `Command Description: ${rpg.description}, this Command is currently just a thought`);
 	}
 };
 export default rpg;

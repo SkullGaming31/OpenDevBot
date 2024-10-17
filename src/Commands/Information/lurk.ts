@@ -12,7 +12,7 @@ const lurk: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		try {
-			if (channel !== '#canadiendragon') return;
+			if (channel !== '#skullgaminghq') return;
 			const toggle = args.shift();
 			const message = args.join(' ');
 			const savedLurkMessage = await LurkMessageModel.findOne({ id: msg.userInfo.userId });
@@ -55,7 +55,7 @@ const lurk: Command = {
 					break;
 			}
 			await sleep(5000);
-			await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking. ${numLurkers}`);	
+			await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking. ${numLurkers}`);
 		} catch (error) {
 			console.error('Error with the Lurk Command', error);
 		}

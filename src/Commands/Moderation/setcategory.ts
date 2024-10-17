@@ -11,6 +11,21 @@ const setcategory: Command = {
 	aliases: ['setgame'],
 	description: 'Set the channel category for the broadcaster',
 	usage: '!setcategory [gamename]',
+	/**
+	 * Sets the channel category for the broadcaster if the user has the necessary permissions.
+	 *
+	 * @param channel - The channel where the command is issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The arguments passed with the command, expected to contain the game name.
+	 * @param text - The full text of the message containing the command.
+	 * @param msg - The ChatMessage object representing the command message.
+	 *
+	 * @returns {Promise<void>}
+	 *
+	 * @description Checks whether the user is a moderator, broadcaster, or channel editor
+	 * and updates the channel category to the specified game name if found. Sends appropriate
+	 * feedback messages to the chat and logs the command usage.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
