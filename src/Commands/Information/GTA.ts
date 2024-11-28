@@ -13,9 +13,6 @@ const gta: Command = {
 	name: 'gta',
 	description: 'Displays GTAcharacter\'s backstory',
 	usage: '!gta',
-	moderator: true,
-	devOnly: true,
-	cooldown: 30000,
 	/**
 	 * Executes the gta command.
 	 *
@@ -36,7 +33,7 @@ const gta: Command = {
 
 		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
-		const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterID.id as UserIdResolvable);
+		const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterID?.id as UserIdResolvable);
 
 		if (streamerChannel?.gameName !== 'Grand Theft Auto V') return chatClient.say(channel, 'You must be in GTA V to use this command.');
 		// console.log('GTA command executed.', streamerChannel);
