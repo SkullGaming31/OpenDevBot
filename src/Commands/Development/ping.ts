@@ -42,6 +42,9 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
+			if (!isStaff) {
+				return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
+			}
 			if (args.length > 0) {
 				const gameName = args.join(' '); // Join the args array into a string with a space separator
 				const game = await userApiClient.games.getGameByName(gameName);
@@ -53,15 +56,11 @@ const ping: Command = {
 					await chatClient.say(channel, `Game "${gameName}" not found.`);
 				}
 				return; // Exit after processing game info
+			} else {
+				const pingValue = await checkTwitchApiPing();
+				const uptime = getBotUptime(); // Get the bot uptime
+				await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 			}
-
-			if (!isStaff) {
-				return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
-			}
-
-			const pingValue = await checkTwitchApiPing();
-			const uptime = getBotUptime(); // Get the bot uptime
-			await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 		} catch (error) {
 			console.error(error);
 		}
