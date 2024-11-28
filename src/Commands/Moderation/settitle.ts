@@ -10,6 +10,23 @@ const settitle: Command = {
 	name: 'settitle',
 	description: 'Set the Channels title',
 	usage: '!settitle [title]',
+	/**
+	 * Updates the channel's title if the user has appropriate permissions.
+	 * 
+	 * @param channel - The channel where the command is executed.
+	 * @param user - The user executing the command.
+	 * @param args - Arguments passed along with the command; expected to contain the new title.
+	 * @param text - The full text of the command message.
+	 * @param msg - The message object containing details about the user and context.
+	 * 
+	 * @returns {Promise<void>}
+	 * 
+	 * @throws Will log an error if updating the channel title fails.
+	 * 
+	 * Checks if the user is a moderator, broadcaster, or channel editor. If so, updates the channel's title
+	 * and sends a confirmation message. Sends a usage message if no arguments are provided or an access
+	 * denied message if the user lacks the necessary permissions.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
@@ -74,8 +91,12 @@ const settitle: Command = {
 			} else {
 				chatClient.say(channel, `${msg.userInfo.displayName}, Access denied. This command can only be used by broadcasters, moderators, and channel editors.`);
 			}
-		} catch (error: any) {
-			console.error(error.message);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error(error.name + ': ' + error.message + error.stack);
+			} else {
+				console.error('Unknown error');
+			}
 		}
 	}
 };

@@ -1,4 +1,4 @@
-import { UserIdResolvable, UserNameResolvable } from '@twurple/api';
+import { ApiClient, HelixChannelEditor, UserIdResolvable, UserNameResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
@@ -7,10 +7,47 @@ import { IUser, UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 
+/**
+ * Checks if a user is authorized to execute a command.
+ *
+ * @param msg The Twitch message that triggered the command.
+ * @param userApiClient The Twitch API client instance.
+ *
+ * @returns A promise that resolves to true if the user is authorized, false otherwise.
+ */
+function isAuthorized(msg: ChatMessage, userApiClient: ApiClient): Promise<boolean> {
+	return new Promise((resolve) => {
+		const broadcaster = userApiClient.users.getUserById(msg.channelId as UserIdResolvable).then((broadcaster) => {
+			if (!broadcaster) {
+				resolve(false);
+			} else {
+				const channelEditor = userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable).then((channelEditor) => {
+					const isEditor = channelEditor.some((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId);
+					const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
+					resolve(isStaff);
+				});
+			}
+		});
+	});
+}
+
 const addpoints: Command = {
 	name: 'addpoints',
 	description: 'Give points to a viewer',
 	usage: '!addpoints <user> <amount>',
+	/**
+	 * Execute the addpoints command to add points to a user's balance.
+	 * 
+	 * This function checks if the user is authorized to use the command and extracts the target user and amount 
+	 * from the command arguments. It then adds the specified amount to the user's balance in the database and 
+	 * sends a message to the chat confirming the points added.
+	 * 
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, including the target user and the amount of points to add.
+	 * @param text - The full text of the chat message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -24,20 +61,20 @@ const addpoints: Command = {
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable);
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
-		const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
+		const isStaff = isAuthorized(msg, userApiClient);
 
 		// Extract the target user and amount from the command arguments
 		let targetUser = args[0];
 		const amountToAdd = parseInt(args[1]);
 
-		if (!isStaff) { 
-			return chatClient.say(channel, `${msg.userInfo.displayName}, You are not authorized to use this command.`); 
+		if (!isStaff) {
+			return chatClient.say(channel, `${msg.userInfo.displayName}, You are not authorized to use this command.`);
 		}
-		if (!args[0] || !args[1]) { 
-			return chatClient.say(channel, `Usage: ${addpoints.usage}`); 
+		if (!args[0] || !args[1]) {
+			return chatClient.say(channel, `Usage: ${addpoints.usage}`);
 		}
-		if (isNaN(amountToAdd)) { 
-			return chatClient.say(channel, 'Invalid amount. Please provide a valid number.'); 
+		if (isNaN(amountToAdd)) {
+			return chatClient.say(channel, 'Invalid amount. Please provide a valid number.');
 		}
 
 		const userSearch = await userApiClient.users.getUserByName(args[0].replace('@', ''));
@@ -46,8 +83,8 @@ const addpoints: Command = {
 		}
 
 		// Remove '@' symbol from the target user's name
-		if (targetUser.startsWith('@')) { 
-			targetUser = targetUser.substring(1).toLowerCase(); 
+		if (targetUser.startsWith('@')) {
+			targetUser = targetUser.substring(1).toLowerCase();
 		}
 
 		// Find the target user in the database

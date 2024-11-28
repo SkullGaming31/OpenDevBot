@@ -8,6 +8,13 @@ class Database {
 		this.uri = uri;
 	}
 
+	/**
+	 * Asynchronously connects to the database using the provided URI.
+	 * Sets debug mode based on the environment.
+	 * Logs the connection status of the database.
+	 * Ensures the database is created by performing a no-op operation.
+	 * @returns Promise<void>
+	 */
 	public async connect(): Promise<void> {
 		try {
 			if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
@@ -15,7 +22,7 @@ class Database {
 			} else {
 				mongoose.set('debug', false);
 			}
-			
+
 			await mongoose.connect(this.uri, {
 				serverSelectionTimeoutMS: 5000,
 				dbName: 'opendevbot',
@@ -52,6 +59,11 @@ class Database {
 		}
 	}
 
+	/**
+	 * @description
+	 * Drops the 'users' collection in the database.
+	 * @returns Resolves if the collection is dropped successfully, rejects with an error if it fails.
+	 */
 	public async dropUsersCollection(): Promise<void> {
 		try {
 			await mongoose.connection.dropCollection('users');

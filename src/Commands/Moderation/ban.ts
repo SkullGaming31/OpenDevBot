@@ -10,6 +10,15 @@ const ban: Command = {
 	name: 'ban',
 	description: 'Ban a user from your Twitch chat',
 	usage: '!ban [@name] (reason)',
+	/**
+	 * Ban a user from your Twitch chat
+	 * @param channel - The channel to ban the user from
+	 * @param user - The user to ban
+	 * @param args - The reason for the ban
+	 * @param text - The text of the command
+	 * @param msg - The message that triggered the command
+	 * @returns {Promise<void>}
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();

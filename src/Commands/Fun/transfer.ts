@@ -8,6 +8,20 @@ const transfer: Command = {
 	name: 'transfer',
 	description: 'Transfer money to another person',
 	usage: '!transfer [@name] [amount]',
+	/**
+	 * Transfer gold from one user to another.
+	 *
+	 * @remarks
+	 * This command will decrement the sender's balance and increment the recipient's balance.
+	 * It will also perform some error checking to ensure that the sender has enough gold
+	 * and that the recipient exists.
+	 *
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, which should include the recipient and amount.
+	 * @param text - The full text of the message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		try {
 			const chatClient = await getChatClient();
@@ -23,17 +37,17 @@ const transfer: Command = {
 			if (isNaN(parsedAmount)) return chatClient.say(channel, `@${user}, please specify a valid amount.`);
 			if (parsedAmount <= 0) return chatClient.say(channel, `@${user}, you can only transfer positive amounts.`);
 
-			// Combine sender balance check and update into a single operation
+			// Decrement sender balance
 			const updatedSenderDoc = await UserModel.findOneAndUpdate<IUser>(
 				{ username: sender.toLowerCase(), channelId: msg.channelId },
 				{
-					$inc: { balance: -parsedAmount },// Decrement balance directly
+					$inc: { balance: -parsedAmount },
 				},
-				{ new: true } // Return updated document for checks
+				{ new: true }
 			);
 			if (updatedSenderDoc?.balance === undefined) return;
 
-			// Handle potential errors with sender balance
+			// Increment recipient balance
 			if (!updatedSenderDoc) {
 				return chatClient.say(channel, `@${user}, you don't have a gold balance.`);
 			}
@@ -41,13 +55,17 @@ const transfer: Command = {
 				return chatClient.say(channel, `@${user}, you don't have enough gold to make this transfer.`);
 			}
 
-			const recipientDoc = await UserModel.findOneAndUpdate<IUser>({ username: recipient.toLowerCase(), channelId: msg.channelId });
-			if (recipientDoc && recipientDoc.balance !== undefined) {
-				recipientDoc.balance += parsedAmount;
-				recipientDoc.save(); // Updates the saved document
+			const recipientDoc = await UserModel.findOneAndUpdate<IUser>(
+				{ username: recipient.toLowerCase(), channelId: msg.channelId },
+				{ $inc: { balance: parsedAmount } },
+				{ new: true }
+			);
+
+			if (recipientDoc) {
 				await chatClient.say(channel, `@${user}, you have transferred ${parsedAmount} gold to ${recipientDoc.username}.`);
 			} else {
-				// Handle recipient not found
+				await chatClient.say(channel, `@${user}, recipient not found.`);
+				throw new Error(`Recipient not found: ${recipient}`);
 			}
 
 		} catch (error) {

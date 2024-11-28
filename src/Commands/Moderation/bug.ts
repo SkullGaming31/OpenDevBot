@@ -14,6 +14,14 @@ const bug: Command = {
 	description: 'Send a bug report to discord for the twitch chatbot',
 	usage: '!bug <command> <bug description> NOTE: command name to file the bug about',
 	cooldown: 30000,
+	/**
+	 * Sends a bug report to the discord server for the twitch chatbot
+	 * @param channel - The channel the command was used in
+	 * @param user - The user who sent the command
+	 * @param args - The arguments provided with the command
+	 * @param text - The full text of the command
+	 * @param msg - The message object from twurple
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		try {
 			const chatClient = await getChatClient();
@@ -42,10 +50,10 @@ const bug: Command = {
 
 			const bugReportEmbed = new EmbedBuilder()
 				.setTitle(`${commandtitle}`)
-				.setAuthor({ name: `${bugReportUser?.displayName}`, iconURL: `${bugReportUser?.profilePictureUrl}`})
+				.setAuthor({ name: `${bugReportUser?.displayName}`, iconURL: `${bugReportUser?.profilePictureUrl}` })
 				.setDescription(bugDescription)
 				.setColor('Red')
-				.setFooter({ text: 'Provided by CanadienDragon' })
+				.setFooter({ text: 'Provided by skullgaminghq' })
 				.setTimestamp();
 
 			if (bugDescription) {

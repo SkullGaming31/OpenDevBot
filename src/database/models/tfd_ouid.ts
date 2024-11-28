@@ -1,13 +1,13 @@
 import { model, Schema, Document } from 'mongoose';
 
 interface TFDDoc extends Document {
-  OUID: string;
-  username?: string;
+	OUID: string;
+	username?: string;
 }
 
 const tfdSchema = new Schema<TFDDoc>({
 	OUID: { type: String, required: true },
-	username: { type: String, required: false }
+	username: { type: String, required: false, index: true },
 });
 
 const tfd = model<TFDDoc>('tfdouid', tfdSchema);

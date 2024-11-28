@@ -10,11 +10,22 @@ const vip: Command = {
 	name: 'vip',
 	description: 'Assign someone the VIP role on Twitch',
 	usage: '!vip [name]',
+	/**
+	 * 
+	 * @param channel - The channel to assign the VIP role in
+	 * @param user - The user assigning the VIP role
+	 * @param args - The arguments passed to the command
+	 * @param text - The full text of the command
+	 * @param msg - The message that triggered the command
+	 * 
+	 * @description
+	 * Assigns the VIP role to the targeted user.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		const chatClient = await getChatClient();
+		const userApiClient = await getUserApi();
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 		try {
-			const chatClient = await getChatClient();
-			const userApiClient = await getUserApi();
-			const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 			// Check user privileges
 			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
@@ -55,7 +66,7 @@ const vip: Command = {
 			// Construct VIP embed message
 			const vipEmbed = new EmbedBuilder()
 				.setTitle('Command Usage[VIP]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Green')
 				.addFields([
 					{
@@ -70,19 +81,21 @@ const vip: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just viped ${args[0].replace('@', '')} in ${channel}'s Twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just viped ${args[0].replace('@', '')} in ${channel}'s Twitch channel` })
 				.setTimestamp();
 
-			// Add user as VIP
 			if (stream !== null) {
 				await userApiClient.channels.addVip(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
 				await chatClient.say(channel, `${args[0]} has been added as VIP by ${msg.userInfo.displayName}`);
 				await commandUsage.send({ embeds: [vipEmbed] });
 			} else {
-				chatClient.say(channel, 'Stream must be live to use this command');
+				await chatClient.say(channel, 'Stream must be live to use this command');
 			}
-		} catch (error) {
-			console.error(error);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error(error.name + ': ' + error.message, error.stack);
+				await chatClient.say(channel, 'An error occurred while assigning the VIP role');
+			}
 		}
 	}
 };

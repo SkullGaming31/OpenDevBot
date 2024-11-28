@@ -11,6 +11,7 @@
     "prod": "tsc && node ./dist/index.js",
     "build": "tsc",
     "seed": "npx ts-node seedDatabase.ts",
+    "log": "npx ts-node logDatabaseData.ts",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit"
@@ -32,7 +33,7 @@
     "oauth": "^0.9.15"
   },
   "engines": {
-    "node": "20.16.0"
+    "node": "^20.17.0"
   },
   "devDependencies": {
     "@types/countdown": "^0.0.8",

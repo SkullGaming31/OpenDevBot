@@ -7,7 +7,7 @@ export interface Command {
   aliases?: string[];
   moderator?: boolean;
   devOnly?: boolean;
-  cooldown?: number; // cooldown property in milliseconds
+  cooldown?: number; // in seconds
   lastExecuted?: number; // store the timestamp of the last execution
   execute: (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => void;
 }

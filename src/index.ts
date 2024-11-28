@@ -8,9 +8,13 @@ import createApp from './util/createApp';
 // import DiscordBot from './Discord/index';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
-import { SubscriptionModel } from './database/models/eventSubscriptions';
 import path from 'path';
 
+/**
+ * Deletes all documents from the injuries collection.
+ *
+ * @returns {Promise<void>}
+ */
 export async function deleteAllInjuries(): Promise<void> {
 	try {
 		const deleteResult = await InjuryModel.deleteMany({});
@@ -24,6 +28,9 @@ export async function deleteAllInjuries(): Promise<void> {
 class OpenDevBot {
 	startTime: number;
 
+	/**
+	 * Initializes the start time of the OpenDevBot instance.
+	 */
 	constructor() {
 		this.startTime = Date.now(); // Record the start time
 	}
@@ -31,6 +38,11 @@ class OpenDevBot {
 	getUptime(): number { return Date.now() - this.startTime; }
 	setTerminalTitle(title: string): void { process.stdout.write(`\x1b]2;${title}\x1b\x5c`); }
 
+	/**
+	 * Prints all environment variables from the .env file to the console.
+	 * The variables are printed in the format 'VARIABLE_NAME: variable_value'.
+	 * If the .env file cannot be read (for example, if it does not exist), the error is logged to the console.
+	 */
 	printEnvironmentVariables(): void {
 		console.log('Environment Variables from .env file:');
 		try {
@@ -46,6 +58,27 @@ class OpenDevBot {
 			console.error('Failed to read .env file:', error);
 		}
 	}
+	/**
+	 * Starts the OpenDevBot by initializing necessary components and services.
+	 * 
+	 * This function performs the following tasks:
+	 * - Determines the MongoDB URI based on the environment and initializes the database connection.
+	 * - Copies metadata files from the source to the destination directory if they exist.
+	 * - Deletes all entries in the injuries collection from the database.
+	 * - Initializes error handling with the ErrorHandler.
+	 * - Optionally initializes Twitch EventSub event listeners if enabled in the environment variables.
+	 * - Optionally initializes the chat client for Twitch IRC if enabled in the environment variables.
+	 * - Starts the server on the specified port and sets the terminal title.
+	 * 
+	 * Environment variables:
+	 * - ENABLE_EVENTSUB: Determines if Twitch EventSub should be initialized.
+	 * - ENABLE_CHAT: Determines if the chat client for Twitch IRC should be initialized.
+	 * - Enviroment: Specifies the environment type (e.g., 'prod', 'dev', 'debug').
+	 * - MONGO_URI/DOCKER_URI: MongoDB connection URIs for different environments.
+	 * - PORT: Port number on which the server should listen.
+	 * 
+	 * @throws {Error} Throws an error if an unknown environment is specified or if any initialization step fails.
+	 */
 	async start() {
 		try {
 			const EventSub = process.env.ENABLE_EVENTSUB;
@@ -61,7 +94,7 @@ class OpenDevBot {
 					break;
 				case 'debug':
 				case 'dev':
-					mongoURI = process.env.MONGO_URI_DEV || '';
+					mongoURI = process.env.DOCKER_URI || '';
 					break;
 				default:
 					throw new Error(`Unknown environment: ${environment}`);
@@ -123,7 +156,7 @@ class OpenDevBot {
 
 			// Start the server with app.listen
 			const app = createApp();
-			app.listen(process.env.PORT || 3001, () => { console.log(`Server listening on http://localhost:${process.env.PORT || 3001}`); });
+			app.listen(process.env.PORT || 3000, () => { console.log(`Server listening on http://localhost:${process.env.PORT || 3001}`); });
 
 			// Set initial terminal title based on the terminal type
 			const terminalTitle = process.platform === 'win32' ? 'OpenDevBot[Twitch]' : 'Uptime: ';
@@ -134,6 +167,13 @@ class OpenDevBot {
 			throw error;
 		}
 	}
+	/**
+	 * Get the uptime of the bot in a human-readable format.
+	 *
+	 * The returned string will be in the format "X days Y hours Z minutes W seconds", where X, Y, Z, and W are the number
+	 * of days, hours, minutes, and seconds that the bot has been running, respectively.
+	 * @return {string} The uptime of the bot in a human-readable format.
+	 */
 	getFormattedUptime(): string {
 		const uptimeMilliseconds = this.getUptime();
 		const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);

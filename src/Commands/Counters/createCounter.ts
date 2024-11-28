@@ -7,6 +7,22 @@ const createcounter: Command = {
 	name: 'createcounter',
 	description: 'create remove and list counters',
 	usage: '!createcounter [create|remove|list] countername',
+	/**
+	 * Executes the createcounter command, allowing users to create, remove, or list counters.
+	 * 
+	 * @param {string} channel - The channel in which the command is executed.
+	 * @param {string} user - The user who triggered the command.
+	 * @param {string[]} args - The arguments passed with the command.
+	 * @param {string} text - The full text of the message.
+	 * @param {ChatMessage} msg - The chat message object containing additional metadata.
+	 * 
+	 * The command supports the following options:
+	 * - 'create <counterName>': Creates a new counter with the specified name.
+	 * - 'remove <counterName>': Removes the specified counter.
+	 * - 'list': Lists all existing counters.
+	 * 
+	 * Provides usage instructions if the command or arguments are invalid, and handles errors during execution.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		// console.log('we hit the counter command');
 		const chatClient = await getChatClient();
@@ -59,14 +75,28 @@ const createcounter: Command = {
 	}
 };
 
+/**
+ * Creates a new counter with the specified name and initializes its value to 0.
+ * @param {string} counterName - The name of the counter to create.
+ * @returns {Promise<void>} - A promise that resolves when the counter is created.
+ */
 async function createCounter(counterName: string): Promise<void> {
 	await CounterModel.create({ counterName, value: 0 });
 }
 
+/**
+ * Removes a counter with the specified name.
+ * @param {string} counterName - The name of the counter to remove.
+ * @returns {Promise<void>} - A promise that resolves when the counter is removed.
+ */
 async function removeCounter(counterName: string): Promise<void> {
 	await CounterModel.findOneAndDelete({ counterName });
 }
 
+/**
+ * Finds all counters in the database and returns them in an array.
+ * @returns {Promise<Counter[]>} - A promise that resolves with an array of Counter objects.
+ */
 async function listCounters(): Promise<Counter[]> {
 	return CounterModel.find();
 }

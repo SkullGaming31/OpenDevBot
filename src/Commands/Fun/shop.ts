@@ -16,13 +16,26 @@ const itemSellPrices: ItemPrices = {
 	item3: { name: 'Flashlight', price: 500 },
 	item4: { name: 'Getaway Car', price: 20000 },
 	item5: { name: 'HackingDevice', price: 1500 }
-	// Add more items and their sell prices here
 };
 
 const shop: Command = {
 	name: 'shop',
 	description: 'Buy items from a shop',
 	usage: '!shop <buy|sell|list> [itemname]',
+	/**
+	 * Executes the shop command.
+	 * 
+	 * @param channel The channel where the command was invoked.
+	 * @param user The user who invoked the command.
+	 * @param args The arguments passed to the command, which can be 'buy', 'sell', or 'list'.
+	 * @param text The full text of the message.
+	 * @param msg The chat message object containing metadata and user information.
+	 * 
+	 * The function performs the following actions based on the command:
+	 * - 'buy': Buys an item from the shop and removes the cost from the user's balance.
+	 * - 'sell': Sells an item from the user's inventory and adds the sell price to the user's balance.
+	 * - 'list': Lists the available items in the shop.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 
@@ -42,7 +55,7 @@ const shop: Command = {
 
 		const balance = existingUser.balance ?? 0;
 
-		// Perform the action based on the command
+
 		switch (action) {
 			case 'buy':
 				if (!itemName) {
@@ -76,7 +89,7 @@ const shop: Command = {
 					return chatClient.say(channel, 'Please provide an item name. Usage: !shop sell <itemname>');
 				}
 
-				// Check if the item exists in the user's inventory
+				// Check if the item is in the user's inventory
 				const itemIndex = existingUser.inventory?.indexOf(itemName);
 
 				if (itemIndex === undefined || itemIndex === -1) {
@@ -86,7 +99,7 @@ const shop: Command = {
 				const updatedInventory = [...(existingUser.inventory ?? [])];
 				updatedInventory.splice(itemIndex, 1);
 
-				// Calculate the sell price of the item
+				// Get the sell price of the item
 				const sellPrice = getItemSellPrice(itemName);
 
 				if (!sellPrice) {
@@ -106,7 +119,7 @@ const shop: Command = {
 				break;
 
 			case 'list':
-				// Retrieve the available items in the shop
+				// Get the list of available items
 				const availableItems = getAvailableItems();
 
 				if (availableItems.length === 0) {
@@ -120,7 +133,6 @@ const shop: Command = {
 
 				const maxCharacters = 500;
 				let message = `Available items in the shop: ${itemList[0]}`;
-
 				for (let i = 1; i < itemList.length; i++) {
 					const newItem = `, ${itemList[i]}`;
 					if (message.length + newItem.length <= maxCharacters) {
@@ -139,7 +151,13 @@ const shop: Command = {
 	},
 };
 
-// Helper function to retrieve the price of an item
+/**
+ * Retrieves the price of an item in the shop.
+ *
+ * @param {string} itemName - The name of the item
+ * @returns {number | undefined} The price of the item, or undefined if the
+ * item is not available
+ */
 function getItemPrice(itemName: string): number | undefined {
 	const lowerCaseItemName = itemName.toLowerCase(); // Convert the item name to lowercase
 	const item = Object.values(itemSellPrices).find(
@@ -148,11 +166,24 @@ function getItemPrice(itemName: string): number | undefined {
 	return item?.price;
 }
 
+/**
+ * Retrieves the price of an item for selling. This is the same as the price
+ * of buying the item.
+ *
+ * @param {string} itemName - The name of the item
+ * @returns {number | undefined} The price of the item, or undefined if the
+ * item is not available
+ */
 function getItemSellPrice(itemName: string): number | undefined {
 	return getItemPrice(itemName);
 }
 
-// Helper function to retrieve the available items in the shop
+
+/**
+ * Retrieves the available items in the shop.
+ *
+ * @returns {string[]} An array of available item names
+ */
 function getAvailableItems(): string[] {
 	return Object.keys(itemSellPrices);
 }

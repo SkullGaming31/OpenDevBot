@@ -10,6 +10,19 @@ const clipCommand: Command = {
 	name: 'clip',
 	description: 'Create a clip in the stream',
 	usage: '!clip',
+	/**
+	 * Creates a clip in the stream.
+	 *
+	 * Checks if the stream is live, and if the user is the broadcaster, mod, sub, or a VIP.
+	 * If the stream is live and the user has the required permissions, creates a new clip
+	 * and sends a message to the chat with a link to the clip.
+	 *
+	 * @param channel - The channel where the command was issued.
+	 * @param user - The user who issued the command.
+	 * @param args - The command arguments, which is empty for this command.
+	 * @param text - The full text of the chat message.
+	 * @param msg - The chat message object containing metadata and user information.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		console.log('Clip command executed.');
 		const chatClient = await getChatClient();
@@ -36,7 +49,7 @@ const clipCommand: Command = {
 						: []
 				)
 			])
-			.setFooter({ text: `${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel`})
+			.setFooter({ text: `${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel` })
 			.setTimestamp();
 		// console.log('Clip embed created:', clipEmbed);
 

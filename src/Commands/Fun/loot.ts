@@ -61,6 +61,14 @@ const robber: Command = {
 	name: 'loot',
 	description: 'Rob a house, person, or store for quick cash',
 	usage: '!loot <house|person|store> [item1] [item2] [item3]',
+	/**
+	 * Executes the !loot command.
+	 * @param {string} channel The channel that the command was triggered in.
+	 * @param {string} user The user that triggered the command.
+	 * @param {string[]} args The arguments that were passed to the command.
+	 * @param {string} text The full text of the message that triggered the command.
+	 * @param {ChatMessage} msg The message instance that triggered the command.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const robberyTarget = args[0];

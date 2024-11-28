@@ -1,8 +1,8 @@
 import { Document, Model, Schema, model } from 'mongoose';
 
 export interface Counter extends Document {
-  counterName: string;
-  value: number;
+	counterName: string;
+	value: number;
 }
 
 const counterSchema = new Schema<Counter>({
@@ -11,5 +11,3 @@ const counterSchema = new Schema<Counter>({
 });
 
 export const CounterModel: Model<Counter> = model<Counter>('Counter', counterSchema);
-
-// export default CounterModel;

@@ -11,6 +11,19 @@ const beg: Command = {
 	name: 'beg',
 	description: 'Beg to get some free coins(12 hour cooldown)',
 	usage: '!beg',
+	/**
+	 * Execute the !beg command. This command allows users to beg for free coins every 12 hours.
+	 * The command will check if the user has already begged in the last 12 hours and if the stream is currently live.
+	 * If the user has not begged in the last 12 hours and the stream is live, the command will randomly decide
+	 * if the user is successful in their beg. If the user is successful, they will receive a random amount of coins
+	 * between 1 and 100. If the user is not successful, they will receive a random response from a list of failed responses.
+	 * If the user has already begged in the last 12 hours, the command will respond with a cooldown message.
+	 * @param channel - The channel where the command was triggered
+	 * @param user - The user who triggered the command
+	 * @param args - The arguments passed to the command
+	 * @param text - The text that the user typed in to trigger the command
+	 * @param msg - The message object from TwitchIO
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();

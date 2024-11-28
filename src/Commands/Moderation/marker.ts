@@ -9,6 +9,12 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 axios.defaults;
 
+/**
+ * Format the total seconds into hours, minutes, and remaining seconds.
+ * 
+ * @param seconds - The total number of seconds to be formatted.
+ * @returns A string representing the formatted time in hours, minutes, and seconds.
+ */
 function formatStreamTime(seconds: number) {
 	const hours = Math.floor(seconds / 3600);
 	const minutes = Math.floor((seconds % 3600) / 60);
@@ -22,6 +28,18 @@ const marker: Command = {
 	description: 'Creates a marker at the current location in the broadcaster\'s stream',
 	usage: '!marker [description] (description is optional)',
 	moderator: true,
+	/**
+	 * Creates a marker at the current location in the broadcaster's stream with an optional description.
+	 * 
+	 * @param channel - The channel the command was used in.
+	 * @param user - The user who used the command.
+	 * @param args - The array of arguments provided with the command.
+	 * @param text - The entire message that was sent.
+	 * @param msg - The ChatMessage object containing information about the message.
+	 * 
+	 * @throws {Error} If the broadcaster ID is not found, the user search fails, or the command is used when the stream is not live.
+	 * @throws {Error} If the command is used by a user without the required permission of Channel Broadcaster or Editor.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -53,7 +71,7 @@ const marker: Command = {
 
 			const markerEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Channel Marker Added]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
@@ -68,7 +86,7 @@ const marker: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${msg.userInfo.displayName} just created a stream marker with description: ${sanitizedDescription} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${msg.userInfo.displayName} just created a stream marker with description: ${sanitizedDescription} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			// Check if user is authorized to use the command

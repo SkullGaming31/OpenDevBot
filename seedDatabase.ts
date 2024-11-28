@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 config();
 import mongoose from 'mongoose';
 import FollowMessage, { FollowMessageDoc } from './src/database/models/followMessages';
+import { ITwitchToken, TokenModel } from './src/database/models/tokenModel';
 
 const followerRandomMessages = [
 	{
@@ -155,8 +156,67 @@ const followerRandomMessages = [
 	},
 ];
 
+const userTokenData = {
+	user_id: '659523613',
+	login: 'opendevbot',
+	access_token: 'c9a9awbt3mg0j0638vg31e74jkz5s5',
+	refresh_token: 'loutch2hnlibbqpyols4xfbfz07l3pkn9ynejinff9skch4hkq',
+	scope: ['bits:read',
+		'channel:edit:commercial',
+		'channel:manage:broadcast',
+		'channel:manage:moderators',
+		'channel:manage:polls',
+		'channel:manage:predictions',
+		'channel:manage:raids',
+		'channel:manage:redemptions',
+		'channel:manage:schedule',
+		'channel:manage:vips',
+		'channel:read:editors',
+		'channel:read:goals',
+		'channel:read:hype_train',
+		'channel:read:polls',
+		'channel:read:predictions',
+		'channel:read:redemptions',
+		'channel:read:subscriptions',
+		'channel:read:vips',
+		'channel_subscriptions',
+		'clips:edit',
+		'moderation:read',
+		'moderator:manage:announcements',
+		'moderator:manage:automod',
+		'moderator:manage:automod_settings',
+		'moderator:manage:banned_users',
+		'moderator:manage:blocked_terms',
+		'moderator:manage:chat_messages',
+		'moderator:manage:chat_settings',
+		'moderator:manage:guest_star',
+		'moderator:manage:shield_mode',
+		'moderator:manage:shoutouts',
+		'moderator:read:automod_settings',
+		'moderator:read:blocked_terms',
+		'moderator:read:chat_settings',
+		'moderator:read:chatters',
+		'moderator:read:followers',
+		'moderator:read:guest_star',
+		'moderator:read:shield_mode',
+		'moderator:read:shoutouts',
+		'user:edit',
+		'user:edit:broadcast',
+		'user:edit:follows',
+		'user:manage:blocked_users',
+		'user:manage:whispers',
+		'user:read:blocked_users',
+		'user:read:broadcast',
+		'user:read:email',
+		'user:read:follows',
+		'user:read:subscriptions'],
+	expires_in: 13202,
+	obtainmentTimestamp: Math.floor(Date.now() / 1000),
+	broadcaster_type: 'streamer'
+};
+
 async function seedFollowerMessages() {
-	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI as string : process.env.MONGO_URI_DEV as string;
+	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI as string : process.env.DOCKER_URI as string;
 	await mongoose.connect(mongoUri, { autoIndex: true });
 
 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
@@ -179,6 +239,10 @@ async function seedFollowerMessages() {
 	await FollowMessage.insertMany(insertDocuments);
 
 	console.log('Database seeded successfully!');
+
+	// Insert user token
+	await TokenModel.create(userTokenData);
+	console.log('User Token seeded successfully!');
 	await mongoose.disconnect();
 }
 

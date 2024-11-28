@@ -8,6 +8,14 @@ const dig: Command = {
 	name: 'dig',
 	description: 'Dig up a hole and potentially win gold',
 	usage: '!dig [amount]',
+	/**
+	 * Executes the dig command to allow the user to dig up a hole and potentially win gold.
+	 * Parses the dig amount from the arguments and checks if it is valid.
+	 * Checks if the user has enough balance to dig and deducts the dig amount from the user's balance.
+	 * Generates a random number of bombs and creates an array of holes with the specified number of bombs.
+	 * Shuffles the holes randomly and checks if the user dug up a bomb.
+	 * Updates the user's balance accordingly and sends a message to the chat with the result.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 

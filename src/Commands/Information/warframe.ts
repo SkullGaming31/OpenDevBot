@@ -94,15 +94,24 @@ function formatTime(timeInSeconds: number) {
 	return `${formattedDays}${formattedHours}${formattedMinutes}${formattedSeconds}`;
 }
 
-const warframe: Command = {// needs more work
+const warframe: Command = {
 	name: 'warframe',
 	description: 'get information about warframe the lore of warframe or my warframe MasteryRank(s)',
 	usage: '!warframe [about|lore|mr|frames] <framename>',
+	/**
+	 * Executes the warframe command based on the specified arguments.
+	 * 
+	 * @param {string} channel The channel where the command was triggered.
+	 * @param {string} user The user who triggered the command.
+	 * @param {string[]} args The arguments passed to the command.
+	 * @param {string} text The full text of the message that triggered the command.
+	 * @param {ChatMessage} msg The message instance that triggered the command.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
-		if (channel !== '#canadiendragon') return;
+		if (channel !== '#skullgaminghq') return;
 
 		const display = msg.userInfo.displayName;
 		switch (args[0]) {

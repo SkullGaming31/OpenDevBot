@@ -22,5 +22,49 @@
   "abandoned_hospital": {
     "name": "Abandoned Hospital",
     "difficulty": "low"
+  },
+  "cursed_temple": {
+    "name": "Cursed Temple",
+    "difficulty": "moderate"
+  },
+  "flooded_subway_tunnels": {
+    "name": "Flooded Subway Tunnels",
+    "difficulty": "low"
+  },
+  "abandoned_research_facility": {
+    "name": "Abandoned Research Facility",
+    "difficulty": "high"
+  },
+  "deserted_oil_rig": {
+    "name": "Deserted Oil Rig",
+    "difficulty": "low"
+  },
+  "ruins_of_an_ancient_castle": {
+    "name": "Ruins of an Ancient Castle",
+    "difficulty": "moderate"
+  },
+  "flooded_government_facility": {
+    "name": "Flooded Government Facility",
+    "difficulty": "high"
+  },
+  "abandoned_factory": {
+    "name": "Abandoned Factory",
+    "difficulty": "low"
+  },
+  "flooded_school": {
+    "name": "Flooded School",
+    "difficulty": "moderate"
+  },
+  "cursed_cemetery": {
+    "name": "Cursed Cemetery",
+    "difficulty": "low"
+  },
+  "ruins_of_an_ancient_village": {
+    "name": "Ruins of an Ancient Village",
+    "difficulty": "moderate"
+  },
+  "abandoned_prison": {
+    "name": "Abandoned Prison",
+    "difficulty": "high"
   }
 }

@@ -11,6 +11,15 @@ const mod: Command = {
 	name: 'mod',
 	description: 'Mod a user in your Twitch chat',
 	usage: '!mod [@name]',
+	/**
+	 * Mod a user in your Twitch chat
+	 * @param channel The channel to mod the user in
+	 * @param user The user to mod
+	 * @param args The user to mod
+	 * @param text The text of the command
+	 * @param msg The message that triggered the command
+	 * @returns {Promise<void>}
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -37,7 +46,7 @@ const mod: Command = {
 
 			const moderatorEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Channel Mod Added]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Blue')
 				.addFields([
 					{
@@ -51,7 +60,7 @@ const mod: Command = {
 						inline: true
 					}
 				])
-				.setFooter({ text: `${display} just modded ${username} in ${channel}'s Twitch channel`})
+				.setFooter({ text: `${display} just modded ${username} in ${channel}'s Twitch channel` })
 				.setTimestamp();
 
 			if (isChannelEditor || msg.userInfo.isBroadcaster) {

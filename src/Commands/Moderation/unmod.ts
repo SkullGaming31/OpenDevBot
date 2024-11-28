@@ -10,6 +10,21 @@ const unmod: Command = {
 	name: 'unmod',
 	description: 'remove the moderator role from a user on twitch',
 	usage: '!unmmod [@name]',
+	/**
+	 * Asynchronously removes the moderator role from a user on Twitch.
+	 * 
+	 * @param channel - The channel where the command is executed.
+	 * @param user - The user executing the command.
+	 * @param args - Arguments passed along with the command.
+	 * @param text - The full text of the command message.
+	 * @param msg - The message object containing details about the user and context.
+	 * 
+	 * @returns {Promise<void>}
+	 * 
+	 * @description
+	 * Checks if the user is a channel editor. If so, removes the moderator role from the specified user
+	 * and sends a message confirming the action. Sends an error message if the user lacks the necessary permissions.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -27,7 +42,7 @@ const unmod: Command = {
 
 			const unModeratorEmbed = new EmbedBuilder()
 				.setTitle('Command Usage[Unmod]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}`})
+				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
 				.setColor('Red')
 				.addFields([
 					{
@@ -42,7 +57,7 @@ const unmod: Command = {
 							: []
 					)
 				])
-				.setFooter({ text: `${display} just unmodded ${args[0].replace('@', '')} in ${channel}'s twitch channel`})
+				.setFooter({ text: `${display} just unmodded ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 			try {
 				if (isEditor || msg.userInfo.isBroadcaster) {
@@ -52,11 +67,23 @@ const unmod: Command = {
 				} else {
 					await chatClient.say(channel, 'You Must be the Broadcaster or Channel Editor to use this command');
 				}
-			} catch (error) {
-				console.error(error);
+			} catch (error: unknown) {
+				if (error instanceof Error) {
+					console.error(error.name + ': ' + error.message, error.stack);
+					await chatClient.say(channel, `${error.message}`);
+				} else {
+					console.error('Unknown error');
+					await chatClient.say(channel, 'An unknown error occurred');
+				}
 			}
-		} catch (error) {
-			console.error(error);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				console.error(error.name + ': ' + error.message, error.stack);
+				await chatClient.say(channel, `${error.message}`);
+			} else {
+				console.error('Unknown error');
+				await chatClient.say(channel, 'An unknown error occurred');
+			}
 		}
 	}
 };

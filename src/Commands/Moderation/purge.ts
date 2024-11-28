@@ -10,6 +10,24 @@ const purge: Command = {
 	name: 'purge',
 	description: 'Purge messages from a user in the Twitch chat',
 	usage: '!purge [name] [duration[seconds]] (reason)',
+	/**
+	 * Execute the `purge` command.
+	 *
+	 * @remarks
+	 * This command will purge messages from a user in the Twitch chat.
+	 * The command must be used by a moderator or broadcaster.
+	 *
+	 * The command takes the following arguments:
+	 * - `name`: The name of the user to purge.
+	 * - `duration[seconds]`: The duration to purge the user for in seconds.
+	 * - `reason`: The reason for the purge.
+	 *
+	 * @param channel - The channel that the command was used in.
+	 * @param user - The user that used the command.
+	 * @param args - The arguments passed to the command.
+	 * @param text - The raw text of the command.
+	 * @param msg - The {@link ChatMessage} object that triggered the command.
+	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const display = msg.userInfo.displayName;
 
@@ -28,34 +46,35 @@ const purge: Command = {
 			const durationSeconds = Number(args[1]);
 			const reason = args[2] || 'No Reason Provided';
 
-			// Check moderator or broadcaster status
+			// Check if user has permission
 			if (!msg.userInfo.isMod && !msg.userInfo.isBroadcaster) {
 				await chatClient.say(channel, 'You do not have permission to use this command');
 				return;
 			}
 
-			// Retrieve user information
+			// Check if user exists
 			const userSearch = await userApiClient.users.getUserByName(username);
 
+			// Check if user exists
 			if (!userSearch?.id) {
 				await chatClient.say(channel, `User ${username} not found`);
 				return;
 			}
 
-			// Prevent purging/banning the broadcaster
+			// Check if user is the broadcaster
 			if (userSearch.id === broadcasterInfo[0].id as UserIdResolvable) {
 				await chatClient.say(channel, 'You cannot purge/ban the broadcaster');
 				return;
 			}
 
-			// Purge the user
+			// Purge user
 			await userApiClient.moderation.banUser(broadcasterInfo[0].id as UserIdResolvable, {
 				user: userSearch.id,
 				duration: durationSeconds,
 				reason: reason,
 			});
 
-			// Send purge event to command usage webhook
+			// Send purge embed
 			const purgeEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event[Channel Purge(user)]')
 				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
