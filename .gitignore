@@ -4,3 +4,4 @@
 /src/Warframe_Data.json
 /src/devlogs
 insertTestData.ts
+seedDatabase.ts
