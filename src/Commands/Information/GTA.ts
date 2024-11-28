@@ -38,7 +38,7 @@ const gta: Command = {
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
 		const stream = await userApiClient.streams.getStreamByUserId(broadcasterID.id as UserIdResolvable);
 
-		if (stream?.gameName !== 'Grand Theft Auto V') return chatClient.say(channel, 'You must be in GTA V to use this command.');
+		if (stream?.gameId !== '32982') return chatClient.say(channel, 'You must be in GTA V to use this command.');
 
 		try {
 			switch (channel) {
