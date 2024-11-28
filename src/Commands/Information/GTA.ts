@@ -35,8 +35,7 @@ const gta: Command = {
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
 		const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterID?.id as UserIdResolvable);
 
-		if (streamerChannel?.gameName !== 'Grand Theft Auto V') return chatClient.say(channel, 'You must be in GTA V to use this command.');
-		// console.log('GTA command executed.', streamerChannel);
+		// if (streamerChannel?.gameName !== 'Grand Theft Auto V') return chatClient.say(channel, 'You must be in GTA V to use this command.');
 
 		try {
 			switch (channel) {
@@ -45,6 +44,7 @@ const gta: Command = {
 					break;
 				case 'modvlog':
 					await chatClient.say(channel, 'Eugene Dixon(61) War vet, backstory coming soon...');
+					// console.log('GTA command executed.', streamerChannel.gameName);
 					break;
 				default:
 					await chatClient.say(channel, 'this channel is not in the database');

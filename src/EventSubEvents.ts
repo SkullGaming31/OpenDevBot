@@ -1580,25 +1580,34 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	eventSubListener.start();
 
 	// Set up the disconnect event listener only once
-	eventSubListener.onUserSocketDisconnect(
-		async (userId: string, error?: Error) => {
-			if (error) {
-				console.error(`Socket disconnected for user ${userId}`, error);
-			}
+	let isReconnecting = false;
 
+	eventSubListener.onUserSocketDisconnect(async (userId: string, error?: Error) => {
+		if (isReconnecting) {
+			console.log('Reconnection attempt already in progress.');
+			return;
+		}
+
+		isReconnecting = true;
+
+		if (error) {
+			console.error(`Socket disconnected for user ${userId}`, error);
+		}
+
+		try {
 			// Reset the promise to allow a new listener to be created
 			eventSubListenerPromise = null;
 
 			// Attempt to recreate EventSub listener
-			try {
-				await getEventSubs();
-				console.log('EventSub listener reconnected successfully.');
-			} catch (e) {
-				console.error('Failed to reconnect EventSub listener:', e);
-				process.exit(1);
-			}
-		},
-	);
+			await getEventSubs();
+			console.log('EventSub listener reconnected successfully.');
+		} catch (e) {
+			console.error('Failed to reconnect EventSub listener:', e);
+			process.exit(1);
+		} finally {
+			isReconnecting = false; // Reset reconnection flag
+		}
+	});
 	eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
 		const Enviroment = process.env.Enviroment as string;
 
