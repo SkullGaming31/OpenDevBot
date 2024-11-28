@@ -235,6 +235,6 @@ async function seedFollowerMessages() {
 
 seedFollowerMessages().catch((err: unknown) => {
 	if (err instanceof Error) {
-		console.error('Error seeding the database: ', err.cause + ': ' + err.name + ': ' + err.message + ': ' + err.stack);
+		console.error('Error seeding the database: ', err);
 	}
 });
