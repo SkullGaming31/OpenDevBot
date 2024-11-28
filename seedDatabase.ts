@@ -17,17 +17,6 @@ const followerRandomMessages = [
 		]
 	},
 	{
-		name: 'Vigor',
-		gameId: '506489',
-		followerMessages: [
-			'Welcome to Vigor, @${e.userDisplayName}. Your journey starts here.',
-			'@${e.userDisplayName}, welcome to the harsh yet beautiful world of Vigor. May you survive and thrive!',
-			'Greetings, @${e.userDisplayName}. In Vigor, you must always stay alert and trust no one. Welcome to the challenge!',
-			'@${e.userDisplayName}, welcome to the Outlands. May your weapons stay sharp and your aim true!',
-			'Welcome to the Stream, @${e.userDisplayName}. Remember: your decisions here will determine your survival. Choose wisely!'
-		]
-	},
-	{
 		name: 'Science & Technolgy',
 		gameId: '509670',
 		followerMessages: [
@@ -75,18 +64,6 @@ const followerRandomMessages = [
 		]
 	},
 	{
-		name: 'Starfield',
-		gameId: '506438',
-		followerMessages: [
-			'In the vastness of the cosmos, we follow you, ${e.userDisplayName}, just like in Starfield.',
-			'Our journey through the stars continues, ${e.userDisplayName}, just like in the game Starfield.',
-			'Exploring the unknown, together with you, ${e.userDisplayName}, inspired by Starfield.',
-			'To infinity and beyond, with you as our guide, ${e.userDisplayName}, much like in Starfield.',
-			'Navigating the cosmic mysteries with you, ${e.userDisplayName}, echoing the spirit of Starfield',
-			'Welcome to the cosmic crew, ${e.userDisplayName}! Together, we explore the stars like true adventurers in Starfield.'
-		]
-	},
-	{
 		name: 'Rust',
 		gameId: '263490',
 		followerMessages: [
@@ -119,6 +96,22 @@ const followerRandomMessages = [
 		]
 	},
 	{
+		name: 'Dark and Darker',
+		gameId: '2009321156',
+		followerMessages: [
+			'Welcome to the darkness, ${e.userDisplayName}! May your journey through the dungeons be filled with epic loot and glorious victories!',
+			'Thanks for following, ${e.userDisplayName}! Prepare yourself for the darkest dungeons and fiercest battles!',
+			'Hail, ${e.userDisplayName}! Your bravery in following brings us one step closer to conquering the dark!',
+			'Welcome to the adventurers\' guild, ${e.userDisplayName}! May your path be lit by the treasures you find!',
+			'Thanks for following, ${e.userDisplayName}! Together, we shall explore the depths and claim our fortune!',
+			'Welcome, ${e.userDisplayName}, to the realm of Dark and Darker! May your sword stay sharp and your spells powerful!',
+			'Thanks for joining us, ${e.userDisplayName}! The dungeons await your courage and skill!',
+			'Welcome aboard, ${e.userDisplayName}! May your journey through the darkness be filled with light and loot!',
+			'Hail, ${e.userDisplayName}! Your presence strengthens our quest to conquer the shadows!',
+			'Thanks for following, ${e.userDisplayName}! Together, we shall delve into the darkness and emerge victorious!'
+		]
+	},
+	{
 		name: 'default',
 		followerMessages: [
 			'@${e.userDisplayName} has followed the channel',
@@ -137,22 +130,6 @@ const followerRandomMessages = [
 			'It\'s dangerous to go alone, @${e.userDisplayName}. Take this warm welcome!',
 			'Welcome to the battlefield, @${e.userDisplayName}. Let\'s conquer together!',
 		],
-	},
-	{
-		name: 'Dark and Darker',
-		gameId: '2009321156',
-		followerMessages: [
-			'Welcome to the darkness, ${e.userDisplayName}! May your journey through the dungeons be filled with epic loot and glorious victories!',
-			'Thanks for following, ${e.userDisplayName}! Prepare yourself for the darkest dungeons and fiercest battles!',
-			'Hail, ${e.userDisplayName}! Your bravery in following brings us one step closer to conquering the dark!',
-			'Welcome to the adventurers\' guild, ${e.userDisplayName}! May your path be lit by the treasures you find!',
-			'Thanks for following, ${e.userDisplayName}! Together, we shall explore the depths and claim our fortune!',
-			'Welcome, ${e.userDisplayName}, to the realm of Dark and Darker! May your sword stay sharp and your spells powerful!',
-			'Thanks for joining us, ${e.userDisplayName}! The dungeons await your courage and skill!',
-			'Welcome aboard, ${e.userDisplayName}! May your journey through the darkness be filled with light and loot!',
-			'Hail, ${e.userDisplayName}! Your presence strengthens our quest to conquer the shadows!',
-			'Thanks for following, ${e.userDisplayName}! Together, we shall delve into the darkness and emerge victorious!'
-		]
 	},
 ];
 
@@ -215,6 +192,16 @@ const userTokenData = {
 	broadcaster_type: 'streamer'
 };
 
+/**
+ * Seeds the FollowMessage model with the messages from followerRandomMessages.
+ *
+ * Connects to the database, deletes any existing data if in dev/debug mode,
+ * and inserts the messages.
+ *
+ * Also seeds the user token for the bot.
+ *
+ * @returns {Promise<void>}
+ */
 async function seedFollowerMessages() {
 	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI as string : process.env.DOCKER_URI as string;
 	await mongoose.connect(mongoUri, { autoIndex: true });
@@ -246,4 +233,8 @@ async function seedFollowerMessages() {
 	await mongoose.disconnect();
 }
 
-seedFollowerMessages().catch(err => { console.error('Error seeding the database:', err); });
+seedFollowerMessages().catch((err: unknown) => {
+	if (err instanceof Error) {
+		console.error('Error seeding the database: ', err.cause + ': ' + err.name + ': ' + err.message + ': ' + err.stack);
+	}
+});

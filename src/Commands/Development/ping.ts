@@ -27,13 +27,12 @@ const ping: Command = {
 	 *
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
-	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage): Promise<void> => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
 		const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
 		if (!broadcasterID?.id) return;
-
 
 		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
@@ -43,16 +42,26 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
-			if (!args[0]) return chatClient.say(channel, 'Please Provide a Game to search the GameID for');
-			const gameName = args.join(' '); // Join the args array into a string with a space separator
-			const game = await userApiClient.games.getGameByName(gameName);
+			if (args.length > 0) {
+				const gameName = args.join(' '); // Join the args array into a string with a space separator
+				const game = await userApiClient.games.getGameByName(gameName);
 
-			await chatClient.say(channel, `${game?.name} Id is ${game?.id}`);
-			console.log(`${game?.name} Id is ${game?.id}`);
-			if (!isStaff) return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
+				if (game) {
+					await chatClient.say(channel, `${game.name} ID is ${game.id}`);
+					// console.log(`${game.name} ID is ${game.id}`);
+				} else {
+					await chatClient.say(channel, `Game "${gameName}" not found.`);
+				}
+				return; // Exit after processing game info
+			}
+
+			if (!isStaff) {
+				return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
+			}
+
 			const pingValue = await checkTwitchApiPing();
 			const uptime = getBotUptime(); // Get the bot uptime
-			await chatClient.say(channel, `Im online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
+			await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 		} catch (error) {
 			console.error(error);
 		}

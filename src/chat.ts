@@ -157,13 +157,15 @@ export async function initializeChat(): Promise<void> {
 								}
 							}
 						}
-					} catch (error: any) {
-						if (error.code === 11000) {
-							console.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
-							// Handle or log the duplicate key error as needed
-						} else {
-							console.error('Error processing chatter:', error);
-							// Handle other errors accordingly
+					} catch (error: unknown) {
+						if (error instanceof Error) {
+							if (error.message.includes('E11000')) {
+								console.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
+								// Handle or log the duplicate key error as needed
+							} else {
+								console.error('Error processing chatter:', error);
+								// Handle other errors accordingly
+							}
 						}
 					}
 				}
@@ -323,7 +325,7 @@ export async function initializeChat(): Promise<void> {
 					console.error(error.message);
 				}
 			} else {
-				if (text.includes('!join')) return;
+				if (text.includes('!join') || text.includes('!pokecatch') || text.includes('!pokestart')) return;
 				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
 					await chatClient.say(channel, 'Command not recognized, please try again');
 				}
@@ -446,21 +448,23 @@ export async function getChatClient(): Promise<ChatClient> {
 
 							const updatedUser = await UserModel.findOneAndUpdate(filter, update, options);
 
-							if (updatedUser) {
-								if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-									console.log(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+							// if (updatedUser) {
+							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+							// 		console.log(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+							// 	}
+							// } else {
+							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+							// 		console.log(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+							// 	}
+							// }
+						} catch (error: unknown) {
+							if (error instanceof Error) {
+								if (error.message.includes('11000')) {
+									console.error(`Duplicate key error for id ${userId.id}`);
+									// Handle the duplicate key error appropriately
+								} else {
+									console.error('Error updating watch time:', error);
 								}
-							} else {
-								if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-									console.log(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
-								}
-							}
-						} catch (error: any) {
-							if (error.code === 11000) {
-								console.error(`Duplicate key error for id ${userId.id}`);
-								// Handle the duplicate key error appropriately
-							} else {
-								console.error('Error updating watch time:', error);
 							}
 						}
 					}

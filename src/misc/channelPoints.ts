@@ -11,6 +11,7 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 	const userApiClient = await getUserApi();
 
 	const broadcasterID = await userApiClient.channels.getChannelInfoById('1155035316');
+
 	if (broadcasterID?.id === undefined) return;
 	console.log('registering Channel Points Rewards');
 	try {

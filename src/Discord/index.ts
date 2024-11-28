@@ -52,6 +52,7 @@ class DiscordBot {
 		this.client.on('error', (error: Error) => { console.error(`Something happen when trying to login: ${error}`); });
 		this.client.on('warn', (warn: string) => { console.info('Discord Warning', warn); });
 		this.client.on('shardDisconnect', (t) => { console.error('Shard Disconnect: ', t); });
+		this.client.on('shardError', (t: Error) => { console.error('Shard Error: ', t); });
 	}
 
 	/**
@@ -59,9 +60,7 @@ class DiscordBot {
 	 * @param token The token to use when logging in.
 	 * @returns A Promise that resolves when the bot is logged in.
 	 */
-	public login(token: string) {
-		return this.client.login(token);
-	}
+	public login(token: string) { return this.client.login(token); }
 }
 
 export default DiscordBot;
