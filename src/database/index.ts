@@ -50,8 +50,8 @@ class Database {
 					break;
 			}
 			// Perform a no-op operation to ensure the database is created
-			await mongoose.connection.db.command({ ping: 1 });
-			console.log(`Database '${mongoose.connection.db.databaseName}' ensured.`);
+			await mongoose.connection.db?.command({ ping: 1 });
+			console.log(`Database '${mongoose.connection.db?.databaseName}' ensured.`);
 			// await this.dropUsersCollection();
 		} catch (error) {
 			console.error('Database connection error:', error);

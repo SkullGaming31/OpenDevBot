@@ -42,6 +42,19 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
+			console.log('Ping command executed.');
+
+			// const listScopes = async () => {
+			// 	const tokens = await TokenModel.find().select('user_id scope');
+			// 	const scopeList = tokens.map((token) => ({
+			// 		user_id: token.user_id,
+			// 		scopes: token.scope,
+			// 	}));
+			// 	console.log(scopeList);
+			// };
+
+			// listScopes();
+			// if (channel !== "skullgaminghq") return;
 			if (!isStaff) {
 				return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			}

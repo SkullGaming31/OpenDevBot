@@ -75,7 +75,9 @@ export default function createApp(): express.Application {
 		'user:read:broadcast',
 		'user:read:email',
 		'user:read:follows',
-		'user:read:subscriptions'
+		'user:read:subscriptions',
+		'chat:edit',
+		'chat:read'
 	].join('+'); // Join scopes with '+'
 	const botScopes = ['bits:read',
 		'channel:edit:commercial',

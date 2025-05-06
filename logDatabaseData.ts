@@ -26,7 +26,7 @@ async function main() {
 			}
 			if (error instanceof MongooseError) {
 				// Handle the error
-				console.error('Mongoose error:', error.cause + ': ' + error.name + ': ' + error.message + ': ' + error.stack);
+				console.error('Mongoose error:', error);
 			}
 		});
 	} catch (error: unknown) {
@@ -42,6 +42,6 @@ async function main() {
 // Call the main function
 main().catch((error: unknown) => {
 	if (error instanceof Error) {
-		console.error('Error: ', error.cause + ': ' + error.name + ': ' + error.message + ': ' + error.stack);
+		console.error('Error: ', error);
 	}
 });

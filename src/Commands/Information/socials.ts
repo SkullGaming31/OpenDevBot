@@ -6,7 +6,7 @@ import { broadcasterInfo } from '../../util/constants';
 const socials: Command = {
 	name: 'socials',
 	description: 'A link to all my socials',
-	usage: '!socials twitter|instagram|facebook|tiktok|discord|merch|tip|website|github',
+	usage: '!socials twitter|instagram|facebook|tiktok|discord|merch|tip|youtube|github',
 	/**
 	 * Executes the socials command.
 	 *
@@ -32,9 +32,9 @@ const socials: Command = {
 			github: 'https://github.com/skullgaming31/opendevbot',
 		};
 
-		const social = args[0]?.toLowerCase();
+		// const social = args[0]?.toLowerCase();
 
-		if (channel !== '#skullgaminghq') return;
+		if (channel !== 'skullgaminghq') return;
 
 		try {
 			const social = args[0]?.toLowerCase();

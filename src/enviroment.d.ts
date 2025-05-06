@@ -41,6 +41,7 @@ declare global {
 			ENABLE_EVENTSUB: boolean;
 			GUILDED_TOKEN: string;
 			NEXON_API_KEY: string;
+			DEV_NEXON_API_KEY: string;
 		}
 	}
 }

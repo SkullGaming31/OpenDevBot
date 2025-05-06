@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config();
 import mongoose from 'mongoose';
 import FollowMessage, { FollowMessageDoc } from './src/database/models/followMessages';
-import { ITwitchToken, TokenModel } from './src/database/models/tokenModel';
+import { TokenModel } from './src/database/models/tokenModel';
 
 const followerRandomMessages = [
 	{
@@ -186,7 +186,9 @@ const userTokenData = {
 		'user:read:broadcast',
 		'user:read:email',
 		'user:read:follows',
-		'user:read:subscriptions'],
+		'user:read:subscriptions',
+		'chat:edit',
+		'chat:read'],
 	expires_in: 13202,
 	obtainmentTimestamp: Math.floor(Date.now() / 1000),
 	broadcaster_type: 'streamer'
@@ -202,7 +204,7 @@ const userTokenData = {
  *
  * @returns {Promise<void>}
  */
-async function seedFollowerMessages() {
+async function seedFollowerMessages(): Promise<void> {
 	const mongoUri = process.env.Enviroment === 'prod' ? process.env.MONGO_URI as string : process.env.DOCKER_URI as string;
 	await mongoose.connect(mongoUri, { autoIndex: true });
 

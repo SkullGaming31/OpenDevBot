@@ -277,9 +277,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		// });
 		//#endregion
 
+		let streamStartTime: Date | undefined;// testing for stream end message for discord when stream goes offline and shows how long the stream was live
 		const online = eventSubListener.onStreamOnline(
 			info.id as UserIdResolvable,
 			async (o) => {
+				streamStartTime = new Date();
 				const userApiClient = await getUserApi();
 				const stream = await o.getStream();
 				const userInfo = await o.getBroadcaster();
@@ -330,8 +332,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						{
 							color: 'green',
 							message:
-								`${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName
-								}- (${stream?.title})`,
+								`${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName} - (${stream?.title})`,
 						},
 					);
 					if (info.id === '1155035316') {
@@ -343,46 +344,44 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const offline = eventSubListener.onStreamOffline(info.id as UserIdResolvable, async (stream) => {
-			const caster = await stream.getBroadcaster();
 
-			// Get the start time of the stream
-			const streamStartTime = await caster.getStream();
+		const offline = eventSubListener.onStreamOffline(
+			info.id as UserIdResolvable,
+			async (stream) => {
+				if (!streamStartTime) return;
+				const caster = await stream.getBroadcaster();
+				const duration = new Date().getTime() - streamStartTime.getTime();
+				const hours = Math.floor(duration / (1000 * 60 * 60));
+				const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+				const seconds = Math.floor((duration % (1000 * 60)) / 1000);
 
-			// Calculate the duration of the stream
-			const streamDuration = new Date().getTime() - (streamStartTime?.startDate?.getTime() ?? 0);
-			const hours = Math.floor(streamDuration / (1000 * 60 * 60));
-			const minutes = Math.floor((streamDuration % (1000 * 60 * 60)) / (1000 * 60));
-			const seconds = Math.floor((streamDuration % (1000 * 60)) / 1000);
+				const offlineEmbed = new EmbedBuilder()
+					.setAuthor({ name: caster.displayName, iconURL: caster.profilePictureUrl })
+					.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
+					.setColor('Red')
+					.setFooter({ text: `Ended Stream at ${new Date().toLocaleTimeString()} after ${hours}h ${minutes}m ${seconds}s` })
+					.setTimestamp();
 
-			const offlineEmbed = new EmbedBuilder()
-				.setAuthor({ name: `${caster.displayName}`, iconURL: `${caster.profilePictureUrl}` })
-				.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
-				.setColor('Red')
-				.setFooter({ text: `Ended Stream at ${new Date().toLocaleTimeString()} after ${hours}h ${minutes}m ${seconds}s` })
-				.setTimestamp();
-
-			try {
-				await sleep(2000);
-				await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
-					color: 'primary',
-					message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`,
-				},
-				);
-				await sleep(2000);
-				if (info.id === '1155035316') {
-					await LIVE.send({ embeds: [offlineEmbed] });
+				try {
 					await sleep(2000);
-					if (info.name === 'skullgaminghq') {
-						await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
+					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+						color: 'primary',
+						message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`,
+					});
+					await sleep(2000);
+					if (info.id === '1155035316') {
+						await LIVE.send({ embeds: [offlineEmbed] });
+						await sleep(2000);
+						if (info.name === 'skullgaminghq') {
+							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
+						}
 					}
+					lurkingUsers.length = 0;
+					await LurkMessageModel.deleteMany({});
+				} catch (error) {
+					console.error(error);
 				}
-				lurkingUsers.length = 0; // Clear the lurkingUsers array by setting its length to 0
-				await LurkMessageModel.deleteMany({}); // Clear all messages from the MongoDB collection
-			} catch (error) {
-				console.error(error);
-			}
-		},
+			},
 		);
 		const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(
 			info.id as UserIdResolvable,
@@ -1607,6 +1606,9 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		} finally {
 			isReconnecting = false; // Reset reconnection flag
 		}
+	});
+	eventSubListener.onUserSocketConnect(async (userId: string) => {
+		console.log(`Socket connected for user ${userId}`);
 	});
 	eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
 		const Enviroment = process.env.Enviroment as string;

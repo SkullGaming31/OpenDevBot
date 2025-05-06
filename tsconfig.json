@@ -104,6 +104,7 @@
     "node_modules",
     "seedDatabase.ts",
     "insertTestData.ts",
-    "logDatabaseData.ts"
+    "logDatabaseData.ts",
+    "updateNexonMetadata.ts",
   ]
 }

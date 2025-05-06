@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, TextChannel } from 'discord.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
 
 class DiscordBot {
 	private client: Client;
@@ -47,12 +47,13 @@ class DiscordBot {
 			]
 		});
 
-		this.client.on('ready', () => { console.log(`Logged in as ${this.client.user?.tag}!`); });
+		this.client.on('ready', () => { console.log(`Logged in as ${this.client.user?.globalName || this.client.user?.username}!`); });
 
 		this.client.on('error', (error: Error) => { console.error(`Something happen when trying to login: ${error}`); });
 		this.client.on('warn', (warn: string) => { console.info('Discord Warning', warn); });
 		this.client.on('shardDisconnect', (t) => { console.error('Shard Disconnect: ', t); });
 		this.client.on('shardError', (t: Error) => { console.error('Shard Error: ', t); });
+		this.client.on('shardReconnecting', (sr) => { console.error('Shard Reconnecting', sr); });
 	}
 
 	/**

@@ -1,9 +1,9 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
+
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { TokenModel } from '../../database/models/tokenModel';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
@@ -40,7 +40,9 @@ const gta: Command = {
 		try {
 			switch (channel) {
 				case 'skullgaminghq':
-					await chatClient.say(channel, 'Jimmy Jackson (32) grew up in Newfoundland, Canada. After losing his mother and witnessing his father’s death by police, Jimmy turned to crime and street racing. Hunted by police, he fled to Los Santos to start fresh and dominate the racing scene.');
+					await chatClient.say(channel, `Jimmy Jackson (32) grew up in Newfoundland, Canada. After losing his mother and witnessing his father’s death by police, 
+													Jimmy turned to crime and street racing. Hunted by police, he fled to Los Santos to start fresh and dominate the racing 
+													scene.`);
 					break;
 				case 'modvlog':
 					await chatClient.say(channel, 'Eugene Dixon(61) War vet, backstory coming soon...');
