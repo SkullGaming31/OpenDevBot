@@ -25,7 +25,7 @@
     "@twurple/eventsub-ws": "^7.2.0",
     "axios": "^1.7.4",
     "countdown": "^2.6.0",
-    "discord.js": "^14.15.2",
+    "discord.js": "^14.22.1",
     "dotenv": "^16.4.1",
     "express": "^4.21.2",
     "express-rate-limit": "^7.4.0",
