@@ -111,3 +111,14 @@ Recent follow-up (2025-10-13)
 ---
 
 For older historical entries, add them under new dated headings following this format.
+
+## [0.8.4] - 2025-10-13
+
+### Added
+
+- Channel-points support removed from codebase when not actively used; channel-points registration utilities deleted to avoid untestable behavior.
+- Added design notes and TODOs for planned chat games (Hangman/Word Scramble) and prioritization tasks.
+
+### Fixed
+
+- Small cleanup of EventSub startup references and removal of unused channel-points stubs.
