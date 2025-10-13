@@ -135,19 +135,28 @@ export default function createApp(): express.Application {
 		'whispers:edit',
 		'whispers:read'].join('+');
 
-	// https://id.twitch.tv/oauth2/authorize?client_id=4qhq6yv4vbpy6yp4jagdlx7olozrnx&redirect_uri=http://localhost:3000/api/v1/auth/twitch/callback&response_type=code&scope=bits:read+channel:edit:commercial+channel:manage:broadcast+channel:manage:extensions+channel:manage:guest_star+channel:manage:moderators+channel:manage:polls+channel:manage:predictions+channel:manage:raids+channel:manage:redemptions+channel:manage:schedule+channel:manage:videos+channel:manage:vips+channel:read:charity+channel:read:editors+channel:read:goals+channel:read:guest_star+channel:read:hype_train+channel:read:polls+channel:read:predictions+channel:read:redemptions+channel:read:subscriptions+channel:read:vips+chat:edit+chat:read+clips:edit+moderation:read+moderator:manage:announcements+moderator:manage:automod+moderator:manage:automod_settings+moderator:manage:banned_users+moderator:manage:blocked_terms+moderator:manage:chat_messages+moderator:manage:chat_settings+moderator:manage:guest_star+moderator:manage:shield_mode+moderator:manage:shoutouts+moderator:read:automod_settings+moderator:read:blocked_terms+moderator:read:chat_settings+moderator:read:chatters+moderator:read:followers+moderator:read:guest_star+moderator:read:shield_mode+moderator:read:shoutouts+user:edit+user:manage:blocked_users+user:manage:chat_color+user:manage:whispers+user:read:blocked_users+user:read:email+user:read:follows+user:read:subscriptions+whispers:edit+whispers:read
+	// https://id.twitch.tv/oauth2/authorize?client_id=4qhq6yv4vbpy6yp4jagdlx7olozrnx&redirect_uri=http://localhost:3001/api/v1/auth/twitch/callback&response_type=code&scope=bits:read+channel:edit:commercial+channel:manage:broadcast+channel:manage:extensions+channel:manage:guest_star+channel:manage:moderators+channel:manage:polls+channel:manage:predictions+channel:manage:raids+channel:manage:redemptions+channel:manage:schedule+channel:manage:videos+channel:manage:vips+channel:read:charity+channel:read:editors+channel:read:goals+channel:read:guest_star+channel:read:hype_train+channel:read:polls+channel:read:predictions+channel:read:redemptions+channel:read:subscriptions+channel:read:vips+chat:edit+chat:read+clips:edit+moderation:read+moderator:manage:announcements+moderator:manage:automod+moderator:manage:automod_settings+moderator:manage:banned_users+moderator:manage:blocked_terms+moderator:manage:chat_messages+moderator:manage:chat_settings+moderator:manage:guest_star+moderator:manage:shield_mode+moderator:manage:shoutouts+moderator:read:automod_settings+moderator:read:blocked_terms+moderator:read:chat_settings+moderator:read:chatters+moderator:read:followers+moderator:read:guest_star+moderator:read:shield_mode+moderator:read:shoutouts+user:edit+user:manage:blocked_users+user:manage:chat_color+user:manage:whispers+user:read:blocked_users+user:read:email+user:read:follows+user:read:subscriptions+whispers:edit+whispers:read
 
-	// Step 1: Redirect to Twitch for authorization
+	// Step 1: Redirect to Twitch for authorization. Optional `type` query param selects the scope set.
 	app.get('/api/v1/twitch', (req: express.Request, res: express.Response) => {
-		console.log('Redirect URI:', redirectUri); // Log the redirect URI
-		const userAuthorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${userScopes}`;
-		const botAuthURL = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${botScopes}`;
-		res.redirect(userAuthorizeUrl);
+		const type = (req.query.type as string) || 'user';
+		console.log('Redirect URI:', redirectUri, 'type:', type); // Log the redirect URI and type
+		const scopes = type === 'bot' ? botScopes : userScopes;
+		const authorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
+		res.redirect(authorizeUrl);
+	});
+
+	// Alias: historically some users hit /api/v1/auth/twitch — redirect those requests to the proper start endpoint
+	app.get('/api/v1/auth/twitch', (req: express.Request, res: express.Response) => {
+		const type = (req.query.type as string) || 'user';
+		res.redirect(`/api/v1/twitch${type ? `?type=${encodeURIComponent(type)}` : ''}`);
 	});
 
 	// Step 2: Handle the OAuth2 callback from Twitch
 	app.get('/api/v1/auth/twitch/callback', async (req: express.Request, res: express.Response) => {
 		const { code } = req.query;
+
+		console.log('OAuth callback invoked. code present?', !!code, 'redirectUri=', redirectUri);
 
 		if (code) {
 			try {
@@ -162,8 +171,19 @@ export default function createApp(): express.Application {
 					}
 				});
 
-				const { access_token, refresh_token, expires_in } = tokenResponse.data;
-				console.log('Token Response: ', tokenResponse.data);
+				const { access_token, refresh_token, expires_in } = tokenResponse.data as any;
+
+				// Normalize scopes returned by Twitch: could be array or space-separated string
+				const returnedScopesRaw = (tokenResponse.data as any).scope || (tokenResponse.data as any).scopes;
+				const returnedScopes: string[] = Array.isArray(returnedScopesRaw)
+					? returnedScopesRaw
+					: (typeof returnedScopesRaw === 'string' ? returnedScopesRaw.split(' ') : []);
+
+				console.log('Token Response: ', {
+					has_access_token: !!access_token,
+					expires_in,
+					scopes: returnedScopes
+				});
 
 				// Get user ID using the access token
 				const userResponse = await axios.get('https://api.twitch.tv/helix/users', {
@@ -177,7 +197,8 @@ export default function createApp(): express.Application {
 				const userId = userResponse.data.data[0].id;
 				const username = userResponse.data.data[0].login;
 				const broadcaster_type = userResponse.data.data[0].broadcaster_type || 'streamer';
-				const obtainmentTimestamp = Date.now();
+				// store seconds
+				const obtainmentTimestamp = Math.floor(Date.now() / 1000);
 
 				// Check if token already exists in MongoDB
 				let tokenDoc = await TokenModel.findOne({ user_id: userId });
@@ -188,7 +209,7 @@ export default function createApp(): express.Application {
 						login: username,
 						access_token,
 						refresh_token,
-						scope: userScopes.split('+'),
+						scope: returnedScopes.length > 0 ? returnedScopes : userScopes.split('+'),
 						expires_in,
 						obtainmentTimestamp,
 						broadcaster_type
@@ -199,7 +220,7 @@ export default function createApp(): express.Application {
 					tokenDoc.login = username;
 					tokenDoc.access_token = access_token;
 					tokenDoc.refresh_token = refresh_token;
-					tokenDoc.scope = userScopes.split('+');
+					tokenDoc.scope = returnedScopes.length > 0 ? returnedScopes : userScopes.split('+');
 					tokenDoc.expires_in = expires_in;
 					tokenDoc.obtainmentTimestamp = obtainmentTimestamp;
 					tokenDoc.broadcaster_type = broadcaster_type;
@@ -207,20 +228,23 @@ export default function createApp(): express.Application {
 
 				// Save the token document
 				await tokenDoc.save();
-				console.log('Token Updated');
+				console.log('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
 
-				res.json({
-					UserID: userId,
-					username: username,
-					access_token,
-					refresh_token,
+				return res.json({
+					userId,
+					username,
 					expires_in,
 					broadcaster_type: broadcaster_type === '' ? 'streamer' : broadcaster_type,
-					scopes: userScopes.split('\n')
+					scopes: tokenDoc.scope
 				});
 			} catch (error) {
-				console.error('Error during OAuth2 process:', error);
-				res.status(500).send('Error during OAuth2 process');
+				// Try to log axios error response body if present for easier debugging
+				console.error('Error during OAuth2 process:', error instanceof Error ? error.message : error);
+				if ((error as any)?.response?.data) {
+					console.error('Axios response data:', (error as any).response.data);
+				}
+				const details = (error as any)?.response?.data ?? (error as any)?.message ?? String(error);
+				return res.status(500).json({ error: 'Error during OAuth2 process', details });
 			}
 		} else {
 			res.status(400).send('No authorization code provided');

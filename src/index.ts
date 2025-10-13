@@ -7,21 +7,13 @@ import Database from './database';
 import createApp from './util/createApp';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
+import { deleteAllInjuries, deleteExpiredInjuries } from './services/injuryCleanup';
 
 /**
  * Deletes all documents from the injuries collection.
  *
  * @returns {Promise<void>}
  */
-export async function deleteAllInjuries(): Promise<void> {
-	try {
-		const deleteResult = await InjuryModel.deleteMany({});
-		console.log(`Deleted ${deleteResult.deletedCount} entries from the injuries collection.`);
-	} catch (error) {
-		console.error('Error deleting all injuries:', error);
-		throw error;
-	}
-}
 
 class OpenDevBot {
 	startTime: number;
@@ -102,8 +94,21 @@ class OpenDevBot {
 			const database = new Database(mongoURI);
 			await database.connect();
 
-			// Delete all entries in the injuries collection
-			await deleteAllInjuries();
+			// Injury cleanup strategy:
+			// - If RESET_INJURIES=true, delete all injuries (legacy behavior)
+			// - Otherwise remove only expired injury entries (safer)
+			if (process.env.RESET_INJURIES === 'true') {
+				console.warn('RESET_INJURIES=true: removing all entries from injuries collection (legacy behavior)');
+				await deleteAllInjuries();
+			} else {
+				await deleteExpiredInjuries();
+				// Schedule periodic cleanup (default once per day). Interval ms can be configured with INJURY_CLEANUP_INTERVAL_MS.
+				const cleanupInterval = process.env.INJURY_CLEANUP_INTERVAL_MS ? Number(process.env.INJURY_CLEANUP_INTERVAL_MS) : 24 * 60 * 60 * 1000;
+				// Do not start background interval during tests to avoid open handles that prevent Jest from exiting.
+				if (process.env.NODE_ENV !== 'test' && cleanupInterval > 0) {
+					setInterval(() => { void deleteExpiredInjuries(); }, cleanupInterval);
+				}
+			}
 
 			// Initialize error handling
 			const errorHandler = new ErrorHandler();

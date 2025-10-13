@@ -26,8 +26,8 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 			{
 				access_token: newTokenData.accessToken,
 				refresh_token: newTokenData.refreshToken,
-				scopes: newTokenData.scope,
-				expiresIn: newTokenData.expiresIn,
+				scope: newTokenData.scope,
+				expires_in: newTokenData.expiresIn,
 				obtainmentTimestamp: newTokenData.obtainmentTimestamp,
 			},
 			{ upsert: true, new: true }
@@ -45,8 +45,105 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 		};
 		await authProvider.addUserForToken(newTokenData);
 		if (user_id === '659523613') {
-			authProvider.addUser(user_id as UserIdResolvable, newTokenData, ['chat']);
+			// Provide the actual scopes from the stored token so the provider has correct permissions (do not force just 'chat')
+			authProvider.addUser(user_id as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
 		}
 	}
 	return authProvider;
+}
+
+/**
+ * Returns a RefreshingAuthProvider preloaded only with the configured bot user's token
+ * and attempts to register the 'chat' intent so ChatClient connects with the bot.
+ */
+export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
+	const botEnvId = process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613';
+	const botToken = await TokenModel.findOne({ user_id: String(botEnvId) }) as (ITwitchToken & { user_id: string }) | null;
+
+	const provider = new RefreshingAuthProvider({ clientId, clientSecret });
+
+	provider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
+		try {
+			await TokenModel.findOneAndUpdate(
+				{ user_id: userId },
+				{
+					access_token: newTokenData.accessToken,
+					refresh_token: newTokenData.refreshToken,
+					scope: newTokenData.scope,
+					expires_in: newTokenData.expiresIn,
+					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+				},
+				{ upsert: true, new: true }
+			);
+		} catch (e) {
+			console.warn('ChatAuthProvider: failed to persist refreshed token', e);
+		}
+	});
+
+	if (!botToken) {
+		console.warn('ChatAuthProvider: no bot token found in DB for', botEnvId);
+		return provider;
+	}
+
+	const newTokenData: AccessToken = {
+		accessToken: botToken.access_token,
+		refreshToken: botToken.refresh_token ?? null,
+		scope: botToken.scope as any,
+		expiresIn: botToken.expires_in ?? null,
+		obtainmentTimestamp: botToken.obtainmentTimestamp ?? null,
+	};
+
+	try {
+		// try overload with intents
+		// @ts-ignore
+		await provider.addUserForToken(newTokenData, { intents: ['chat'] });
+		console.log('ChatAuthProvider: addUserForToken called with intents for', botEnvId);
+	} catch (e) {
+		try {
+			// fallback to addUser with options
+			// @ts-ignore
+			provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat'], { intents: ['chat'] });
+			console.log('ChatAuthProvider: addUser called with intents for', botEnvId);
+		} catch (err) {
+			try {
+				provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
+				console.log('ChatAuthProvider: addUser called for', botEnvId);
+			} catch (ee) {
+				console.warn('ChatAuthProvider: failed to register bot user', ee);
+			}
+		}
+	}
+
+	// Dev-only: ensure internal intent maps advertise the 'chat' intent for the bot user.
+	try {
+		const shouldForce = process.env.Enviroment !== 'prod' || process.env.DEBUG_AUTH_PROVIDER === 'true';
+		if (shouldForce) {
+			const inspect = provider as any;
+			const botId = String(botEnvId);
+			if (inspect._intentToUserId) {
+				if (inspect._intentToUserId instanceof Map) {
+					inspect._intentToUserId.set('chat', botId);
+				} else if (typeof inspect._intentToUserId === 'object') {
+					inspect._intentToUserId['chat'] = botId;
+				}
+			}
+			if (inspect._userIdToIntents) {
+				if (inspect._userIdToIntents instanceof Map) {
+					let s = inspect._userIdToIntents.get(botId);
+					if (!s) s = new Set();
+					s.add('chat');
+					inspect._userIdToIntents.set(botId, s);
+				} else if (typeof inspect._userIdToIntents === 'object') {
+					inspect._userIdToIntents[botId] = Array.isArray(inspect._userIdToIntents[botId])
+						? Array.from(new Set([...(inspect._userIdToIntents[botId] || []), 'chat']))
+						: ['chat'];
+				}
+			}
+			console.log('ChatAuthProvider: forced chat intent mapping for bot', botId);
+		}
+	} catch (e) {
+		console.warn('ChatAuthProvider: failed to force internal intent mapping', e);
+	}
+
+	return provider;
 }

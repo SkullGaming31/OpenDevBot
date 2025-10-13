@@ -5,7 +5,7 @@ import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple
 import fs, { existsSync } from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
-import { getAuthProvider } from './auth/authProvider';
+import { getAuthProvider, getChatAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { ITwitchToken, TokenModel } from './database/models/tokenModel';
@@ -99,14 +99,34 @@ export async function initializeChat(): Promise<void> {
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
 		const Enviroment = process.env.Enviroment as string;
+		// Debug: log every incoming message in dev/debug to help diagnose command handling
+		if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+			console.log(`[chat:onMessage] ${msg.userInfo.displayName} in ${channel}: ${text}`);
+		}
 		if (Enviroment === 'dev' || Enviroment === 'debug') {
 			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
 		}
 
 		try {
 			const cursor = ''; // Initialize the cursor value
-			const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
-			const chatters = chattersResponse.data; // Retrieve the array of chatters
+			let chatters: HelixChatChatter[] = [];
+			try {
+				const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
+				chatters = chattersResponse.data || chattersResponse || [];
+			} catch (err: unknown) {
+				// Handle missing moderator scope or other 401 Unauthorized errors gracefully
+				const msgStr = err instanceof Error ? err.message : String(err);
+				if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
+					console.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
+					if (process.env.Enviroment === 'debug') {
+						await chatClient.say(channel, "Chatters list unavailable - bot needs 'moderator:read:chatters' scope. Skipping chatter processing.");
+					}
+					chatters = [];
+				} else {
+					console.error('Error fetching chatters:', err);
+					throw err; // rethrow unexpected errors
+				}
+			}
 			const chunkSize = 100; // Desired number of chatters per chunk
 
 			let intervalDuration: number;
@@ -269,10 +289,15 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 		if (text.startsWith('!')) {
+			// log the raw command parsing for debugging
+			const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
+			console.log(`[chat:command] Raw: ${preview}`);
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
+			console.log(`[chat:command] Parsed commandName='${commandName}'`);
 			if (commandName === undefined) return;
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
+			console.log(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
 			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
 			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
@@ -385,7 +410,19 @@ export async function getChatClient(): Promise<ChatClient> {
 	// console.log('User Collection: ', TBD.deletedCount);
 	const userApiClient = await getUserApi();
 	if (!chatClientInstance) {
-		const authProvider = await getAuthProvider();
+		// Use the chat-specific provider so the ChatClient connects using the bot account
+		const authProvider = await getChatAuthProvider();
+
+		try {
+			const inspect = (authProvider as any);
+			if (inspect._intentToUserId instanceof Map) {
+				console.log('Chat provider intentToUserId has chat ->', inspect._intentToUserId.get('chat'));
+			} else if (inspect._intentToUserId && typeof inspect._intentToUserId === 'object') {
+				console.log('Chat provider intentToUserId has chat ->', inspect._intentToUserId['chat']);
+			}
+		} catch (e) {
+			// ignore
+		}
 
 		// Fetch usernames from the database
 		const usernames = await getUsernamesFromDatabase();

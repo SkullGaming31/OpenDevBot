@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Prevent accidental commits of .env
+if git rev-parse --verify --quiet HEAD >/dev/null; then
+  against=HEAD
+else
+  # Initial commit: diff against empty tree object
+  against=$(git hash-object -t tree /dev/null)
+fi
+
+# Check staged files for .env
+if git diff --cached --name-only | grep -q "^\.env$"; then
+  echo "Aborting commit: .env is staged for commit. Remove it from the index and add it to .gitignore." >&2
+  echo "Run: git reset HEAD .env" >&2
+  exit 1
+fi
+
+exit 0
