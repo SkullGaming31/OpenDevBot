@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
@@ -26,20 +26,25 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Ensure OpenSSL 1.1 is available for mongodb-memory-server (some Ubuntu runners lack libcrypto.so.1.1)
-          sudo apt-get update
-          # Try to install libssl1.1 from apt; on newer runners this may not be available, so ignore failures
-          sudo apt-get install -y libssl1.1 || true
-          # Fallback: try to install a compatible package if libssl1.1 isn't available.
-          if [ ! -f /lib/x86_64-linux-gnu/libcrypto.so.1.1 ]; then
-            echo "libcrypto.so.1.1 not found, attempting to fetch libssl1.1 package from Ubuntu focal archive"
-            wget -q -O /tmp/libssl1.1.deb https://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2_amd64.deb || true
-            sudo dpkg -i /tmp/libssl1.1.deb || true
-          fi
           npm ci
-
+      - name: Start MongoDB service (for tests)
+        run: echo "Using provided MongoDB service"
+      - name: Set MONGO_URI
+        run: echo "MONGO_URI=mongodb://localhost:27017/test" >> $GITHUB_ENV
+      - name: Typecheck (non-blocking)
+        run: npm run typecheck || true
       - name: Run tests
         env:
           CI: true
         run: |
           npm test --silent -- -i
+    services:
+      mongo:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >
+          --health-cmd="mongosh --eval 'db.adminCommand(\"ping\")' || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
