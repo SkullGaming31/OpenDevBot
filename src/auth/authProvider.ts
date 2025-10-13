@@ -1,5 +1,5 @@
 import { UserIdResolvable } from '@twurple/api';
-import { AccessToken, RefreshingAuthProvider } from '@twurple/auth';
+import { AccessToken, RefreshingAuthProvider, StaticAuthProvider } from '@twurple/auth';
 import { config } from 'dotenv';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 config();
@@ -56,7 +56,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
  * Returns a RefreshingAuthProvider preloaded only with the configured bot user's token
  * and attempts to register the 'chat' intent so ChatClient connects with the bot.
  */
-export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
+export async function getChatAuthProvider(): Promise<any> {
 	const botEnvId = process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613';
 	const botToken = await TokenModel.findOne({ user_id: String(botEnvId) }) as (ITwitchToken & { user_id: string }) | null;
 
@@ -93,6 +93,7 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
 		obtainmentTimestamp: botToken.obtainmentTimestamp ?? null,
 	};
 
+	let registrationFailed = false;
 	try {
 		// try overload with intents
 		// @ts-ignore
@@ -110,6 +111,7 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
 				console.log('ChatAuthProvider: addUser called for', botEnvId);
 			} catch (ee) {
 				console.warn('ChatAuthProvider: failed to register bot user', ee);
+				registrationFailed = true;
 			}
 		}
 	}
@@ -119,6 +121,32 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
 	// caused maintenance burden. We now rely on supported public APIs and routine
 	// addUser/addUserForToken fallbacks above. If a provider implementation change is
 	// required in future, add an explicit adapter instead of mutating internals.
+
+	// Try to explicitly register the 'chat' intent via public API if available.
+	try {
+		const anyProv: any = provider;
+		// Twurple v7 exposes addIntentsToUser(user, intents)
+		if (typeof anyProv.addIntentsToUser === 'function') {
+			try {
+				anyProv.addIntentsToUser(botEnvId, ['chat']);
+				console.log('ChatAuthProvider: addIntentsToUser called for', botEnvId);
+			} catch (e) {
+				console.warn('ChatAuthProvider: addIntentsToUser threw an error', e);
+			}
+		}
+	} catch (e) {
+		// ignore
+	}
+
+	// Only fallback to StaticAuthProvider if registration actually failed above.
+	if (registrationFailed) {
+		try {
+			console.warn('ChatAuthProvider: registration failed; falling back to StaticAuthProvider for chat');
+			return new StaticAuthProvider(clientId, newTokenData.accessToken ?? '');
+		} catch (e) {
+			console.warn('ChatAuthProvider: failed to create StaticAuthProvider fallback', e);
+		}
+	}
 
 	return provider;
 }
