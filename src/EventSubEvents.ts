@@ -1,6 +1,5 @@
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { config } from 'dotenv';
-import { randomInt } from 'node:crypto';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 config();
@@ -10,7 +9,8 @@ import {
 	HelixPaginatedEventSubSubscriptionsResult,
 	HelixPagination,
 	UserIdResolvable,
-} from '@twurple/api/lib';
+} from '@twurple/api';
+import { StaticAuthProvider } from '@twurple/auth';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
@@ -27,7 +27,6 @@ import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
 import FollowMessage from './database/models/followMessages';
-// import tfd from './database/models/tfd_ouid';
 
 export async function initializeTwitchEventSub(): Promise<void> {
 	const userApiClient = await getUserApi();
@@ -1747,4 +1746,95 @@ export async function getEventSubs(): Promise<EventSubWsListener> {
 		eventSubListenerPromise = createEventSubListener();
 	}
 	return eventSubListenerPromise;
+}
+
+/**
+ * Force recreation of the EventSub listener. This clears the cached listener
+ * promise and creates a fresh listener which will re-register subscriptions.
+ * Used by the retry worker to trigger re-subscription attempts.
+ */
+export async function recreateEventSubs(): Promise<void> {
+	// Reset the promise so getEventSubs will create a new listener
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore - eventSubListenerPromise is module scoped above
+	eventSubListenerPromise = null;
+	await getEventSubs();
+}
+
+/**
+ * Create subscriptions for a single broadcaster using their access token.
+ * This creates a short-lived EventSubWsListener using a StaticAuthProvider
+ * built from the broadcaster's token and registers minimal handlers so the
+ * listener will create EventSub subscriptions for that broadcaster.
+ */
+export async function createSubscriptionsForAuthUser(authUserId: string, accessToken: string): Promise<void> {
+	if (!accessToken) throw new Error('No access token provided for resubscribe');
+	const clientId = process.env.TWITCH_CLIENT_ID as string;
+	if (!clientId) throw new Error('TWITCH_CLIENT_ID not set');
+
+	// subscription types we want to ensure exist
+	const subs = [
+		{ type: 'stream.online', version: '1' },
+		{ type: 'stream.offline', version: '1' },
+		{ type: 'channel.follow', version: '1' },
+		{ type: 'channel.subscribe', version: '1' },
+		{ type: 'channel.subscription.message', version: '1' },
+		{ type: 'channel.cheer', version: '1' },
+	];
+
+	const apiClient = new ApiClient({ authProvider: new StaticAuthProvider(clientId, accessToken), logger: { minLevel: 'ERROR' } });
+
+	// Twurple exposes EventSub helpers on the ApiClient in recent versions. Prefer that.
+	const eventSubHelper = (apiClient as any).eventSub || (apiClient as any).eventsub || null;
+
+	if (eventSubHelper && typeof eventSubHelper.createSubscription === 'function') {
+		// use Twurple helper to create subscriptions
+		for (const s of subs) {
+			const body = {
+				type: s.type,
+				version: s.version,
+				condition: { broadcaster_user_id: authUserId },
+				transport: { method: 'websocket' },
+			};
+			try {
+				await eventSubHelper.createSubscription(body);
+				console.log(`Created EventSub ${s.type} for ${authUserId} via Twurple`);
+			} catch (err: any) {
+				const status = err?.status ?? err?.response?.status;
+				if (status === 409 || String(err).includes('409')) {
+					console.log(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
+				} else {
+					console.warn(`Twurple EventSub create failed for ${s.type}:`, err);
+					throw err;
+				}
+			}
+
+			// small delay to reduce chance of rate-limit bursts
+			// eslint-disable-next-line no-await-in-loop
+			await sleep(250);
+		}
+		return;
+	}
+
+	// Fallback: if helper not available, create a short-lived listener to register handlers
+	const tempListener = new EventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
+	try {
+		tempListener.start();
+		tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => { });
+		tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => { });
+		tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => { });
+		tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => { });
+		tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => { });
+		tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => { });
+
+		// allow some time for subscriptions to be created
+		await sleep(2000);
+	} finally {
+		try {
+			// @ts-ignore
+			if (typeof tempListener.stop === 'function') await tempListener.stop();
+		} catch (_) {
+			// ignore
+		}
+	}
 }

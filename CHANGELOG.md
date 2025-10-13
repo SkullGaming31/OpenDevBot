@@ -34,6 +34,12 @@ Detailed changes
   - `src/EventSubEvents.ts`: deferred subscription creation until the EventSub websocket listener is established, added guarded reconnect logic, and handlers to persist subscription records.
   - Reduced race conditions that previously caused repeated 400 errors when attempting to create subscriptions while the websocket transport was unavailable.
 
+  ### 2025-10-13 — EventSub idempotent/resubscribe
+
+  - Prefer Twurple ApiClient EventSub helper when creating subscriptions for a broadcaster during targeted resubscribe attempts; fall back to a short-lived EventSubWsListener if the helper is unavailable.
+  - Added a retry worker and persisted retry state in MongoDB so failed subscription creates are retried with backoff. Files: `src/EventSub/retryModel.ts`, `src/EventSub/retryManager.ts`, `src/EventSub/retryWorker.ts`.
+  - Tests added for the retry flow and targeted resubscribe helper.
+
 - Discord webhooks
   - New file `src/Discord/webhookQueue.ts`: a per-webhook queue that serializes sends and respects a configurable send interval (to avoid Discord rate limits).
   - Replaced direct `WebhookClient.send()` usages in `src/EventSubEvents.ts`, `src/chat.ts`, and `src/Commands/Moderation/shoutout.ts` with `enqueueWebhook()` calls.
