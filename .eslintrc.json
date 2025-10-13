@@ -11,7 +11,14 @@
         "node_modules/",
         "dist/"
     ],
-    "overrides": [],
+    "overrides": [
+        {
+            "files": ["src/**/__tests__/**", "src/**/*.test.ts"],
+            "rules": {
+                "@typescript-eslint/no-explicit-any": "off"
+            }
+        }
+    ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "ecmaVersion": "latest",

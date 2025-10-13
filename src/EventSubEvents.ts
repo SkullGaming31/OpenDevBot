@@ -1785,7 +1785,10 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 	const apiClient = new ApiClient({ authProvider: new StaticAuthProvider(clientId, accessToken), logger: { minLevel: 'ERROR' } });
 
 	// Twurple exposes EventSub helpers on the ApiClient in recent versions. Prefer that.
-	const eventSubHelper = (apiClient as any).eventSub || (apiClient as any).eventsub || null;
+	type EventSubHelper = { createSubscription: (body: unknown) => Promise<unknown> };
+	const eventSubHelper: EventSubHelper | null = (apiClient as unknown as Record<string, unknown>).eventSub as EventSubHelper
+		|| (apiClient as unknown as Record<string, unknown>).eventsub as EventSubHelper
+		|| null;
 
 	if (eventSubHelper && typeof eventSubHelper.createSubscription === 'function') {
 		// use Twurple helper to create subscriptions
@@ -1799,9 +1802,19 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 			try {
 				await eventSubHelper.createSubscription(body);
 				console.log(`Created EventSub ${s.type} for ${authUserId} via Twurple`);
-			} catch (err: any) {
-				const status = err?.status ?? err?.response?.status;
-				if (status === 409 || String(err).includes('409')) {
+			} catch (err) {
+				// Attempt to read HTTP status code from several possible shapes without using `any`
+				const getStatus = (e: unknown): number | undefined => {
+					if (!e || typeof e !== 'object') return undefined;
+					const rec = e as Record<string, unknown>;
+					if (typeof rec.status === 'number') return rec.status;
+					const resp = rec.response as Record<string, unknown> | undefined;
+					if (resp && typeof resp.status === 'number') return resp.status;
+					return undefined;
+				};
+				const status = getStatus(err);
+				const errStr = String(err);
+				if (status === 409 || errStr.includes('409')) {
 					console.log(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
 				} else {
 					console.warn(`Twurple EventSub create failed for ${s.type}:`, err);
@@ -1820,21 +1833,28 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 	const tempListener = new EventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
 	try {
 		tempListener.start();
-		tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => { });
-		tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => { });
-		tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => { });
-		tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => { });
-		tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => { });
-		tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => { });
+		// register minimal no-op handlers so the listener creates subscriptions
+		tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => undefined);
+		tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => undefined);
+		tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
+		tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => undefined);
+		tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => undefined);
+		tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => undefined);
 
 		// allow some time for subscriptions to be created
 		await sleep(2000);
 	} finally {
 		try {
-			// @ts-ignore
-			if (typeof tempListener.stop === 'function') await tempListener.stop();
-		} catch (_) {
-			// ignore
+			const stopProp = (tempListener as unknown as Record<string, unknown>)['stop'];
+			if (typeof stopProp === 'function') {
+				const fn = stopProp as (...args: unknown[]) => unknown;
+				const res = fn.call(tempListener);
+				if (res && typeof (res as Promise<unknown>).then === 'function') await res as Promise<unknown>;
+			}
+		} catch (e) {
+			// log unexpected stop errors at debug level
+			// eslint-disable-next-line no-console
+			console.debug('Failed to stop temp EventSub listener', (e as Error).message);
 		}
 	}
 }

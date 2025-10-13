@@ -52,8 +52,8 @@ const bots: Command = {
 						} else {
 							await chatClient.say(channel, 'All usernames provided are already in the database.');
 						}
-					} catch (error: any) {
-						console.error('Failed to add usernames to the database:', error);
+					} catch (error: unknown) {
+						console.error('Failed to add usernames to the database:', String(error));
 						await chatClient.say(channel, 'An error occurred while adding the usernames to the database.');
 					}
 				} else {
@@ -93,8 +93,8 @@ const bots: Command = {
 						await knownBotsModel.deleteMany({ username: { $in: existingUsernamesToRemove } });
 						await chatClient.say(channel, `${existingUsernamesToRemove.length} user(s) have been removed from the database: ${existingUsernamesToRemove.join(', ')}.`);
 					}
-				} catch (error: any) {
-					console.error('Error removing users:', error);
+				} catch (error: unknown) {
+					console.error('Error removing users:', String(error));
 					await chatClient.say(channel, 'An error occurred while removing the users.');
 				}
 				break;

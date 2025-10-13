@@ -121,7 +121,7 @@ export async function initializeChat(): Promise<void> {
 				if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
 					console.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
 					if (process.env.Enviroment === 'debug') {
-						await chatClient.say(channel, "Chatters list unavailable - bot needs 'moderator:read:chatters' scope. Skipping chatter processing.");
+						await chatClient.say(channel, 'Chatters list unavailable - bot needs \'moderator:read:chatters\' scope. Skipping chatter processing.');
 					}
 					chatters = [];
 				} else {
@@ -348,8 +348,10 @@ export async function initializeChat(): Promise<void> {
 
 					// Update the last executed timestamp of the command
 					userCooldowns.set(commandName, currentTimestamp);
-				} catch (error: any) {
-					console.error(error.message);
+				} catch (error: unknown) {
+					// Safely log error
+					if (error instanceof Error) console.error(error.message);
+					else console.error(String(error));
 				}
 			} else {
 				if (text.includes('!join') || text.includes('!pokecatch') || text.includes('!pokestart')) return;
@@ -416,11 +418,12 @@ export async function getChatClient(): Promise<ChatClient> {
 		const authProvider = await getChatAuthProvider();
 
 		try {
-			const inspect = (authProvider as any);
-			if (inspect._intentToUserId instanceof Map) {
-				console.log('Chat provider intentToUserId has chat ->', inspect._intentToUserId.get('chat'));
-			} else if (inspect._intentToUserId && typeof inspect._intentToUserId === 'object') {
-				console.log('Chat provider intentToUserId has chat ->', inspect._intentToUserId['chat']);
+			const inspect = authProvider as unknown as Record<string, unknown>;
+			const intentMap = inspect._intentToUserId;
+			if (intentMap instanceof Map) {
+				console.log('Chat provider intentToUserId has chat ->', (intentMap as Map<string, unknown>).get('chat'));
+			} else if (intentMap && typeof intentMap === 'object') {
+				console.log('Chat provider intentToUserId has chat ->', (intentMap as Record<string, unknown>)['chat']);
 			}
 		} catch (e) {
 			// ignore

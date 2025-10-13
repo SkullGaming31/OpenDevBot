@@ -56,9 +56,10 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
  * Returns a RefreshingAuthProvider preloaded only with the configured bot user's token
  * and attempts to register the 'chat' intent so ChatClient connects with the bot.
  */
-export async function getChatAuthProvider(): Promise<any> {
+export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | StaticAuthProvider> {
 	const botEnvId = process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613';
-	const botToken = await TokenModel.findOne({ user_id: String(botEnvId) }) as (ITwitchToken & { user_id: string }) | null;
+	type BotTokenRecord = ITwitchToken & { user_id: string; scope: string[] | string };
+	const botToken = await TokenModel.findOne({ user_id: String(botEnvId) }) as BotTokenRecord | null;
 
 	const provider = new RefreshingAuthProvider({ clientId, clientSecret });
 
@@ -85,27 +86,61 @@ export async function getChatAuthProvider(): Promise<any> {
 		return provider;
 	}
 
+	// Normalize scope which may be stored as an array or space-separated string in DB
+	const rawScope = botToken.scope as unknown;
+	let normalizedScope: string[];
+	if (Array.isArray(rawScope)) {
+		normalizedScope = rawScope;
+	} else if (typeof rawScope === 'string') {
+		normalizedScope = rawScope.split(' ');
+	} else {
+		normalizedScope = [];
+	}
+
 	const newTokenData: AccessToken = {
 		accessToken: botToken.access_token,
 		refreshToken: botToken.refresh_token ?? null,
-		scope: botToken.scope as any,
+		scope: normalizedScope,
 		expiresIn: botToken.expires_in ?? null,
 		obtainmentTimestamp: botToken.obtainmentTimestamp ?? null,
 	};
 
 	let registrationFailed = false;
 	try {
-		// try overload with intents
-		// @ts-ignore
-		await provider.addUserForToken(newTokenData, { intents: ['chat'] });
-		console.log('ChatAuthProvider: addUserForToken called with intents for', botEnvId);
-	} catch (e) {
+		// try overload with intents if available
 		try {
-			// fallback to addUser with options
-			// @ts-ignore
-			provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat'], { intents: ['chat'] });
-			console.log('ChatAuthProvider: addUser called with intents for', botEnvId);
-		} catch (err) {
+			// Try addUserForToken with options if available on this provider implementation
+			const provRec = provider as unknown as Record<string, unknown>;
+			const addUserForTokenFn = provRec.addUserForToken as ((token: AccessToken, opts?: unknown) => Promise<unknown>) | undefined;
+			if (typeof addUserForTokenFn === 'function') {
+				await addUserForTokenFn.call(provider, newTokenData, { intents: ['chat'] });
+				console.log('ChatAuthProvider: addUserForToken called with intents for', botEnvId);
+			} else {
+				const addUserWithOpts = provRec.addUser as ((userId: string, token: AccessToken, scope?: string[] | string, opts?: unknown) => unknown) | undefined;
+				if (typeof addUserWithOpts === 'function') {
+					try {
+						addUserWithOpts.call(provider, String(botEnvId), newTokenData, newTokenData.scope ?? ['chat'], { intents: ['chat'] });
+						console.log('ChatAuthProvider: addUser called with intents for', botEnvId);
+					} catch (err) {
+						try {
+							provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
+							console.log('ChatAuthProvider: addUser called for', botEnvId);
+						} catch (ee) {
+							console.warn('ChatAuthProvider: failed to register bot user', ee);
+							registrationFailed = true;
+						}
+					}
+				} else {
+					try {
+						provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
+						console.log('ChatAuthProvider: addUser called for', botEnvId);
+					} catch (ee) {
+						console.warn('ChatAuthProvider: failed to register bot user', ee);
+						registrationFailed = true;
+					}
+				}
+			}
+		} catch (e) {
 			try {
 				provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
 				console.log('ChatAuthProvider: addUser called for', botEnvId);
@@ -114,6 +149,10 @@ export async function getChatAuthProvider(): Promise<any> {
 				registrationFailed = true;
 			}
 		}
+	} catch (e) {
+		// unexpected outer error
+		console.warn('ChatAuthProvider: unexpected error during registration', e);
+		registrationFailed = true;
 	}
 
 	// Note: previously we forced internal Twurple intent mappings here as a developer-only
@@ -124,14 +163,16 @@ export async function getChatAuthProvider(): Promise<any> {
 
 	// Try to explicitly register the 'chat' intent via public API if available.
 	try {
-		const anyProv: any = provider;
+		const anyProv = provider as unknown as Record<string, unknown>;
 		// Twurple v7 exposes addIntentsToUser(user, intents)
-		if (typeof anyProv.addIntentsToUser === 'function') {
+		const addIntents = anyProv.addIntentsToUser;
+		if (typeof addIntents === 'function') {
 			try {
-				anyProv.addIntentsToUser(botEnvId, ['chat']);
+				const fn = addIntents as (userId: string, intents: string[]) => unknown;
+				fn.call(provider, botEnvId, ['chat']);
 				console.log('ChatAuthProvider: addIntentsToUser called for', botEnvId);
 			} catch (e) {
-				console.warn('ChatAuthProvider: addIntentsToUser threw an error', e);
+				console.warn('ChatAuthProvider: addIntentsToUser threw an error', String(e));
 			}
 		}
 	} catch (e) {

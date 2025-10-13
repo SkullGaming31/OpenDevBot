@@ -171,10 +171,11 @@ export default function createApp(): express.Application {
 					}
 				});
 
-				const { access_token, refresh_token, expires_in } = tokenResponse.data as any;
+				type TokenResponseData = { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string[] | string; scopes?: string[] | string };
+				const { access_token, refresh_token, expires_in } = tokenResponse.data as TokenResponseData;
 
 				// Normalize scopes returned by Twitch: could be array or space-separated string
-				const returnedScopesRaw = (tokenResponse.data as any).scope || (tokenResponse.data as any).scopes;
+				const returnedScopesRaw = (tokenResponse.data as TokenResponseData).scope || (tokenResponse.data as TokenResponseData).scopes;
 				const returnedScopes: string[] = Array.isArray(returnedScopesRaw)
 					? returnedScopesRaw
 					: (typeof returnedScopesRaw === 'string' ? returnedScopesRaw.split(' ') : []);
@@ -218,10 +219,10 @@ export default function createApp(): express.Application {
 				} else {
 					// If token is found, update it
 					tokenDoc.login = username;
-					tokenDoc.access_token = access_token;
-					tokenDoc.refresh_token = refresh_token;
+					tokenDoc.access_token = access_token ?? '';
+					tokenDoc.refresh_token = refresh_token ?? '';
 					tokenDoc.scope = returnedScopes.length > 0 ? returnedScopes : userScopes.split('+');
-					tokenDoc.expires_in = expires_in;
+					tokenDoc.expires_in = expires_in ?? 0;
 					tokenDoc.obtainmentTimestamp = obtainmentTimestamp;
 					tokenDoc.broadcaster_type = broadcaster_type;
 				}
@@ -237,13 +238,21 @@ export default function createApp(): express.Application {
 					broadcaster_type: broadcaster_type === '' ? 'streamer' : broadcaster_type,
 					scopes: tokenDoc.scope
 				});
-			} catch (error) {
+			} catch (error: unknown) {
 				// Try to log axios error response body if present for easier debugging
-				console.error('Error during OAuth2 process:', error instanceof Error ? error.message : error);
-				if ((error as any)?.response?.data) {
-					console.error('Axios response data:', (error as any).response.data);
+				if (error instanceof Error) console.error('Error during OAuth2 process:', error.message);
+				else console.error('Error during OAuth2 process:', String(error));
+				const getAxiosResponseData = (e: unknown): unknown | undefined => {
+					if (!e || typeof e !== 'object') return undefined;
+					const rec = e as Record<string, unknown>;
+					const resp = rec['response'] as Record<string, unknown> | undefined;
+					return resp ? resp['data'] : undefined;
+				};
+				const axiosResp = getAxiosResponseData(error);
+				if (axiosResp) {
+					console.error('Axios response data:', axiosResp);
 				}
-				const details = (error as any)?.response?.data ?? (error as any)?.message ?? String(error);
+				const details = axiosResp ?? (error instanceof Error ? error.message : String(error));
 				return res.status(500).json({ error: 'Error during OAuth2 process', details });
 			}
 		} else {
