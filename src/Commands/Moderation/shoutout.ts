@@ -6,6 +6,7 @@ import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { sleep } from '../../util/util';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { enqueueWebhook } from '../../Discord/webhookQueue';
 
 const shoutout: Command = {
 	name: 'shoutout',
@@ -76,9 +77,9 @@ const shoutout: Command = {
 			await sleep(5000);
 			if (broadcasterStream !== null) await userApiClient.chat.shoutoutUser(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await sleep(3000);
-			await commandUsage.send({ embeds: [commandUsageEmbed] });
+			await enqueueWebhook(commandUsageWebhookID, CommandUssageWebhookTOKEN, { embeds: [commandUsageEmbed] });
 			await sleep(5000);
-			await TwitchActivity.send({ embeds: [shoutoutEmbed] });
+			await enqueueWebhook(TwitchActivityWebhookID, TwitchActivityWebhookToken, { embeds: [shoutoutEmbed] });
 		} catch (error: unknown) {
 			if (error instanceof Error) {
 				console.error(error.name + ': ' + error.message, error.stack);

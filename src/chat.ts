@@ -12,7 +12,8 @@ import { ITwitchToken, TokenModel } from './database/models/tokenModel';
 import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
+import { enqueueWebhook } from './Discord/webhookQueue';
 import { IUser, UserModel } from './database/models/userModel';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
@@ -92,7 +93,8 @@ export async function initializeChat(): Promise<void> {
 	await loadCommands(commandsDir, commands);
 	console.log(`Loaded ${Object.keys(commands).length} Commands.`);
 	const userApiClient = await getUserApi();
-	const twitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
+	const TWITCH_ACTIVITY_ID = TwitchActivityWebhookID;
+	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
 	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
 
 	// Handle commands
@@ -283,7 +285,7 @@ export async function initializeChat(): Promise<void> {
 				// - Send chat message notifying ban
 				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
 				// - Send embed to activity feed
-				await twitchActivity.send({ embeds: [banEmbed] });
+				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [banEmbed] });
 			} catch (error) {
 				console.error(error);
 			}

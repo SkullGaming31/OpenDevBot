@@ -1,7 +1,8 @@
 import { EventSubWsListener } from '@twurple/eventsub-ws';
 import { config } from 'dotenv';
 import { randomInt } from 'node:crypto';
-import { EmbedBuilder, WebhookClient } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
+import { enqueueWebhook } from './Discord/webhookQueue';
 config();
 
 import {
@@ -33,14 +34,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	const chatClient = await getChatClient();
 
 	//#region DiscordWebhooks
-	const LIVE = new WebhookClient({
-		id: PromoteWebhookID,
-		token: PromoteWebhookToken,
-	});
-	const twitchActivity = new WebhookClient({
-		id: TwitchActivityWebhookID,
-		token: TwitchActivityWebhookToken,
-	});
+	const LIVE_ID = PromoteWebhookID;
+	const LIVE_TOKEN = PromoteWebhookToken;
+	const TWITCH_ACTIVITY_ID = TwitchActivityWebhookID;
+	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
 	//#endregion
 
 	// await createChannelPointsRewards(false);
@@ -337,7 +334,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					);
 					if (info.id === '1155035316') {
 						await sleep(60000);
-						await LIVE.send({ content: '@everyone', embeds: [liveEmbed] });
+						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: '@everyone', embeds: [liveEmbed] });
 					}
 				} catch (err: unknown) {
 					console.error('Error sending going live post', err);
@@ -370,7 +367,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					});
 					await sleep(2000);
 					if (info.id === '1155035316') {
-						await LIVE.send({ embeds: [offlineEmbed] });
+						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { embeds: [offlineEmbed] });
 						await sleep(2000);
 						if (info.name === 'skullgaminghq') {
 							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
@@ -440,7 +437,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						iconURL: `${userInfo.profilePictureUrl}`,
 					})
 					.setTimestamp();
-				await twitchActivity.send({ embeds: [hypeeventendEmbed] });
+				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [hypeeventendEmbed] });
 			},
 		);
 		const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(
@@ -496,7 +493,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						iconURL: `${userInfo.profilePictureUrl}`,
 					})
 					.setTimestamp();
-				await twitchActivity.send({ embeds: [giftedSubs] });
+				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [giftedSubs] });
 			},
 		);
 		const resub = eventSubListener.onChannelSubscriptionMessage(
@@ -536,7 +533,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					})
 					.setTimestamp();
 				try {
-					// await twitchActivity.send({ embeds: [resubEmbed] });
+					// await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [resubEmbed] });
 					await chatClient.say(
 						userInfo.name,
 						`${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`,
@@ -629,7 +626,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					}
 
 					await chatClient.say(info.name, `${randomMessage}`);
-					await twitchActivity.send({ embeds: [followEmbed] });
+					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [followEmbed] });
 				} catch (error) {
 					console.error(
 						'An error occurred in the follower event handler:',
@@ -724,7 +721,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							info.name,
 							`${cheer.userDisplayName} has cheered ${cheer.bits} bits in ${info.name}`,
 						);
-						await twitchActivity.send({ embeds: [cheerEmbed] });
+						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [cheerEmbed] });
 					} catch (error) {
 						console.error(error);
 					}
@@ -769,7 +766,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					const raidMessage =
 						`${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
 					await chatClient.say(info.name, raidMessage);
-					await twitchActivity.send({ embeds: [raidEmbed] });
+					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
 
 					await sleep(1000);
 
@@ -809,7 +806,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						])
 						.setTimestamp();
 
-					await twitchActivity.send({ embeds: [raidEmbed] });
+					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
 				} catch (error) {
 					console.error(error);
 				}
@@ -990,7 +987,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName}'s Tipping Page: https://overlay.expert/celebrate/canadiendragon`,
 								);
 							}
-							await twitchActivity.send({ embeds: [tipEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [tipEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1039,7 +1036,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						} catch (error) {
 							console.error(error);
 						}
-						await twitchActivity.send({ embeds: [instagramEmbed] });
+						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [instagramEmbed] });
 						break;
 					case 'YouTube':
 						console.log(
@@ -1082,7 +1079,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName}'s YouTube: https://youtube.com/channel/UCUHnQESlc-cPkp_0KvbVK6g`,
 								);
 							}
-							await twitchActivity.send({ embeds: [youtubeEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [youtubeEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1128,7 +1125,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName}'s Tic-Tok: https://tiktok.com/@canadiendragon`,
 								);
 							}
-							await twitchActivity.send({ embeds: [tiktokEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [tiktokEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1174,7 +1171,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName}'s Facebook: https://facebook.com/gaming/SkullGaming8461`,
 								);
 							}
-							await twitchActivity.send({ embeds: [facebookEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [facebookEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1222,7 +1219,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						} catch (error) {
 							console.error(error);
 						}
-						await twitchActivity.send({ embeds: [discordEmbed] });
+						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [discordEmbed] });
 						break;
 					case 'Hydrate':
 						// console.log(`${cp.rewardTitle} has been redeemed by ${cp.userName}`);
@@ -1263,7 +1260,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName}'s, you must stay hydrated, take a sip of whatever your drinking.`,
 								);
 							}
-							await twitchActivity.send({ embeds: [hydrateEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [hydrateEmbed] });
 						} catch (error) {
 							console.log(error);
 						}
@@ -1307,7 +1304,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName} Put down that controller for 30 seconds`,
 								);
 							}
-							await twitchActivity.send({ embeds: [dropcontrollerEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [dropcontrollerEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1354,7 +1351,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`${cp.broadcasterDisplayName} you should not be listening to game sounds right now`,
 								);
 							}
-							await twitchActivity.send({ embeds: [muteheadsetEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [muteheadsetEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1403,7 +1400,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.userDisplayName} has redeemed ${cp.rewardTitle} and has ban the word ${cp.input.toLowerCase()}`,
 								);
 							}
-							await twitchActivity.send({ embeds: [irlwordbanEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [irlwordbanEmbed] });
 						} catch (error) {
 							console.log(error);
 						}
@@ -1446,7 +1443,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`@${cp.broadcasterDisplayName} SHHHHHH why are you still talking right now`,
 								);
 							}
-							await twitchActivity.send({ embeds: [irlvoicebanEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [irlvoicebanEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
@@ -1494,7 +1491,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`${cp.userDisplayName} has redeemed Ban an In-Game Action, Action:${cp.input}`,
 								);
 							}
-							await twitchActivity.send({ embeds: [baningameactionEmbed] });
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [baningameactionEmbed] });
 						} catch (error) {
 							console.error(error);
 						}
