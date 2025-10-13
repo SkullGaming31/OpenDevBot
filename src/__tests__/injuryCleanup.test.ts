@@ -4,17 +4,23 @@ import { InjuryModel } from '../database/models/injury';
 import { deleteExpiredInjuries } from '../services/injuryCleanup';
 
 describe('injury cleanup', () => {
-    let mongod: MongoMemoryServer;
+    let mongod: MongoMemoryServer | null = null;
 
     beforeAll(async () => {
-        mongod = await MongoMemoryServer.create();
-        const uri = mongod.getUri();
-        await mongoose.connect(uri, { dbName: 'test' } as any);
+        const mongoUriFromEnv = process.env.MONGO_URI;
+        if (mongoUriFromEnv) {
+            // CI provides a MongoDB service; connect to it
+            await mongoose.connect(mongoUriFromEnv, { dbName: 'test' } as any);
+        } else {
+            mongod = await MongoMemoryServer.create();
+            const uri = mongod.getUri();
+            await mongoose.connect(uri, { dbName: 'test' } as any);
+        }
     });
 
     afterAll(async () => {
         await mongoose.disconnect();
-        await mongod.stop();
+        if (mongod) await mongod.stop();
     });
 
     beforeEach(async () => {
