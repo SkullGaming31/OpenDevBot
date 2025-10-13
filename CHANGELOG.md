@@ -82,6 +82,9 @@ Recommended next steps
 - Remove the temporary developer-only Twurple mapping in `getChatAuthProvider()` once the SDK surface is stabilized or the workaround is no longer needed.
 - Harden EventSub subscription reconciliation with exponential backoff and idempotent create-or-ensure logic.
 
+Recent follow-up (2025-10-13)
+- Removed developer-only mutation of Twurple provider internals from `src/auth/authProvider.ts` and added a unit test `src/__tests__/authProviderInternals.test.ts` that asserts internals are not mutated. This reduces tech-debt and keeps provider behavior within supported APIs.
+
 ---
 
 For older historical entries, add them under new dated headings following this format.
