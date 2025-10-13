@@ -114,36 +114,11 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider> {
 		}
 	}
 
-	// Dev-only: ensure internal intent maps advertise the 'chat' intent for the bot user.
-	try {
-		const shouldForce = process.env.Enviroment !== 'prod' || process.env.DEBUG_AUTH_PROVIDER === 'true';
-		if (shouldForce) {
-			const inspect = provider as any;
-			const botId = String(botEnvId);
-			if (inspect._intentToUserId) {
-				if (inspect._intentToUserId instanceof Map) {
-					inspect._intentToUserId.set('chat', botId);
-				} else if (typeof inspect._intentToUserId === 'object') {
-					inspect._intentToUserId['chat'] = botId;
-				}
-			}
-			if (inspect._userIdToIntents) {
-				if (inspect._userIdToIntents instanceof Map) {
-					let s = inspect._userIdToIntents.get(botId);
-					if (!s) s = new Set();
-					s.add('chat');
-					inspect._userIdToIntents.set(botId, s);
-				} else if (typeof inspect._userIdToIntents === 'object') {
-					inspect._userIdToIntents[botId] = Array.isArray(inspect._userIdToIntents[botId])
-						? Array.from(new Set([...(inspect._userIdToIntents[botId] || []), 'chat']))
-						: ['chat'];
-				}
-			}
-			console.log('ChatAuthProvider: forced chat intent mapping for bot', botId);
-		}
-	} catch (e) {
-		console.warn('ChatAuthProvider: failed to force internal intent mapping', e);
-	}
+	// Note: previously we forced internal Twurple intent mappings here as a developer-only
+	// workaround when SDK internals changed. That code was removing encapsulation and
+	// caused maintenance burden. We now rely on supported public APIs and routine
+	// addUser/addUserForToken fallbacks above. If a provider implementation change is
+	// required in future, add an explicit adapter instead of mutating internals.
 
 	return provider;
 }
