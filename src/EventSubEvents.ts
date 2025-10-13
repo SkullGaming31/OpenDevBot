@@ -25,6 +25,7 @@ import {
 } from './util/constants';
 import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
+import retryManager from './EventSub/retryManager';
 import FollowMessage from './database/models/followMessages';
 // import tfd from './database/models/tfd_ouid';
 
@@ -1642,6 +1643,12 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			console.log(
 				`New subscription saved to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 			);
+			// mark any retry record as succeeded
+			try {
+				await retryManager.markSucceeded(subscription.id, String(subscription.authUserId ?? ''));
+			} catch (e) {
+				console.warn('Failed to clear retry record on subscription success', e);
+			}
 		} catch (error) {
 			console.error('Error saving subscription to database:', error);
 		}
@@ -1664,6 +1671,14 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 			// Optionally, attempt to re-create the subscription if necessary
 			// await recreateSubscription(subscription);
+		}
+
+		// Record failure in retry manager so it can be retried later
+		try {
+			await retryManager.markFailed(subscription.id, String(subscription.authUserId ?? ''), error?.toString?.() ?? String(error));
+			console.log('Recorded subscription create failure for retry:', subscription.id);
+		} catch (e) {
+			console.warn('Failed to record subscription retry state', e);
 		}
 	});
 	eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {

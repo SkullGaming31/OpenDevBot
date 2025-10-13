@@ -56,8 +56,9 @@ describe('EventSub reconnection logic', () => {
 
         const l1: any = await getEventSubs();
         // ensure one instance was created
-        expect((MockEventSubWsListener as any).instances || instances).toBeDefined();
-        expect(instances.length).toBe(1);
+        const created = instances;
+        expect(created).toBeDefined();
+        expect(created.length).toBe(1);
 
         // trigger disconnect
         await l1._triggerDisconnect('659523613', new Error('test')); // call the stored handler
@@ -66,7 +67,7 @@ describe('EventSub reconnection logic', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         // a new instance should have been created by reconnect
-        expect(instances.length).toBeGreaterThanOrEqual(2);
+        expect(created.length).toBeGreaterThanOrEqual(2);
         expect(log).toHaveBeenCalledWith('EventSub listener reconnected successfully.');
 
         log.mockRestore();

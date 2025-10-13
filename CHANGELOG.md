@@ -72,6 +72,23 @@ Use the same steps as CI. If you want to run the tests the way CI runs them (fas
 npm ci
 npm test --silent -- -i
 ```
+## [0.8.3] - 2025-10-13
+
+### Changed
+
+- Persisted EventSub subscription retry state to MongoDB and added a RetryManager to record failures and schedule retries (scaffolding). Files: `src/EventSub/retryModel.ts`, `src/EventSub/retryManager.ts`, `src/EventSubEvents.ts`.
+- Added tests and integration coverage for EventSub reconnect and backoff behavior. Files: `src/__tests__/eventSub.integration.test.ts`, `src/__tests__/eventSub.test.ts`, `src/__tests__/eventSubIdempotent.test.ts`.
+- Hardened auth provider to register chat intents safely across Twurple versions and added token refresh persistence. File: `src/auth/authProvider.ts`.
+- Added CI workflow and made jest/ts-jest config modern (moved ts-jest options into `transform`). Files: `.github/workflows/ci.yml`, `jest.config.js`.
+
+### Fixed
+
+- Removed test-only module hooks that exposed internal instances; tests now use self-contained mocks. Files: `src/__tests__/eventSub.test.ts`, `src/__tests__/eventSub.integration.test.ts`.
+
+### Notes
+
+- This release introduces persistent retry state but does not yet include an active retry worker that replays pending retries on a schedule — that is next.
+
 
 Notes about CI and branch protection
 - CI initially failed because `package.json` and `package-lock.json` were out of sync. I updated `package.json` (devDependencies) and regenerated the lockfile so `npm ci` succeeds.
