@@ -8,6 +8,8 @@ import { sleep } from '../../util/util';
 import { ParticipantModel } from '../../database/models/Participant';
 import { InjuryModel } from '../../database/models/injury';
 
+import ENVIRONMENT from '../../util/env';
+
 type LootValue = {
 	[itemName: string]: number | Gems | Antique | Artwork | Cash;
 };
@@ -275,7 +277,7 @@ const heist: Command = {
 
 
 		// Wait for the heist to start (e.g., 60 seconds)
-		const ENVIROMENT = process.env.Enviroment as string;
+		const ENVIROMENT = ENVIRONMENT as string;
 		let delay = 0;
 		if (ENVIROMENT !== 'dev' && ENVIROMENT !== 'debug') {
 			delay = 60000;

@@ -1,13 +1,17 @@
 import { config } from 'dotenv';
 config();
+import { initMonitoring } from './monitoring';
 import { initializeTwitchEventSub } from './EventSubEvents';
+import { startRetryWorker } from './EventSub/retryWorker';
 import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
 import Database from './database';
 import createApp from './util/createApp';
+import { initializeConstants } from './util/constants';
 import fs from 'fs';
 import { InjuryModel } from './database/models/injury';
 import { deleteAllInjuries, deleteExpiredInjuries } from './services/injuryCleanup';
+import ENVIRONMENT from './util/env';
 
 /**
  * Deletes all documents from the injuries collection.
@@ -74,7 +78,7 @@ class OpenDevBot {
 			const EventSub = process.env.ENABLE_EVENTSUB;
 			const chatIIRC = process.env.ENABLE_CHAT;
 			// Initialize database connection
-			const environment = process.env.Enviroment as string;
+			const environment = ENVIRONMENT as string;
 			let mongoURI = '';
 
 			// Determine MongoDB URI based on environment
@@ -117,18 +121,36 @@ class OpenDevBot {
 
 			// Initialize Twitch EventSub event listeners
 			if (EventSub) {
-				const message = process.env.Enviroment === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
-				console.time(message);
-				await initializeTwitchEventSub();
-				console.timeEnd(message);
+				// During tests we avoid initializing EventSub and constants because tests
+				// typically mock the Database and do not establish a real mongoose
+				// connection; calling initializeConstants() would hit TokenModel.find()
+				// and cause buffering/timeouts. Only initialize in non-test runs.
+				if (process.env.NODE_ENV === 'test') {
+					console.log('Skipping EventSub initialization in test environment');
+				} else {
+					const message = ENVIRONMENT === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
+					console.time(message);
+					// Ensure constants (broadcasterInfo, moderatorIDs) are initialized from DB
+					await initializeConstants();
+					await initializeTwitchEventSub();
+					// start background retry worker to process failed subscription creations
+					void startRetryWorker();
+					console.timeEnd(message);
+				}
 			}
 
 			// Initialize chat client for Twitch IRC
 			if (chatIIRC) {
-				const message = process.env.Enviroment === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
-				console.time(message);
-				await initializeChat();
-				console.timeEnd(message);
+				if (process.env.NODE_ENV === 'test') {
+					console.log('Skipping Chat initialization in test environment');
+				} else {
+					const message = ENVIRONMENT === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
+					console.time(message);
+					// Ensure broadcaster info is loaded for chat operations
+					await initializeConstants();
+					await initializeChat();
+					console.timeEnd(message);
+				}
 			}
 
 			// Start the server with app.listen
@@ -166,5 +188,8 @@ class OpenDevBot {
 
 config();
 const client = new OpenDevBot();
+
+// Initialize monitoring (Sentry/LogDNA) if configured
+initMonitoring();
 
 client.start().then(() => console.log('Bot started successfully')).catch((error) => console.error('Failed to start bot:', error));
