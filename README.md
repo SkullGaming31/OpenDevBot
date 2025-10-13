@@ -166,6 +166,19 @@ This is an example of how to list things you need to use the software and how to
   * [x] Gamble
 * [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
+### Today (2025-10-13)
+
+- Added comprehensive unit tests covering:
+  - `authProvider` token preloading and chat-provider registration fallbacks.
+  - OAuth callback token exchange and persistence (`/api/v1/auth/twitch/callback`).
+  - Chat helper `getUsernamesFromDatabase()` behavior for success and failure.
+- Improved OAuth callback logging and normalization of returned scopes (code path exercised by tests).
+- Implemented a dedicated chat auth provider and fallbacks to ensure the bot account is registered for the `chat` intent (dev-only forced mapping remains as a temporary workaround).
+- Added debug logging around chat message parsing and command handling to aid diagnosis of why commands may not run.
+- Started refactor to defer EventSub subscription registration until the websocket session is ready and added scaffolding for restart/retry logic (work in progress).
+
+Notes: these changes include tests and mocks so the project can run unit tests without external Twitch or MongoDB services. See `CHANGELOG.md` for a detailed list of edits made on this date.
+
 See the [open issues](https://github.com/skullgaming31/OpenDevBot/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#top">back to top</a>)</p>
