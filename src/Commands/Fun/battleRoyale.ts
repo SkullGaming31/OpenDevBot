@@ -6,11 +6,11 @@ import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
 const battleRoyale: Command = {
-    name: 'br',
-    description: 'Start a Battle Royal game in chat',
-    usage: '!br <amount>',
-    cooldown: 30000,
-    /**
+	name: 'br',
+	description: 'Start a Battle Royal game in chat',
+	usage: '!br <amount>',
+	cooldown: 30000,
+	/**
      * @description Executes the battleRoyale command.
      *
      * @param channel The channel that the command was triggered in.
@@ -21,26 +21,26 @@ const battleRoyale: Command = {
      *
      * @returns {Promise<void>} The result of the command execution.
      */
-    execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage): Promise<void> => {
-        const chatClient = await getChatClient();
-        const userApiClient = await getUserApi();
+	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage): Promise<void> => {
+		const chatClient = await getChatClient();
+		const userApiClient = await getUserApi();
 
-        const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
-        if (!broadcasterID?.id) return;
+		const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
+		if (!broadcasterID?.id) return;
 
-        const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
-        const moderatorsData = moderatorsResponse.data; // Access the moderator data
+		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
+		const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
-        const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-        const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
-        const isStaff = isModerator || isBroadcaster;
+		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
+		const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
+		const isStaff = isModerator || isBroadcaster;
 
-        try {
-            chatClient.say(channel, 'This command is still in the planning phase');
-        } catch (error) {
-            console.error(error);
-        }
-    },
+		try {
+			chatClient.say(channel, 'This command is still in the planning phase');
+		} catch (error) {
+			console.error(error);
+		}
+	},
 };
 
 export default battleRoyale;

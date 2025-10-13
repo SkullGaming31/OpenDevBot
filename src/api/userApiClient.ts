@@ -1,6 +1,7 @@
 import { ApiClient } from '@twurple/api';
 import { RefreshingAuthProvider } from '@twurple/auth';
 import { getAuthProvider } from '../auth/authProvider';
+import ENVIRONMENT from '../util/env';
 
 /**
  * Initializes and returns an instance of the ApiClient configured with a RefreshingAuthProvider.
@@ -10,7 +11,7 @@ import { getAuthProvider } from '../auth/authProvider';
  */
 export async function getUserApi(): Promise<ApiClient> {
 	const userAuthProvider: RefreshingAuthProvider = await getAuthProvider();
-	const environment = process.env.Enviroment || 'prod';
+	const environment = ENVIRONMENT || 'prod';
 	const minLevel: 'ERROR' | 'INFO' | 'CRITICAL' | 'DEBUG' | 'WARNING' | 'TRACE' =
 		environment === 'dev' || environment === 'debug' ? 'INFO' : 'CRITICAL';
 

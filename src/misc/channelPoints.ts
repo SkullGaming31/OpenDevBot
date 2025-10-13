@@ -57,7 +57,7 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 	console.log('registering Channel Points Rewards (if available)');
 	try {
 		// Probe for channel points availability by attempting to list existing rewards
-		let existingRewards: any[] = [];
+		let existingRewards: unknown[] = [];
 		try {
 			existingRewards = (await userApiClient.channelPoints.getCustomRewards(broadcasterID.id)) || [];
 		} catch (probeErr) {
@@ -67,7 +67,11 @@ export async function createChannelPointsRewards(registerNewRewards: boolean = t
 
 		// Create any desired rewards that do not already exist (by title)
 		for (const desired of desiredRewards) {
-			const exists = existingRewards.some(r => String(r.title).toLowerCase() === String(desired.title).toLowerCase());
+			const exists = existingRewards.some(r => {
+				const rec = r as unknown as Record<string, unknown> | null;
+				const title = rec ? rec['title'] : undefined;
+				return typeof title === 'string' && title.toLowerCase() === String(desired.title).toLowerCase();
+			});
 			if (!exists) {
 				try {
 					await userApiClient.channelPoints.createCustomReward(broadcasterID.id, desired);
@@ -99,7 +103,7 @@ export async function DeleteChannelPointsRewards(DeleteReward: boolean = false):
 	console.log('Deleting Channel Points Rewards (if present)');
 	try {
 		// Probe for existing rewards and only attempt deletes if the reward exists
-		let existingRewards: any[] = [];
+		let existingRewards: unknown[] = [];
 		try {
 			existingRewards = (await userApiClient.channelPoints.getCustomRewards(broadcasterID.id)) || [];
 		} catch (probeErr) {
@@ -109,7 +113,10 @@ export async function DeleteChannelPointsRewards(DeleteReward: boolean = false):
 
 		// Example: delete by known id(s) if present
 		const targetId = '5c18b145-5824-4c8c-9419-4c0b4f52f489';
-		if (existingRewards.some(r => r.id === targetId)) {
+		if (existingRewards.some(r => {
+			const id = (r as unknown as Record<string, unknown>)['id'];
+			return typeof id === 'string' && id === targetId;
+		})) {
 			await userApiClient.channelPoints.deleteCustomReward(broadcasterID.id, targetId);
 			console.log(`Deleted reward id ${targetId}`);
 		} else {

@@ -24,8 +24,9 @@ const id: Command = {
 					chatClient.say(channel, `${msg.userInfo.displayName}, your Twitch ID is ${userToLookup}`);
 				}
 			}
-		} catch (err: any) {
-			console.error(err.message);
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
+			else console.error(String(err));
 		}
 	}
 };

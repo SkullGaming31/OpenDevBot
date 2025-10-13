@@ -114,15 +114,15 @@ const warframe: Command = {
 		// --- Rate limiting / cooldowns for frames lookup ---
 		// Per-user cooldown map (stores timestamp when user may query again)
 		const userCooldownsKey = '__warframe_user_cooldowns';
-		// Attach shared maps to module-level (via global) to survive multiple calls in same process
-		// Use (global as any) to avoid type issues
-		if (!(global as any)[userCooldownsKey]) (global as any)[userCooldownsKey] = new Map<string, number>();
-		const userCooldowns: Map<string, number> = (global as any)[userCooldownsKey];
+		// Attach shared maps to module-level (via globalThis) to survive multiple calls in same process
+		const globalRecord = globalThis as unknown as Record<string, unknown>;
+		if (!globalRecord[userCooldownsKey]) globalRecord[userCooldownsKey] = new Map<string, number>();
+		const userCooldowns: Map<string, number> = globalRecord[userCooldownsKey] as Map<string, number>;
 
 		// Global sliding-window timestamps for requests
 		const globalWindowKey = '__warframe_global_timestamps';
-		if (!(global as any)[globalWindowKey]) (global as any)[globalWindowKey] = [] as number[];
-		const globalTimestamps: number[] = (global as any)[globalWindowKey];
+		if (!globalRecord[globalWindowKey]) globalRecord[globalWindowKey] = [] as number[];
+		const globalTimestamps: number[] = globalRecord[globalWindowKey] as number[];
 
 		const USER_COOLDOWN_MS = process.env.WARFRAME_USER_COOLDOWN_MS ? Number(process.env.WARFRAME_USER_COOLDOWN_MS) : 30 * 1000; // 30s default
 		const GLOBAL_WINDOW_MS = process.env.WARFRAME_GLOBAL_WINDOW_MS ? Number(process.env.WARFRAME_GLOBAL_WINDOW_MS) : 60 * 1000; // 1 minute
