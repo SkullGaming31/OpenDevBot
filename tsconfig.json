@@ -105,6 +105,7 @@
     "seedDatabase.ts",
     "insertTestData.ts",
     "logDatabaseData.ts",
-    "updateNexonMetadata.ts"
+    "updateNexonMetadata.ts",
+    "web-dashboard"
   ]
 }
