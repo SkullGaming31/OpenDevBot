@@ -27,15 +27,7 @@
 
 
 
-1 Create an adapter: src/services/balanceAdapter.ts DONE
-
- * Provide functions: getOrCreate(userId), deposit(userId, amount), withdraw(userId, amount), transfer(from,to,amount).
- * Internally call economyService but optionally mirror changes to UserModel for backwards compatibility (write-through) if you want to keep UserModel for reads by other code during migration.
-
-2 Migrate lightweight commands first (low risk): DONE
-* beg.ts, balance.ts (already migrated), roulette.ts, transfer.ts (command level) — replace direct UserModel updates with adapter calls.
-
-3 Migrate higher-risk, multi-user commands: IN PROGRESS
+3 Migrate higher-risk, multi-user commands: DONE
 
 * duel.ts, heist.ts, loot.ts, shop.ts, gamble.ts — rework to use the adapter/economyService atomic ops. Where operations affect multiple users, use the economyService.transfer or transaction path.
 

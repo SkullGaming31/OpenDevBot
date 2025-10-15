@@ -4,6 +4,7 @@ import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
+import { deposit, getOrCreateAccount } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 
@@ -87,19 +88,9 @@ const addpoints: Command = {
 			targetUser = targetUser.substring(1).toLowerCase();
 		}
 
-		// Find the target user in the database
-		const existingUser = await UserModel.findOne<IUser>({ username: targetUser, channelId: msg.channelId });
-
-		if (existingUser) {
-			// Calculate the new balance
-			const currentBalance = existingUser.balance ?? 0; // Use 0 if balance is undefined
-			const newBalance = currentBalance + amountToAdd;
-
-			// Update the balance of the existing user
-			existingUser.balance = newBalance;
-
-			// Save the updated user document to the database
-			const savedUser = await existingUser.save();
+		// Perform the deposit via the economy service (creates account if needed)
+		try {
+			const acct = await deposit(userSearch.id, amountToAdd, undefined, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
 
 			const addPointsEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event [Addpoints]')
@@ -117,18 +108,18 @@ const addpoints: Command = {
 							? [{ name: 'Broadcaster', value: 'Yes', inline: true }]
 							: []
 					),
-					{ name: 'Balance', value: `${amountToAdd}`, inline: false },
-					{ name: 'New Balance', value: `${savedUser.balance}`, inline: true },
+					{ name: 'Balance Added', value: `${amountToAdd}`, inline: false },
+					{ name: 'New Balance', value: `${acct.balance}`, inline: true },
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			// Send a message to the chat confirming the points added
-			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${savedUser.balance}`);
+			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${acct.balance}`);
 			await commandUsage.send({ embeds: [addPointsEmbed] });
-		} else {
-			// User not found in the database
-			await chatClient.say(channel, `User ${targetUser} not found.`);
+		} catch (err: any) {
+			console.error('Error adding points:', err);
+			await chatClient.say(channel, `Failed to add points: ${err?.message ?? 'unknown error'}`);
 		}
 	}
 };
