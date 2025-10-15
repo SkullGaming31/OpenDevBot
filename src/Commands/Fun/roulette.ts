@@ -7,6 +7,7 @@ import { broadcasterInfo } from '../../util/constants';
 import ChamberStateModel from '../../database/models/roulette';
 import { randomInt } from 'node:crypto';
 import { UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 
 const MAX_BULLETS = 6;
 const GOLD_MIN = 500;
@@ -91,17 +92,8 @@ const roulette: Command = {
 				await chatClient.say(channel, `@${msg.userInfo.displayName} survived the gunshot and earned ${rewardGold} gold!`);
 				chamberState.bullets += 1; // Increase the bullets in the chamber
 
-				// Add gold reward
-				const userRecord = await UserModel.findOne({ id: msg.userInfo.userId, channelId: msg.channelId });
-				if (userRecord && userRecord.balance !== undefined) {
-					userRecord.balance += rewardGold;
-					console.log('updating UserData');
-					await userRecord.save();
-				} else {
-					const newUser = new UserModel({ id: msg.userInfo.userId, channelId: msg.channelId, balance: rewardGold, roles: 'User' });
-					console.log('New UserData Saved');
-					await newUser.save();
-				}
+				// Add gold reward to wallet (legacy UserModel) via adapter helper
+				await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, rewardGold, msg.userInfo.userName, msg.channelId ?? undefined);
 
 				if (chamberState.bullets > MAX_BULLETS) {
 					chamberState.bullets = 1; // Reset the chamber to 1 bullet if it exceeds max bullets

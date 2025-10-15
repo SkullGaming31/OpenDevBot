@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 
 const transfer: Command = {
@@ -37,35 +38,12 @@ const transfer: Command = {
 			if (isNaN(parsedAmount)) return chatClient.say(channel, `@${user}, please specify a valid amount.`);
 			if (parsedAmount <= 0) return chatClient.say(channel, `@${user}, you can only transfer positive amounts.`);
 
-			// Decrement sender balance
-			const updatedSenderDoc = await UserModel.findOneAndUpdate<IUser>(
-				{ username: sender.toLowerCase(), channelId: msg.channelId },
-				{
-					$inc: { balance: -parsedAmount },
-				},
-				{ new: true }
-			);
-			if (updatedSenderDoc?.balance === undefined) return;
-
-			// Increment recipient balance
-			if (!updatedSenderDoc) {
-				return chatClient.say(channel, `@${user}, you don't have a gold balance.`);
-			}
-			if (updatedSenderDoc.balance < 0) { // Ensure balance is not negative
-				return chatClient.say(channel, `@${user}, you don't have enough gold to make this transfer.`);
-			}
-
-			const recipientDoc = await UserModel.findOneAndUpdate<IUser>(
-				{ username: recipient.toLowerCase(), channelId: msg.channelId },
-				{ $inc: { balance: parsedAmount } },
-				{ new: true }
-			);
-
-			if (recipientDoc) {
-				await chatClient.say(channel, `@${user}, you have transferred ${parsedAmount} gold to ${recipientDoc.username}.`);
-			} else {
-				await chatClient.say(channel, `@${user}, recipient not found.`);
-				throw new Error(`Recipient not found: ${recipient}`);
+			// Use balanceAdapter.transfer which handles atomicity and mirroring
+			try {
+				await balanceAdapter.transfer(sender.toLowerCase(), recipient.replace(/^@/, '').toLowerCase(), parsedAmount);
+				await chatClient.say(channel, `@${user}, you have transferred ${parsedAmount} gold to ${recipient.replace(/^@/, '')}.`);
+			} catch (err: any) {
+				await chatClient.say(channel, `@${user}, transfer failed: ${err.message}`);
 			}
 
 		} catch (error) {

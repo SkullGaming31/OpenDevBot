@@ -1,11 +1,12 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 import { getUserApi } from '../../api/userApiClient';
 import { broadcasterInfo } from '../../util/constants';
 import { UserIdResolvable } from '@twurple/api';
+import { UserModel } from '../../database/models/userModel';
 
 const beg: Command = {
 	name: 'beg',
@@ -34,9 +35,9 @@ const beg: Command = {
 		const lastBegTime = userDoc?.lastBegTime || new Date(0);
 		const timeSinceLastBeg = Math.floor((currentTime.getTime() - lastBegTime.getTime()) / 1000);
 		const begCooldownSeconds = 12 * 60 * 60; // 12 hours in seconds
-		const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-
-		if (stream === null) return;
+		// Note: previously this command required the stream to be live. Remove that requirement
+		// so users can beg while stream is offline. If you want to restore the old behavior,
+		// check an env flag like BEG_REQUIRE_LIVE and skip when set.
 
 		if (timeSinceLastBeg < begCooldownSeconds) {
 			const remainingCooldown = begCooldownSeconds - timeSinceLastBeg;
@@ -50,7 +51,17 @@ const beg: Command = {
 		if (randomInt(1, 101) <= successChance * 100) {
 			// Successful beg
 			const amount = randomInt(1, 101);
-			await UserModel.updateOne({ username, channelId }, { $inc: { balance: amount }, $set: { lastBegTime: new Date() } });
+			// Put winnings into the wallet (legacy UserModel.balance) via adapter
+			const userKey = typeof msg.userInfo?.userId === 'string' ? msg.userInfo.userId : undefined;
+			const usernameArg = (typeof msg.userInfo?.userName === 'string' ? msg.userInfo.userName : undefined) as string | undefined;
+			await balanceAdapter.creditWallet(userKey ?? usernameArg, amount, usernameArg, channelId);
+			// update lastBegTime on the UserModel (best-effort)
+			const { UserModel } = await import('../../database/models/userModel');
+			if (msg.userInfo?.userId) {
+				await UserModel.updateOne({ id: msg.userInfo.userId }, { $set: { lastBegTime: new Date(), username } }, { upsert: true });
+			} else {
+				await UserModel.updateOne({ username, channelId }, { $set: { lastBegTime: new Date() } }, { upsert: true });
+			}
 			const successResponses = [
 				`@${user}, your pitiful pleas tug at my heartstrings. Here's ${amount} Gold!`,
 				`@${user}, seems like you're down on your luck. Here's ${amount} Gold to get by.`,

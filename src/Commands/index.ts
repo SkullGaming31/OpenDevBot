@@ -24,7 +24,7 @@ export default {
 	unmod: './unmod',
 	ban: './ban',
 	shoutout: './shoutout',
-	balence: './balence',
+	bank: './Information/bank',
 	transfer: './transfer',
 	beg: './beg',
 	dice: './dice',
