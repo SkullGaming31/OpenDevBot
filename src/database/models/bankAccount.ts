@@ -8,8 +8,8 @@ export interface IBankAccount extends Document {
 }
 
 const bankAccountSchema = new Schema<IBankAccount>({
-    userId: { type: String, required: true, unique: true },
-    balance: { type: Number, required: true, default: 0 },
+	userId: { type: String, required: true, unique: true },
+	balance: { type: Number, required: true, default: 0 },
 }, { timestamps: true });
 
 const BankAccount = model<IBankAccount>('BankAccount', bankAccountSchema);

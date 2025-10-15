@@ -341,7 +341,7 @@ const heist: Command = {
 				const donorMinBalance = 1000;
 				const donorMaxPercent = 0.1; // 10%
 				const donorMaxAbsolute = 500; // absolute cap per donor
-				let needed = amount;
+				const needed = amount;
 
 				// Fetch candidate donors (limit to a few times sample size to randomize)
 				const candidates = await BankAccount.find({ balance: { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();

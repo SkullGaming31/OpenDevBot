@@ -66,8 +66,8 @@ const dig: Command = {
 			const badLuckMessages = [
 				`You dug up a bomb and lost ${digAmount} gold. There were ${numBombs} bombs in play. Better luck next time!`,
 				`Oops! You hit a bomb and lost ${digAmount} gold. Try again soon!`,
-				`Seems like you triggered a buried treasure! Unfortunately, it was a bomb. Don\'t give up, ${username}!`,
-				`Looks like today isn\'t your lucky day. You dug up a bomb and lost ${digAmount} gold. There were ${numBombs} bombs in play, Keep digging!`,
+				`Seems like you triggered a buried treasure! Unfortunately, it was a bomb. Don't give up, ${username}!`,
+				`Looks like today isn't your lucky day. You dug up a bomb and lost ${digAmount} gold. There were ${numBombs} bombs in play, Keep digging!`,
 				`you avoid digging up the cache to follow a modvlog to a shed which he drops a grenade on you, you lost ${digAmount}`
 			];
 

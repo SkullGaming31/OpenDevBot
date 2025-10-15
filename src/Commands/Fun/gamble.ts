@@ -46,7 +46,7 @@ const gamble: Command = {
 			}
 
 			if (!acct || acct.balance === undefined) {
-				await chatClient.say(channel, "Could not find your account or balance. Try again later.");
+				await chatClient.say(channel, 'Could not find your account or balance. Try again later.');
 				return;
 			}
 
