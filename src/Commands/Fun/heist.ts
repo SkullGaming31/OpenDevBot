@@ -2,7 +2,10 @@ import { ChatClient, ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import fs from 'fs';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
+import * as economyService from '../../services/economyService';
+import mongoose from 'mongoose';
+import BankAccount from '../../database/models/bankAccount';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 import { ParticipantModel } from '../../database/models/Participant';
@@ -76,7 +79,6 @@ interface Artwork {
 	ArtisticInstallations: number;
 	DecorativeArtObjects: number;
 }
-
 interface Antique {
 	RareCoins: number;
 	Currency: number;
@@ -126,6 +128,11 @@ interface Zone {
 let participants: string[] = [];
 let isHeistInProgress: boolean = false;
 let betAmount: number = 0;
+
+// Per-channel cooldown map for bank heists (channelId -> timestamp when allowed again)
+const heistCooldowns: Map<string, number> = new Map();
+const HEIST_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown per channel (tunable)
+const MIN_PARTICIPANTS = 1; // per your request, allow 1 for testing
 
 const participantData: { [participantName: string]: { injuries: Injury[] } } = {};
 // Define a JSON object to store the injury data
@@ -238,6 +245,16 @@ const heist: Command = {
 		}
 
 		// Set heist in progress
+		// Check cooldown if bank zone is requested
+		if (zoneName === 'bank') {
+			const now = Date.now();
+			const cd = heistCooldowns.get(channelId ?? channel) ?? 0;
+			if (now < cd) {
+				const remaining = Math.ceil((cd - now) / 1000);
+				return chatClient.say(channel, `Bank heist is on cooldown for this channel. Try again in ${remaining}s.`);
+			}
+		}
+
 		isHeistInProgress = true;
 
 		const zoneDifficulty = zonesLowercase[zoneName].difficulty;
@@ -258,16 +275,10 @@ const heist: Command = {
 			// console.log('Participant Data for User:', participantData[user]);
 		}
 
-		const userBalance = await UserModel.findOne({ username: msg.userInfo.userName, channelId });
-		if (!userBalance) {
-			throw new Error('User not found');
-		}
-		if (userBalance.balance === undefined) return;
-
-		const updatedBalance = userBalance.balance - betAmount;
-		await UserModel.updateOne({ username: msg.userInfo.userName, channelId }, { balance: updatedBalance });
-
-		if (updatedBalance < 0) { return chatClient.say(channel, 'Insufficient balance for the heist.'); }
+		// Debit the initiating user's wallet for the bet amount (legacy wallet). If insufficient, abort.
+		const initiatorId = msg.userInfo.userId ?? msg.userInfo.userName;
+		const debited = await balanceAdapter.debitWallet(initiatorId, betAmount, msg.userInfo.userName, channelId);
+		if (!debited) return chatClient.say(channel, 'Insufficient balance for the heist.');
 
 		// Send a heist start message with instructions to join
 		await chatClient.say(channel, `A heist has been started by ${user}! Type !join to participate, you have 60 seconds to join!`);
@@ -287,10 +298,10 @@ const heist: Command = {
 		await new Promise((resolve) => setTimeout(resolve, delay));
 
 		// Check if there are enough participants for the heist
-		if (participants.length <= 2) {
+		if (participants.length < MIN_PARTICIPANTS) {
 			participants = [];
 			isHeistInProgress = false;
-			await chatClient.say(channel, 'The heist requires a minimum of 2 participants. The heist has been canceled.');
+			await chatClient.say(channel, `The heist requires a minimum of ${MIN_PARTICIPANTS} participants. The heist has been canceled.`);
 			return;
 		}
 
@@ -316,11 +327,93 @@ const heist: Command = {
 		// Determine the potential loot
 		let loot: number = 0;
 		let stolenItems: string[] = [];
+		let donorDetails: Array<{ userId: string; amount: number }> = [];
 
 		if (isSuccessful) {
-			const lootResult = calculateLoot(amount, zoneDifficulty);
-			loot = lootResult.totalAmount;
-			stolenItems = lootResult.items;
+			// If the chosen zone is the special 'bank' zone, perform a conservative bank heist:
+			// - sample a small number of user BankAccounts
+			// - take up to donorMaxPercent or donorMaxAbsolute from each (capped)
+			// - attempt to perform all debits in a transaction when possible
+			// - distribute collected pool to winners' wallets
+			if (zoneName === 'bank') {
+				// Conservative defaults
+				const donorSampleSize = 5;
+				const donorMinBalance = 1000;
+				const donorMaxPercent = 0.1; // 10%
+				const donorMaxAbsolute = 500; // absolute cap per donor
+				let needed = amount;
+
+				// Fetch candidate donors (limit to a few times sample size to randomize)
+				const candidates = await BankAccount.find({ balance: { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();
+				if (!candidates || candidates.length === 0) {
+					// No eligible donors — heist fails
+					loot = 0;
+					stolenItems = [];
+				} else {
+					// shuffle candidates
+					for (let i = candidates.length - 1; i > 0; i--) {
+						const j = Math.floor(Math.random() * (i + 1));
+						[candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+					}
+					const donors = candidates.slice(0, donorSampleSize);
+
+					let collected = 0;
+					donorDetails = [];
+					// Try transactional path first
+					let usedTransaction = false;
+					try {
+						const session = await mongoose.startSession();
+						session.startTransaction();
+						for (const donor of donors) {
+							if (collected >= needed) break;
+							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const take = Math.min(maxFromDonor, needed - collected);
+							if (take <= 0) continue;
+							await economyService.withdraw(donor.userId, take, session);
+							collected += take;
+							donorDetails.push({ userId: donor.userId, amount: take });
+						}
+						if (collected > 0) {
+							await session.commitTransaction();
+							console.debug('Heist: transaction committed', { collected, donorDetails });
+							usedTransaction = true;
+						} else {
+							await session.abortTransaction();
+							console.debug('Heist: transaction aborted, collected=0');
+						}
+						session.endSession();
+					} catch (err) {
+						// Transaction path unavailable or failed — fall back to non-transactional per-donor withdraws
+						console.warn('Bank heist transaction path failed, falling back to per-donor withdraws', err);
+					}
+
+					if (!usedTransaction) {
+						// Non-transactional fallback: attempt to withdraw from each donor individually
+						for (const donor of donors) {
+							if (collected >= needed) break;
+							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const take = Math.min(maxFromDonor, needed - collected);
+							if (take <= 0) continue;
+							try {
+								await economyService.withdraw(donor.userId, take);
+								collected += take;
+								donorDetails.push({ userId: donor.userId, amount: take });
+							} catch (err) {
+								// skip donors that couldn't be debited
+								console.warn('Failed to withdraw from donor in fallback path', donor.userId, err);
+							}
+						}
+						console.debug('Heist: fallback collected', { collected, donorDetails });
+					}
+
+					loot = collected;
+					stolenItems = [];
+				}
+			} else {
+				const lootResult = calculateLoot(amount, zoneDifficulty);
+				loot = lootResult.totalAmount;
+				stolenItems = lootResult.items;
+			}
 		}
 		// console.log('Stolen Items:', stolenItems);
 
@@ -335,14 +428,19 @@ const heist: Command = {
 		if (isSuccessful) {
 			resultMessage += ' The heist was successful!';
 			for (const winner of winners) {
-				const winnerBalance = await UserModel.findOne({ username: winner });
-				if (!winnerBalance) {
-					throw new Error(`User ${winner} not found`);
+				// Credit each winner's wallet via adapter.creditWallet
+				try {
+					console.debug('Heist: crediting winner', { winner, winningAmount, channelId });
+					if (zoneName === 'bank') {
+						// For bank heists, credit the BankAccount directly so deposits are recorded
+						console.debug('Heist: depositing to bank account for winner', { winner, winningAmount });
+						await economyService.deposit(winner, winningAmount);
+					} else {
+						await balanceAdapter.creditWallet(winner, winningAmount, winner, channelId);
+					}
+				} catch (err) {
+					console.warn('Failed to credit winner in heist', err);
 				}
-				if (winnerBalance.balance === undefined) return;
-				// Create a new object with the updated balance
-				const updatedBalance = winnerBalance.balance + winningAmount;
-				await UserModel.updateOne({ username: winner, channelId }, { balance: updatedBalance });
 			}
 
 			// Check if there are any winners
@@ -355,6 +453,21 @@ const heist: Command = {
 			resultMessage += ` You managed to steal ${loot} units of loot. You stole the following items: ${stolenItems.join(', ')}`;
 			// Save updated injury data to MongoDB
 			await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
+
+			// If bank heist, append masked donor summary and set cooldown
+			if (zoneName === 'bank') {
+				// Build a masked summary of donors: show first 3 chars then ****
+				const masked = (donorDetails || []).map(d => {
+					const id = String(d.userId || '');
+					const label = id.length > 3 ? `${id.slice(0, 3)}****` : `${id}****`;
+					return `${label} (${d.amount})`;
+				});
+				if (masked.length > 0) {
+					resultMessage += ` Donors hit: ${masked.join(', ')}.`;
+				}
+				// Set channel cooldown
+				heistCooldowns.set(channelId ?? channel, Date.now() + HEIST_COOLDOWN_MS);
+			}
 		} else {
 			resultMessage += ' The heist failed. Better luck next time!';
 			// Loop through each participant
@@ -788,20 +901,13 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 				}
 			}
 
-			// Continue with the join process if the user is eligible
-			const userBalance = await UserModel.findOne({ username: msg.userInfo.userName, channelId });
-
-			if (!userBalance) {
-				throw new Error('User not found');
-			}
-			if (userBalance.balance === undefined) return;
-			if (userBalance.balance < betAmount) {
+			// Continue with the join process using balanceAdapter to debit the user's wallet
+			const joinerId = msg.userInfo.userId ?? msg.userInfo.userName;
+			const debited = await balanceAdapter.debitWallet(joinerId, betAmount, msg.userInfo.userName, channelId);
+			if (!debited) {
 				await chatClient.say(channel, 'Insufficient balance to join the heist.');
 				return;
 			}
-
-			userBalance.balance -= betAmount;
-			await userBalance.save();
 
 			participants.push(user);
 

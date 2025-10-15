@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { IUser, UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 /**
  * Bug: Not deducting correct amount when losing, FIXED
@@ -33,60 +33,63 @@ const gamble: Command = {
 
 		const username = user.toLowerCase();
 		const channelId = msg.channelId;
+		const userKey = msg.userInfo.userId ?? msg.userInfo.userName;
 		try {
-			// Retrieve the user from the database
-			let userModel: IUser | null;
+			// Retrieve or create the bank account for this user via the balance adapter
+			let acct;
 			try {
-				userModel = await UserModel.findOne<IUser>({ username, channelId }).exec();
+				acct = await balanceAdapter.getOrCreate(userKey);
 			} catch (error) {
-				console.error('Error retrieving user from database:', error);
-				await chatClient.say(channel, 'An error occurred while retrieving user information.');
+				console.error('Error retrieving account via balanceAdapter:', error);
+				await chatClient.say(channel, 'An error occurred while retrieving your account.');
 				return;
 			}
 
-			if (!userModel || userModel.balance === undefined) return;
+			if (!acct || acct.balance === undefined) {
+				await chatClient.say(channel, "Could not find your account or balance. Try again later.");
+				return;
+			}
+
+			// Ensure an amount argument was provided
+			if (!args || !args[0]) {
+				return chatClient.say(channel, `Please provide an amount to gamble. Usage: ${gamble.usage}`);
+			}
 
 			// Extract the amount from the command arguments
 			let amount: number;
 
 			if (args[0] === 'all') {
 				// Gamble all balance
-				amount = Math.max(0, userModel?.balance ?? 0); // Ensure amount is positive, even if balance is undefined
+				amount = Math.max(0, acct?.balance ?? 0); // Ensure amount is positive
 			} else if (args[0].endsWith('%')) {
 				// Gamble a percentage of the balance
 				const percentage = parseInt(args[0].slice(0, -1));
 				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
 					return chatClient.say(channel, `Please provide a valid percentage for gambling. Usage: ${gamble.usage}`);
 				}
-				amount = Math.floor((userModel?.balance ?? 0) * (percentage / 100));
+				amount = Math.floor((acct?.balance ?? 0) * (percentage / 100));
 			} else {
 				// Gamble a specific amount
 				amount = parseInt(args[0]);
-				if (isNaN(amount)) {
-					return chatClient.say(channel, `Please provide a valid amount for gambling. Usage: ${gamble.usage}`);
+				if (isNaN(amount) || amount <= 0) {
+					return chatClient.say(channel, `Please provide a valid amount greater than 0 for gambling. Usage: ${gamble.usage}`);
 				}
 			}
 
-			// Check if the user has enough coins to gamble
-			if (amount > userModel.balance) return chatClient.say(channel, 'You do not have enough coins to gamble.');
+			// Attempt to debit the wager from the user's wallet first
+			const debited = await balanceAdapter.debitWallet(userKey, amount, msg.userInfo.userName, msg.channelId);
+			if (!debited) return chatClient.say(channel, 'You do not have enough coins to gamble.');
 
 			// Perform the gambling logic
-			const isWin = randomInt(1, 11) <= 3; // Example: 30% chance of winning
+			const isWin = randomInt(1, 11) <= 3; // 30% chance of winning
 			if (isWin) {
-				const winnings = amount * 2;
-				const newBalance = userModel.balance + winnings - amount; // Calculate the new balance
-				// Enforce non-negative balance (optional)
-				userModel.balance = Math.min(0, newBalance); // Set balance to 0 if negative
+				const winnings = amount * 2; // net profit equals winnings - stake; we'll credit the winnings
+				await balanceAdapter.creditWallet(userKey, winnings, msg.userInfo.userName, msg.channelId);
 				await chatClient.say(channel, `Congratulations ${user}! You won ${winnings} coins.`);
 			} else {
 				await chatClient.say(channel, `${user}, better luck next time! You lost ${amount} coins.`);
-				const newBalance = userModel.balance - amount; // Calculate the new balance
-				// Enforce non-negative balance (optional)
-				userModel.balance = Math.min(0, newBalance); // Set balance to 0 if negative
+				// losing path: stake was already debited, nothing more to do
 			}
-
-			// Save the updated user information back to the database
-			await userModel.save();
 		} catch (error) {
 			console.error('Error saving user information:', error);
 			await chatClient.say(channel, 'An error occurred while updating user information.');

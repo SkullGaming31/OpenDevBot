@@ -66,5 +66,9 @@
   "abandoned_prison": {
     "name": "Abandoned Prison",
     "difficulty": "high"
+  },
+  "bank": {
+    "name": "Bank",
+    "difficulty": "high"
   }
 }

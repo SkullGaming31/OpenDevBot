@@ -133,7 +133,7 @@ const bank: Command = {
                         }
                     }
 
-                    return chatClient.say(channel, `@${user}, withdrew ${amount} from ${target} and added to wallet.`);
+                    return chatClient.say(channel, `@${user}, withdrew ${amount} from bank and added to wallet.`);
                 } catch (err: any) {
                     return chatClient.say(channel, `@${user}, failed to withdraw: ${err.message}`);
                 }

@@ -1,6 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 
 interface ItemPrices {
@@ -53,7 +54,7 @@ const shop: Command = {
 			return chatClient.say(channel, 'User not found');
 		}
 
-		const balance = existingUser.balance ?? 0;
+		const balance = existingUser.balance ?? 0; // keep for inventory logic; wallet ops use adapter
 
 
 		switch (action) {
@@ -72,16 +73,18 @@ const shop: Command = {
 					return chatClient.say(channel, 'Insufficient balance to purchase this item.');
 				}
 
-				const updatedBalance = balance - itemPrice;
+				// Debit the user's wallet via adapter and then update inventory
+				const debited = await balanceAdapter.debitWallet(userId, itemPrice, user, msg.channelId);
+				if (!debited) return chatClient.say(channel, 'Insufficient balance to purchase this item.');
+
 				const updatedUser: Partial<IUser> = {
 					id: userId,
-					balance: updatedBalance,
 					inventory: [...(existingUser.inventory ?? []), itemName],
 				};
 
 				await UserModel.findOneAndUpdate({ id: userId, channelId: msg.channelId }, updatedUser);
 
-				chatClient.say(channel, `Item "${itemName}" purchased successfully. Your new balance is ${updatedBalance}.`);
+				chatClient.say(channel, `Item "${itemName}" purchased successfully.`);
 				break;
 
 			case 'sell':
@@ -106,16 +109,17 @@ const shop: Command = {
 					return chatClient.say(channel, `Item "${itemName}" cannot be sold.`);
 				}
 
-				const updatedBalanceSell = balance + sellPrice;
+				// Credit the user's wallet via adapter
+				await balanceAdapter.creditWallet(userId, sellPrice, user, msg.channelId);
+
 				const updatedUserSell: Partial<IUser> = {
 					id: userId,
-					balance: updatedBalanceSell,
 					inventory: updatedInventory,
 				};
 
 				await UserModel.findOneAndUpdate({ id: userId, channelId: msg.channelId }, updatedUserSell);
 
-				chatClient.say(channel, `Item "${itemName}" sold successfully. Your new balance is ${updatedBalanceSell}.`);
+				chatClient.say(channel, `Item "${itemName}" sold successfully.`);
 				break;
 
 			case 'list':

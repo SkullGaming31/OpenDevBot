@@ -293,13 +293,13 @@ export async function initializeChat(): Promise<void> {
 		if (text.startsWith('!')) {
 			// log the raw command parsing for debugging
 			const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
-			console.log(`[chat:command] Raw: ${preview}`);
+			// console.log(`[chat:command] Raw: ${preview}`);
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
-			console.log(`[chat:command] Parsed commandName='${commandName}'`);
+			// console.log(`[chat:command] Parsed commandName='${commandName}'`);
 			if (commandName === undefined) return;
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
-			console.log(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
+			// console.log(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
 			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
 			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
 

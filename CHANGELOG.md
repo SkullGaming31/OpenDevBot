@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### 2025-10-15 — Heist integration test note
+
+- The replica-set integration test for the `!heist bank` flow currently fails: donors are debited transactionally but winner deposits are not observed by the test. Debug logs show the transaction committed and the code attempted to deposit to the winner's account, but DB totals and TransactionLog entries for deposits/transfers were not present.
+- Temporary instrumentation was added to `src/Commands/Fun/heist.ts` to log transaction commit/abort and deposit attempts. The current recommended fix is to perform winner deposits inside the same mongoose session used for donor withdrawals (i.e., pass the session into `economyService.deposit`) so withdraws and deposits are atomic. This change has not yet been applied across all code paths and needs review.
+- Next steps:
+  - Update `heist.ts` to pass the active session into `economyService.deposit` when using transactions.
+  - Re-run the integration test and confirm TransactionLog contains deposit/transfer entries and that BankAccount totals reflect expected changes.
+  - If session propagation doesn't fix the issue, investigate model/connection import ordering and ensure a single mongoose connection is used by all modules in the test.
+
 ### 2025-10-13 — Full changelog of work
 
 This file documents the work completed on October 13, 2025. The changes focused on authentication, chat reliability, EventSub subscription stability, Discord webhook rate-limiting, tests, and CI. The list below is a condensed, actionable summary with the most important files and behaviors changed.

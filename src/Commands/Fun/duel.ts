@@ -1,8 +1,25 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
+
+// In-memory map for pending duel challenges: challengedUser -> { challenger, amount, accepted }
+const pendingDuels: Map<string, { challenger: string; amount: number; accepted: boolean }> = new Map();
+
+export function acceptDuel(username: string) {
+	const key = username.toLowerCase();
+	const entry = pendingDuels.get(key);
+	if (!entry) return false;
+	entry.accepted = true;
+	pendingDuels.set(key, entry);
+	return true;
+}
+
+export function declineDuel(username: string) {
+	const key = username.toLowerCase();
+	return pendingDuels.delete(key);
+}
 
 const duel: Command = {
 	name: 'duel',
@@ -34,44 +51,51 @@ const duel: Command = {
 		if (!duelAmount || duelAmount <= 0) return chatClient.say(channel, 'Invalid duel amount.');
 
 		// Check if the challenged user exists
-		const challengedUserDoc = await UserModel.findOne({ username: challengedUser.toLowerCase(), channelId });
+		const challengedUserDoc = await balanceAdapter.getOrCreate(challengedUser.toLowerCase());
 		if (!challengedUserDoc) return chatClient.say(channel, 'User not found.');
 
-		// Check if the challenged user is the same as the challenger
-		if (challengedUserDoc.id === msg.userInfo.userId) return chatClient.say(channel, 'You cannot duel yourself.');
+		// Disallow dueling yourself
+		const challengerId = msg.userInfo.userId ?? msg.userInfo.userName;
+		const challengedId = challengedUserDoc.userId ?? challengedUser.toLowerCase();
+		if (String(challengedId) === String(challengerId)) return chatClient.say(channel, 'You cannot duel yourself.');
 
-		// Check if the challenger has enough balance
-		const challengerDoc = await UserModel.findOne({ username, channelId });
-		if (challengerDoc?.balance === undefined) return;
-		if (!challengerDoc || challengerDoc.balance < duelAmount) return chatClient.say(channel, 'You don\'t have enough balance to start the duel.');
+		// Check challenger has enough in wallet (legacy) or bank via adapter debitWallet
+		const hasFunds = await balanceAdapter.debitWallet(challengerId, duelAmount, msg.userInfo.userName, channelId);
+		if (!hasFunds) return chatClient.say(channel, 'You don\'t have enough balance to start the duel.');
 
-		// Ask the challenged user if they accept the duel
+		// Ask the challenged user if they accept the duel and register a pending duel
+		pendingDuels.set(challengedUser.toLowerCase(), { challenger: challengerId, amount: duelAmount, accepted: false });
 		await chatClient.say(channel, `${challengedUser}, you have been challenged to a duel for ${duelAmount} gold by ${msg.userInfo.displayName}. Type "!accept" to accept the duel or "!decline" to decline it.`);
 
 		// Wait for 1 minute for the challenged user to accept the duel
 		await sleep(60 * 1000);
 
 		// Check if the challenged user has accepted the duel
-		if (!challengedUserDoc.duelChallengeAccepted) {
+		const pending = pendingDuels.get(challengedUser.toLowerCase());
+		if (!pending || !pending.accepted) {
+			pendingDuels.delete(challengedUser.toLowerCase());
 			return chatClient.say(channel, `${challengedUser} has declined the duel.`);
 		}
+		// remove pending entry
+		pendingDuels.delete(challengedUser.toLowerCase());
 
-		// Deduct the duel amount from the challenger's balance
-		await UserModel.updateOne({ username, channelId }, { $inc: { balance: -duelAmount } });
-
-		// Choose a random winner
+		// Choose a random winner and transfer amount atomically via adapter.transfer
 		const winnerIndex = Math.floor(Math.random() * 2);
-		const winner = winnerIndex === 0 ? msg.userInfo.userName : challengedUserDoc.id;
-		const loser = winnerIndex === 0 ? challengedUserDoc.id : msg.userInfo.userId;
+		const winner = winnerIndex === 0 ? (msg.userInfo.userId ?? msg.userInfo.userName) : (challengedUserDoc.userId ?? challengedUserDoc.userId ?? challengedUser.toLowerCase());
+		const loser = winnerIndex === 0 ? (challengedUserDoc.userId ?? challengedUser.toLowerCase()) : (msg.userInfo.userId ?? msg.userInfo.userName);
 
-		// Award the prize to the winner
-		await UserModel.updateOne({ username: winner, channelId }, { $inc: { balance: duelAmount } });
+		// Use adapter.transfer which uses economyService.transaction when available and falls back to atomic ops
+		await balanceAdapter.transfer(loser, winner, duelAmount);
 
 		// Announce the winner in the chat
 		await chatClient.say(channel, `${msg.userInfo.displayName} has won the duel against ${challengedUser} and won ${duelAmount} gold!`);
 
-		// Reset the challenged user's duel challenge accepted flag
-		await UserModel.updateOne({ username: challengedUserDoc.username, channelId }, { $set: { duelChallengeAccepted: false } });
+		// Reset the challenged user's duel challenge accepted flag (best-effort mirror)
+		try {
+			await balanceAdapter.getOrCreate(challengedUserDoc.userId ?? challengedUserDoc.userId ?? challengedUser.toLowerCase());
+		} catch (err) {
+			// ignore
+		}
 	}
 };
 

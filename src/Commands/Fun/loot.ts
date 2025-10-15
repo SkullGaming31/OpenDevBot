@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
+import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 
 const houseItems: {
@@ -103,20 +104,11 @@ const robber: Command = {
 				// Calculate total value of stolen items
 				const totalStolenValue = stolenItems.reduce((total, item) => total + houseItems[item], 0);
 				// Update user's balance with stolen value (assuming you have a User model and user ID)
-				const userId = msg.userInfo.userId;
+				// Credit the looter's wallet via adapter
 				try {
-					const user = await UserModel.findOne({ id: userId, channelId: msg.channelId }); // Updated user object
-
-					if (user && user.balance !== undefined) {
-						// balance not being updated!
-						user.balance = user.balance + totalStolenValue;
-						user.save();
-						console.log(`Updated user balance to: ${user.balance}`); // Optional: Log for debugging
-					} else {
-						console.error('Couldn\'t find user to update balance.'); // Handle missing user
-					}
-				} catch (error) {
-					console.error('Error updating user balance:', error); // Handle errors
+					await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, totalStolenValue, msg.userInfo.userName, msg.channelId);
+				} catch (err) {
+					console.error('Error crediting looter balance:', err);
 				}
 
 				// Announce stolen items and their value
@@ -151,9 +143,13 @@ const robber: Command = {
 					return chatClient.say(channel, 'There are no eligible bot users to rob at the moment.');
 				}
 
-				// Update the bot user's balance by deducting the robbery amount
-				randomBotUser.balance = botUserBalance - robberyAmount;
-				await randomBotUser.save();
+				// Always deduct from the legacy wallet for a person-target robbery (you can't take from their bank)
+				// Try to debit by numeric id first, then by username
+				const targetKey = randomBotUser.id ?? randomBotUser.username;
+				const debitedFromWallet = await balanceAdapter.debitWallet(targetKey, robberyAmount as number, randomBotUser.username, msg.channelId);
+				if (!debitedFromWallet) {
+					return chatClient.say(channel, 'Failed to rob the target — insufficient funds or error.');
+				}
 
 				// **Calculate success odds based on stolen items**
 				let successOddsMultiplier = 1;
@@ -189,21 +185,8 @@ const robber: Command = {
 					// Add the robbery amount to the user's balance
 					// You can use your existing user model and balance logic here
 					// For demonstration purposes, let's just print the amount and stolen items
-					const userId = msg.userInfo.userId;
-					try {
-						const user = await UserModel.findOne({ id: userId, channelId: msg.channelId }); // Updated user object
-
-						if (user && user.balance !== undefined) {
-							user.balance = user.balance + robberyAmount;
-							user.save();
-							console.log(`Updated user balance to: ${user.balance}`); // Optional: Log for debugging
-							// await chatClient.say(channel, `You successfully robbed ${botUserName} and gained ${robberyAmount} coins. You stole the following items: ${stolenItems.join(', ')}`);
-						} else {
-							console.error('Couldn\'t find user to update balance.'); // Handle missing user
-						}
-					} catch (error) {
-						console.error('Error updating user balance:', error); // Handle errors
-					}
+					// Credit looter via adapter
+					await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, robberyAmount, msg.userInfo.userName, msg.channelId);
 					await chatClient.say(channel, `You successfully robbed ${botUserName} and gained ${robberyAmount} coins.`);
 					console.log('hit a success');
 				} else {
@@ -269,10 +252,8 @@ const robber: Command = {
 					// Only send message if items were stolen
 					if (stolenValue > 0) {
 						const stolenItemsList = stolenItems.join(', ');
-						if (user && user.balance !== undefined) {
-							user.balance = user.balance + stolenValue;
-							user.save();
-						}
+						// Credit the looter via adapter rather than mutating the UserModel directly
+						await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, stolenValue, msg.userInfo.userName, msg.channelId);
 						await chatClient.say(channel, `You stole ${stolenItemsList} totaling ${stolenValue} coins!`);
 					}
 				} catch (error) {
