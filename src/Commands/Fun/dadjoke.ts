@@ -2,7 +2,12 @@ import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { IDadJoke } from '../../interfaces/IDadJoke';
+
+interface IDadJoke {
+	id: string;
+	joke: string;
+	status: number;
+}
 
 const dadjoke: Command = {
 	name: 'dadjoke',

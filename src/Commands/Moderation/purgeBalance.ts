@@ -1,6 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
+import BankAccount from '../../database/models/bankAccount';
+import TransactionLog from '../../database/models/transactionLog';
 import { Command } from '../../interfaces/Command';
 
 const purgebalance: Command = {
@@ -26,13 +27,16 @@ const purgebalance: Command = {
 			// Determine the target user(s) to purge
 			const targetUser = args.length > 0 ? args[0].replace('@', '').toLowerCase() : 'all';
 
-			// Purge the balance of all users
 			if (targetUser === 'all') {
-				await UserModel.updateMany({ channelId }, { $set: { balance: 0 } });
-				await chatClient.say(channel, 'All user balances have been purged.');
+				const res = await BankAccount.updateMany({}, { $set: { balance: 0 } });
+				const count = (res as any)?.modifiedCount ?? (res as any)?.nModified ?? 0;
+				// Log admin purge
+				await TransactionLog.create([{ type: 'withdraw', from: 'system', to: 'all', amount: 0, meta: { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, action: 'purge_all', count } }]);
+				await chatClient.say(channel, `All user balances have been purged. (${count} accounts updated)`);
 			} else {
 				// Purge the balance of the specified user
-				await UserModel.updateOne({ channelId, username: targetUser }, { $set: { balance: 0 } });
+				await BankAccount.updateOne({ userId: targetUser }, { $set: { balance: 0 } });
+				await TransactionLog.create([{ type: 'withdraw', from: 'system', to: targetUser, amount: 0, meta: { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, action: 'purge_user' } }]);
 				await chatClient.say(channel, `@${targetUser}'s balance has been purged.`);
 			}
 		} catch (error) {

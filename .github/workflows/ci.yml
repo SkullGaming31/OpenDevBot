@@ -65,6 +65,15 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      - name: Ensure libssl1.1 is available (needed by mongodb-memory-server)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl1.1 || {
+            echo "libssl1.1 not available via apt, attempting to download focal package..."
+            wget -q -O /tmp/libssl1.1.deb "http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb" || true
+            if [ -f /tmp/libssl1.1.deb ]; then sudo dpkg -i /tmp/libssl1.1.deb || true; fi
+          }
+
       - name: Install dependencies
         run: npm ci
 

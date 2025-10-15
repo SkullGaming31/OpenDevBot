@@ -2,7 +2,7 @@ import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { IUser, UserModel } from '../../database/models/userModel';
+import { withdraw } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
@@ -64,45 +64,44 @@ const removepoints: Command = {
 				targetUser = targetUser.substring(1);
 			}
 
-			const existingUser = await UserModel.findOneAndUpdate(
-				{ username: targetUser.toLowerCase(), channelId: msg.channelId },
-				{ $inc: { balance: -amountToRemove } },
-				{ new: true }
-			);
+			try {
+				const acct = await withdraw(userSearch.id, amountToRemove, undefined, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
+				// acct is returned when successful
+				const newBalance = acct.balance;
 
-			if (!existingUser || existingUser.balance === undefined) {
-				await chatClient.say(channel, `User ${targetUser} not found.`);
-				return;
+				const removePointsEmbed = new EmbedBuilder()
+					.setTitle('Twitch Event[Points Removal]')
+					.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
+					.setColor('Red')
+					.addFields([
+						{
+							name: 'Executer',
+							value: `${msg.userInfo.displayName}`,
+							inline: true
+						},
+						{
+							name: 'Role',
+							value: msg.userInfo.isMod ? 'Mod' : 'Broadcaster',
+							inline: true
+						},
+						{ name: 'Amount Removed', value: `${amountToRemove}`, inline: false },
+						{ name: 'New Balance', value: `${newBalance}`, inline: true },
+					])
+					.setFooter({ text: `${msg.userInfo.displayName} just removed ${amountToRemove} points from ${targetUser} in ${channel}'s Twitch channel` })
+					.setTimestamp();
+
+				await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${newBalance}`);
+				await commandUsage.send({ embeds: [removePointsEmbed] });
+			} catch (err: any) {
+				if (err && err.message && err.message.includes('Insufficient')) {
+					await chatClient.say(channel, `Cannot remove more points than the user has.`);
+				} else {
+					console.error('Error removing points:', err);
+					await chatClient.say(channel, 'An error occurred while processing your request');
+				}
 			}
 
-			if (existingUser.balance < 0) {
-				await chatClient.say(channel, `Cannot remove more points than the user has. ${targetUser} only has ${existingUser.balance} points.`);
-				return;
-			}
-
-			const removePointsEmbed = new EmbedBuilder()
-				.setTitle('Twitch Event[Points Removal]')
-				.setAuthor({ name: `${userSearch.displayName}`, iconURL: `${userSearch.profilePictureUrl}` })
-				.setColor('Red')
-				.addFields([
-					{
-						name: 'Executer',
-						value: `${msg.userInfo.displayName}`,
-						inline: true
-					},
-					{
-						name: 'Role',
-						value: msg.userInfo.isMod ? 'Mod' : 'Broadcaster',
-						inline: true
-					},
-					{ name: 'Amount Removed', value: `${amountToRemove}`, inline: false },
-					{ name: 'New Balance', value: `${existingUser.balance}`, inline: true },
-				])
-				.setFooter({ text: `${msg.userInfo.displayName} just removed ${amountToRemove} points from ${targetUser} in ${channel}'s Twitch channel` })
-				.setTimestamp();
-
-			await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${existingUser.balance}`);
-			await commandUsage.send({ embeds: [removePointsEmbed] });
+			// Completed above: response already sent when withdraw succeeded or failed
 		} catch (error) {
 			console.error('Error in removepoints command:', error);
 			await chatClient.say(channel, 'An error occurred while processing your request');

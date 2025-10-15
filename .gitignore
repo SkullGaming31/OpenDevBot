@@ -6,5 +6,4 @@ dist/
 /dist
 /src/Warframe_Data.json
 /src/devlogs
-insertTestData.ts
-seedDatabase.ts
+/src/scripts
