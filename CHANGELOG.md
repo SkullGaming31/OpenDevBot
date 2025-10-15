@@ -13,6 +13,16 @@ All notable changes to this project are documented in this file.
   - Re-run the integration test and confirm TransactionLog contains deposit/transfer entries and that BankAccount totals reflect expected changes.
   - If session propagation doesn't fix the issue, investigate model/connection import ordering and ensure a single mongoose connection is used by all modules in the test.
 
+  ### 2025-10-15 — Wallet/loot/test migrations
+
+  - Moved chat periodic credits to the legacy wallet path (wallet = `UserModel.balance`) and removed direct writes of `balance` on `UserModel` during chatter processing. New behavior seeds the wallet via `balanceAdapter.creditWallet` for new users and credits the wallet for existing users. (`src/chat.ts`)
+  - Added unit tests mocking `balanceAdapter` for migrated commands and an integration replica-set test verifying transfer/duel flows. New tests added: `src/__tests__/transfer.test.ts`, `src/__tests__/duel.test.ts`, `src/__tests__/transfer.duel.integration.test.ts`.
+  - Improved `!loot person` behavior:
+    - If chosen bot has $0, the command now explicitly reports the bot's username and that they have $0 in their wallet.
+    - If there are no bot users in the DB, the command now informs the user accordingly.
+    - Selection logic now uses a safe random index to avoid out-of-bounds access. (`src/Commands/Fun/loot.ts`)
+  - Removed development-only verbose chat debugging logs added during testing; kept error/warning logs. (`src/chat.ts`)
+
 ### 2025-10-13 — Full changelog of work
 
 This file documents the work completed on October 13, 2025. The changes focused on authentication, chat reliability, EventSub subscription stability, Discord webhook rate-limiting, tests, and CI. The list below is a condensed, actionable summary with the most important files and behaviors changed.

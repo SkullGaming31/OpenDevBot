@@ -31,15 +31,15 @@
 
 * duel.ts, heist.ts, loot.ts, shop.ts, gamble.ts — rework to use the adapter/economyService atomic ops. Where operations affect multiple users, use the economyService.transfer or transaction path.
 
-4 Replace purge/add/remove moderation commands:
+4 Replace purge/add/remove moderation commands: DONE
 
 * addpoints.ts, removepoints.ts, purgeBalance.ts — reimplement using economyService APIs. For purge-all, use a DB operation on BankAccount to zero balances (more efficient).
 
-5 Remove or migrate UserModel.balance usages in chat.ts:
+5 Remove or migrate UserModel.balance usages in chat.ts: DONE
 
 * Adjust user creation to create a BankAccount entry and stop setting balance on UserModel. Optionally keep a migration job to backfill accounts from UserModel.
 
-6 Tests:
+6 Tests: DONE
 
 * For each migrated command, add unit tests mocking economyService to ensure behavior remains the same.
 Add integration tests for critical multi-user flows (transfer/duel/heist) using mongodb-memory-server replica-set or fallback-safe logic as today.

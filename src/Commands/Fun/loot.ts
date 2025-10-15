@@ -121,12 +121,14 @@ const robber: Command = {
 				// Retrieve all user models with the Bot role
 				const botUsers: IUser[] = await UserModel.find({ roles: 'Bot' });
 
-				// Select a random bot user from the list
-				const randomBotUser = botUsers[randomInt(0, botUsers.length - 1)];
-
-				if (!randomBotUser) {
-					return chatClient.say(channel, 'An error occurred while attempting to rob a bot user.');
+				// If there are no bots in the DB, inform the user
+				if (!botUsers || botUsers.length === 0) {
+					return chatClient.say(channel, 'There are currently no bot users available to rob.');
 				}
+
+				// Select a random bot user from the list (safe index)
+				const randomIndex = Math.floor(Math.random() * botUsers.length);
+				const randomBotUser = botUsers[randomIndex];
 
 				// Get the username or identifier of the random bot user
 				const botUserName = randomBotUser.username; // Replace with the actual property name
@@ -140,7 +142,8 @@ const robber: Command = {
 				robberyAmount = Math.min(randomInt(1, 15), maxRobberyAmount); // Take a random percentage between 1-15%
 
 				if (robberyAmount === 0) {
-					return chatClient.say(channel, 'There are no eligible bot users to rob at the moment.');
+					// If the chosen bot has no funds, inform the looter specifically
+					return chatClient.say(channel, `You chose to rob ${botUserName}, but they have $0 in their wallet right now.`);
 				}
 
 				// Always deduct from the legacy wallet for a person-target robbery (you can't take from their bank)

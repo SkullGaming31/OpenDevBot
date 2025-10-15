@@ -15,6 +15,7 @@ import { sleep } from './util/util';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 import { IUser, UserModel } from './database/models/userModel';
+import { creditWallet } from './services/balanceAdapter';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
@@ -91,7 +92,6 @@ export async function initializeChat(): Promise<void> {
 	const commandsDir = path.join(__dirname, 'Commands');
 	const commands: Record<string, Command> = {};
 	await loadCommands(commandsDir, commands);
-	console.log(`Loaded ${Object.keys(commands).length} Commands.`);
 	const userApiClient = await getUserApi();
 	const TWITCH_ACTIVITY_ID = TwitchActivityWebhookID;
 	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
@@ -101,13 +101,7 @@ export async function initializeChat(): Promise<void> {
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
 		const Enviroment = process.env.Enviroment as string;
-		// Debug: log every incoming message in dev/debug to help diagnose command handling
-		if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-			console.log(`[chat:onMessage] ${msg.userInfo.displayName} in ${channel}: ${text}`);
-		}
-		if (Enviroment === 'dev' || Enviroment === 'debug') {
-			console.log(`${msg.userInfo.displayName} Said: ${text} in ${channel}, Time: ${msg.date.toLocaleDateString('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`);
-		}
+		// (dev) verbose logging removed; errors are still logged
 
 		try {
 			const cursor = ''; // Initialize the cursor value
@@ -165,17 +159,30 @@ export async function initializeChat(): Promise<void> {
 							// console.log('existingUser:', existingUser);
 
 							if (existingUser) {
-								const result = await UserModel.updateOne(
-									{ id: chatter.userId, channelId },
-									{ $inc: { balance: 100 } }
-								);
-								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									console.log(result.modifiedCount ? `Updated user ${existingUser.username} with data: ${JSON.stringify(result)}` : `User ${existingUser.username} already up to date`);
+								// Credit the legacy wallet (UserModel.balance) rather than the BankAccount
+								try {
+									await creditWallet(chatter.userId, 100, existingUser.username, channelId);
+								} catch (err) {
+									console.error('Failed to credit wallet for existing user:', err);
 								}
 							} else {
-								const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User', balance: 100 });
-								if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-									console.log(`New user added: ${JSON.stringify(result)}`);
+								// Create the legacy user document but do not store canonical balance on UserModel
+								try {
+									const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
+									// New user created; no bank balance stored on UserModel
+									// Seed the legacy wallet for the new user
+									try {
+										await creditWallet(chatter.userId, 100, chatter.userName, channelId);
+									} catch (err) {
+										console.error('Failed to seed wallet for new user:', err);
+									}
+								} catch (err) {
+									// creation may race with another process inserting user
+									if (err instanceof Error && err.message.includes('E11000')) {
+										console.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
+									} else {
+										console.error('Error creating new user:', err);
+									}
 								}
 							}
 						}
