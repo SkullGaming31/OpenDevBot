@@ -27,6 +27,15 @@ All notable changes to this project are documented in this file.
   - Counters/Development — `src/Commands/Counters/createCounter.ts`, `src/Commands/Development/ping.ts`, `src/Commands/Development/debugbalance.ts`
   - Moderation leftovers — addpoints, ban, bug, clip
 
+  - 2025-10-16 — Replace remaining console.* with centralized logger
+
+  - Replaced remaining ad-hoc `console.*` occurrences across scripts and runtime helpers with the centralized `src/util/logger` implementation. This change:
+    - Ensures consistent log formatting and testability via the Jest mock.
+    - Adds `logger.time` and `logger.timeEnd` helpers for simple profiling.
+    - Writes error-level messages to a persistent `logs/errors.log` file (configurable via `ERROR_LOG_FILE`).
+
+    Files touched include (non-exhaustive): `src/scripts/migrateBankUserIds.ts`, `src/util/logger.ts`, `src/__mocks__/util/logger.ts`, and multiple command and service files.
+
 - Tests and command refactors:
   - Converted `src/Commands/Information/quote.ts` to async/await and added unit tests: `src/__tests__/quote.test.ts` (happy path + edge cases).
   - Added `src/__tests__/metrics.test.ts` for metrics/health handler coverage.
