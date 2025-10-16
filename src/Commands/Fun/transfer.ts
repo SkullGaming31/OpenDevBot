@@ -4,6 +4,7 @@ import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
 import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const transfer: Command = {
 	name: 'transfer',
@@ -47,7 +48,7 @@ const transfer: Command = {
 			}
 
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	}
 };

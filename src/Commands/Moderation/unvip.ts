@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 const unvip: Command = {
 	name: 'unvip',
@@ -57,24 +58,24 @@ const unvip: Command = {
 					await userApiClient.channels.removeVip(broadcasterInfo[0].id as UserIdResolvable, userSearch?.id);
 					await chatClient.say(channel, `@${args[0].replace('@', '')} has been removed from VIP status`);
 				} else {
-					console.error('Something happened while searching for user');
+					logger.error('Something happened while searching for user');
 				}
 				await commandUsage.send({ embeds: [unVIPEmbed] });
 			} catch (error: unknown) {
 				if (error instanceof Error) {
-					console.error(error.name + ': ' + error.message, error.stack);
+					logger.error(error.name + ': ' + error.message, error.stack);
 					await chatClient.say(channel, `${error.message}`);
 				} else {
-					console.error('Unknown error');
+					logger.error('Unknown error');
 					await chatClient.say(channel, 'An unknown error occurred');
 				}
 			}
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				console.error(error.name + ': ' + error.message, error.stack);
+				logger.error(error.name + ': ' + error.message, error.stack);
 				await chatClient.say(channel, `${error.message}`);
 			} else {
-				console.error('Unknown error');
+				logger.error('Unknown error');
 				await chatClient.say(channel, 'An unknown error occurred');
 			}
 		}

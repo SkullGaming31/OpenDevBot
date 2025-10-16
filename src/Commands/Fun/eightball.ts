@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const eightball: Command = {
 	name: '8ball',
@@ -19,7 +20,7 @@ const eightball: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
-		console.log('hit 8ball');
+		logger.debug('hit 8ball');
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		// Check if the user provided a question

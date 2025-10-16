@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 /**
  * Bug: Not deducting correct amount when losing, FIXED
  */
@@ -40,7 +41,7 @@ const gamble: Command = {
 			try {
 				acct = await balanceAdapter.getOrCreate(userKey);
 			} catch (error) {
-				console.error('Error retrieving account via balanceAdapter:', error);
+				logger.error('Error retrieving account via balanceAdapter:', error);
 				await chatClient.say(channel, 'An error occurred while retrieving your account.');
 				return;
 			}
@@ -91,7 +92,7 @@ const gamble: Command = {
 				// losing path: stake was already debited, nothing more to do
 			}
 		} catch (error) {
-			console.error('Error saving user information:', error);
+			logger.error('Error saving user information:', error);
 			await chatClient.say(channel, 'An error occurred while updating user information.');
 		}
 	},

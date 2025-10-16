@@ -1,10 +1,11 @@
+import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { TokenModel } from '../../database/models/tokenModel';
-import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 
 axios.defaults;
@@ -42,7 +43,7 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
-			console.log('Ping command executed.');
+			logger.debug('Ping command executed.');
 
 			// const listScopes = async () => {
 			// 	const tokens = await TokenModel.find().select('user_id scope');
@@ -50,7 +51,7 @@ const ping: Command = {
 			// 		user_id: token.user_id,
 			// 		scopes: token.scope,
 			// 	}));
-			// 	console.log(scopeList);
+			// 	logger.debug(scopeList);
 			// };
 
 			// listScopes();
@@ -64,7 +65,7 @@ const ping: Command = {
 
 				if (game) {
 					await chatClient.say(channel, `${game.name} ID is ${game.id}`);
-					// console.log(`${game.name} ID is ${game.id}`);
+					// logger.debug(`${game.name} ID is ${game.id}`);
 				} else {
 					await chatClient.say(channel, `Game "${gameName}" not found.`);
 				}
@@ -75,7 +76,7 @@ const ping: Command = {
 				await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error('Error executing ping command', error as Error);
 		}
 	},
 };
@@ -100,10 +101,10 @@ async function checkTwitchApiPing() {
 		const end = Date.now();
 		const ping = end - start;
 
-		console.log(`Twitch API Ping: ${ping} ms`);
+		logger.debug('Twitch API ping measured', { ping });
 		return ping;
 	} catch (error) {
-		console.error('Error:', error);
+		logger.error('Error checking Twitch API ping', error as Error);
 		throw error; // Rethrow the error to be caught in the calling function
 	}
 }
@@ -121,7 +122,7 @@ function getBotUptime() {
 	const minutes = Math.floor((uptimeSeconds % 3600) / 60);
 	const seconds = uptimeSeconds % 60;
 
-	const formattedUptime = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+	const formattedUptime = `${days} days ${hours} hours ${minutes} minutes ${seconds} seconds`;
 	return formattedUptime;
 }
 

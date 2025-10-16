@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 interface IDadJoke {
 	id: string;
@@ -36,7 +37,7 @@ const dadjoke: Command = {
 				await chatClient.say(channel, 'An error occured while trying to send the dadjoke');
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	}
 };

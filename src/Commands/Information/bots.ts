@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import knownBotsModel, { Bots } from '../../database/models/knownBotsModel';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
+import logger from '../../util/logger';
 
 // TODO: add the channel the bot was added from and who from that channel added the bot
 // TODO: add logs to discord to show channel, user and bot name that was added to the database ex: modvlog(user) added drapsnatt(bot) from modvlog(channel)
@@ -53,7 +54,7 @@ const bots: Command = {
 							await chatClient.say(channel, 'All usernames provided are already in the database.');
 						}
 					} catch (error: unknown) {
-						console.error('Failed to add usernames to the database:', String(error));
+						logger.error('Failed to add usernames to the database:', String(error));
 						await chatClient.say(channel, 'An error occurred while adding the usernames to the database.');
 					}
 				} else {
@@ -72,7 +73,7 @@ const bots: Command = {
 						await chatClient.say(channel, `Known bots: ${botUsernames.join(', ')}`);
 					}
 				} catch (error) {
-					console.error('Error retrieving bots:', error);
+					logger.error('Error retrieving bots:', error);
 					await chatClient.say(channel, 'An error occurred while retrieving bots.');
 				}
 				break;
@@ -94,7 +95,7 @@ const bots: Command = {
 						await chatClient.say(channel, `${existingUsernamesToRemove.length} user(s) have been removed from the database: ${existingUsernamesToRemove.join(', ')}.`);
 					}
 				} catch (error: unknown) {
-					console.error('Error removing users:', String(error));
+					logger.error('Error removing users:', String(error));
 					await chatClient.say(channel, 'An error occurred while removing the users.');
 				}
 				break;

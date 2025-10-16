@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const id: Command = {
 	name: 'id',
@@ -25,8 +26,8 @@ const id: Command = {
 				}
 			}
 		} catch (err: unknown) {
-			if (err instanceof Error) console.error(err.message);
-			else console.error(String(err));
+			if (err instanceof Error) logger.error(err.message);
+			else logger.error(String(err));
 		}
 	}
 };

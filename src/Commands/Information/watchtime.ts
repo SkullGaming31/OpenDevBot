@@ -26,7 +26,7 @@
 
 // 		try {
 // 			const userRecord = await UserModel.findOne({ id: msg.userInfo.userId });
-// 			console.log('User Watchtime Record: ', userRecord);
+// 			logger.debug('User Watchtime Record: ', userRecord);
 
 // 			if (userRecord && userRecord.watchTime !== undefined) {
 // 				const totalSeconds = userRecord.watchTime / 1000;
@@ -40,7 +40,7 @@
 // 				await chatClient.say(channel, `@${msg.userInfo.displayName} has no recorded watch time.`);
 // 			}
 // 		} catch (error) {
-// 			console.error('Error fetching watch time:', error);
+// 			logger.error('Error fetching watch time:', error);
 // 			await chatClient.say(channel, 'An error occurred while fetching watch time.');
 // 		}
 // 	},
@@ -51,6 +51,7 @@ import { Command } from '../../interfaces/Command';
 import { ChatMessage } from '@twurple/chat/lib';
 import { UserModel } from '../../database/models/userModel';
 import { getChatClient } from '../../chat';
+import logger from '../../util/logger';
 
 /**
  * Calculate the watch time in days, hours, minutes, and seconds based on the total seconds.
@@ -92,10 +93,10 @@ const watchTime: Command = {
 			}
 		} catch (error) {
 			if (error instanceof Error) {
-				console.error(`Error fetching watch time: ${error.message}`);
+				logger.error(`Error fetching watch time: ${error.message}`);
 				await chatClient.say(channel, `An error occurred while fetching watch time: ${error.message}`);
 			} else {
-				console.error('Unknown error fetching watch time');
+				logger.error('Unknown error fetching watch time');
 				await chatClient.say(channel, 'An unknown error occurred while fetching watch time');
 			}
 		}

@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 const ban: Command = {
 	name: 'ban',
@@ -77,7 +78,7 @@ const ban: Command = {
 			// Send the embed
 			await commandUsage.send({ embeds: [commandUsageEmbed] });
 		} catch (error) {
-			console.error('Error executing ban command:', error);
+			logger.error('Error executing ban command:', error);
 		}
 	}
 };

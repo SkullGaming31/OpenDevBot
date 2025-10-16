@@ -6,6 +6,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 axios.defaults;
 
@@ -65,7 +66,7 @@ const bug: Command = {
 			await chatClient.say(channel, 'Bug Report Submitted, Thank You');
 			await bugReport.send({ embeds: [bugReportEmbed] });
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	},
 };

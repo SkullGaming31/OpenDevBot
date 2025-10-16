@@ -4,6 +4,44 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### 2025-10-15 — Logging, metrics, and console->logger sweep
+
+- Added a centralized logger and Jest mock:
+  - `src/util/logger.ts` — lightweight wrapper (debug/info/warn/error).
+  - `src/__mocks__/util/logger.ts` and `jest.setup.ts` — silence/replace console output during tests and provide an assertion-friendly mock.
+
+- Added Prometheus metrics and health endpoints:
+  - `src/monitoring/metrics.ts` — registers metrics (webhook attempts, EventSub retries, token refreshes, DB up gauge) using `prom-client`.
+  - Mounted `/metrics`, `/health`, and `/ready` handlers in `src/util/createApp.ts` and instrumented several runtime paths.
+
+- Instrumented runtime paths to increment counters:
+  - Webhook send attempts instrumented in `src/Discord/webhookQueue.ts`.
+  - EventSub retry attempts in `src/EventSub/retryWorker.ts`.
+  - Token refreshes persisted and counted in `src/auth/authProvider.ts` (onRefresh handlers).
+  - DB health gauge wired to `src/database/index.ts`.
+
+- Replaced repo-wide ad-hoc `console.log`/`console.warn`/`console.error` with the centralized `logger` in Commands and selected services (incremental, low-risk batches):
+  - Moderation batch A — `src/Commands/Moderation/*` (mod, purge, marker, shoutout, unvip)
+  - Fun batches B/C — `src/Commands/Fun/*` (gamble, transfer, rps, roulette, loot, heist, etc.)
+  - Information batches D/E — `src/Commands/Information/*` (bots, socials, warframe, GTA, quote, help, id, bank, accountage)
+  - Counters/Development — `src/Commands/Counters/createCounter.ts`, `src/Commands/Development/ping.ts`, `src/Commands/Development/debugbalance.ts`
+  - Moderation leftovers — addpoints, ban, bug, clip
+
+- Tests and command refactors:
+  - Converted `src/Commands/Information/quote.ts` to async/await and added unit tests: `src/__tests__/quote.test.ts` (happy path + edge cases).
+  - Added `src/__tests__/metrics.test.ts` for metrics/health handler coverage.
+  - Jest now uses the manual logger mock so tests remain quiet and can assert logging when needed.
+
+- Safety and verification:
+  - Performed frequent TypeScript checks (`npx tsc --noEmit`) after each batch; visible edits compile cleanly.
+  - Applied changes in small batches (3–5 files) to reduce risk and make rollbacks easy.
+
+Next steps / open items
+- Finish migrating console usages in core runtime files (high-value targets: `src/index.ts`, `src/chat.ts`, `src/EventSubEvents.ts`, `src/auth/authProvider.ts`).
+- Decide how to map `console.time` / `console.timeEnd` profiling calls into the logger API (implement `logger.time`/`timeEnd` or convert to timestamped debug logs).
+- Run the full Jest suite and address any behavioral regressions; consider adding CI checks for the new metrics endpoints.
+
+
 ### 2025-10-15 — Heist integration test note
 
 - The replica-set integration test for the `!heist bank` flow currently fails: donors are debited transactionally but winner deposits are not observed by the test. Debug logs show the transaction committed and the code attempted to deposit to the winner's account, but DB totals and TransactionLog entries for deposits/transfers were not present.

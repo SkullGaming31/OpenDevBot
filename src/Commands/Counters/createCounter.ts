@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Counter, CounterModel } from '../../database/models/counterModel';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const createcounter: Command = {
 	name: 'createcounter',
@@ -24,7 +25,7 @@ const createcounter: Command = {
 	 * Provides usage instructions if the command or arguments are invalid, and handles errors during execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
-		// console.log('we hit the counter command');
+		// logger.info('we hit the counter command');
 		const chatClient = await getChatClient();
 
 		if (args.length === 0 || !['create', 'remove', 'list'].includes(args[0])) return chatClient.say(channel, `Usage: ${createcounter.usage}`);
@@ -38,6 +39,7 @@ const createcounter: Command = {
 					// Create a new counter
 					const counterNameCreate = args[1];
 					await createCounter(counterNameCreate);
+					logger.debug('creating counter', { name: counterNameCreate });
 					await chatClient.say(channel, `Counter "${counterNameCreate}" created.`);
 					break;
 				case 'remove':
@@ -69,7 +71,7 @@ const createcounter: Command = {
 					break;
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error('error creating counter', error as Error);
 			await chatClient.say(channel, 'An error occurred while executing the command.');
 		}
 	}

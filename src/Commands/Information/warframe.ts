@@ -4,6 +4,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { openDevBotID } from '../../util/constants';
 import { sleep } from '../../util/util';
+import logger from '../../util/logger';
 
 interface WarframeData {
 	uniqueName: string;
@@ -185,7 +186,7 @@ const warframe: Command = {
 						return chatClient.say(channel, `No Warframe found with the name "${warframeName}"`);
 					}
 					const warframeData: WarframeData = data[0];
-					// console.log(warframeData.components[0]);
+					// logger.debug(warframeData.components[0]);
 					if (warframeName.endsWith('Prime')) return chatClient.say(channel, 'I can not look up prime version of warframes yet');
 
 					// Prepare a short summary for chat and a detailed message for whisper or chunked chat messages
@@ -224,7 +225,7 @@ const warframe: Command = {
 							await chatClient.say(channel, detailedMessage);
 						}
 					} catch (err) {
-						console.error('Failed to send whisper - falling back to chunked chat messages:', err);
+						logger.error('Failed to send whisper - falling back to chunked chat messages:', err);
 						// Chunk into <=500 char pieces and send with brief delays
 						const maxLen = 400; // leave buffer
 						for (let i = 0; i < detailedMessage.length; i += maxLen) {
@@ -234,7 +235,7 @@ const warframe: Command = {
 						}
 					}
 				} catch (e) {
-					console.error(`Error fetching Warframe data: ${e}`);
+					logger.error(`Error fetching Warframe data: ${e}`);
 					await chatClient.say(channel, `An error occurred while fetching data for "${warframeName}"`);
 				}
 				break;

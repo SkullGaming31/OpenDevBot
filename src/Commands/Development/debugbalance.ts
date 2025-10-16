@@ -1,6 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 import * as economyService from '../../services/economyService';
 
 const debugbalance: Command = {
@@ -29,9 +30,9 @@ const debugbalance: Command = {
 			const walletMsg = wallet ? `wallet(${wallet.id || wallet.username}): ${wallet.balance ?? 0}` : 'wallet: <none>';
 
 			await chatClient.say(channel, `DEBUG ${target} -> ${bankMsg} | ${walletMsg}`);
-			console.log('DEBUGBALANCE', { target, key, bank, wallet });
+			logger.debug('DEBUGBALANCE', { target, key, bank, wallet });
 		} catch (err: any) {
-			console.error('debugbalance error', err);
+			logger.error('debugbalance error', err as Error);
 			await chatClient.say(channel, `Error inspecting balances: ${err.message}`);
 		}
 	}

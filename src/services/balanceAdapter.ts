@@ -1,6 +1,7 @@
 import { IBankAccount } from '../database/models/bankAccount';
 import BankAccount from '../database/models/bankAccount';
 import { UserModel } from '../database/models/userModel';
+import logger from '../util/logger';
 import * as economyService from './economyService';
 
 /**
@@ -28,7 +29,7 @@ export async function deposit(userId: string, amount: number) {
 			}
 		} catch (err) {
 			// Mirroring is best-effort
-			console.warn('Failed to mirror deposit to UserModel', err);
+			logger.warn('Failed to mirror deposit to UserModel', err);
 		}
 	}
 	return acct;
@@ -45,7 +46,7 @@ export async function withdraw(userId: string, amount: number) {
 				await UserModel.updateOne({ username: userId }, { $inc: { balance: -amount } });
 			}
 		} catch (err) {
-			console.warn('Failed to mirror withdraw to UserModel', err);
+			logger.warn('Failed to mirror withdraw to UserModel', err);
 		}
 	}
 	return acct;
@@ -73,7 +74,7 @@ export async function creditWallet(userKey: string | null | undefined, amount: n
 		// Fallback to upserting by username only
 		await UserModel.updateOne({ username: userKey }, { $inc: { balance: amount }, $setOnInsert: { username: userKey } }, { upsert: true });
 	} catch (err) {
-		console.warn('Failed to credit wallet in UserModel', err);
+		logger.warn('Failed to credit wallet in UserModel', err);
 	}
 }
 
@@ -96,7 +97,7 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 		const updated = await UserModel.findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { new: true });
 		return !!updated;
 	} catch (err) {
-		console.warn('Failed to debit wallet in UserModel', err);
+		logger.warn('Failed to debit wallet in UserModel', err);
 		return false;
 	}
 }
@@ -113,7 +114,7 @@ export async function transfer(from: string, to: string, amount: number) {
 			if (toIsNumeric) await UserModel.updateOne({ id: to }, { $inc: { balance: amount } }, { upsert: true });
 			else await UserModel.updateOne({ username: to }, { $setOnInsert: { username: to }, $inc: { balance: amount } }, { upsert: true });
 		} catch (err) {
-			console.warn('Failed to mirror transfer to UserModel', err);
+			logger.warn('Failed to mirror transfer to UserModel', err);
 		}
 	}
 	return res;

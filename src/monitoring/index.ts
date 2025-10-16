@@ -1,4 +1,5 @@
 import ENVIRONMENT from '../util/env';
+import logger from '../util/logger';
 
 export function initMonitoring(): void {
 	const dsn = process.env.SENTRY_DSN || process.env.LOGDNA_KEY;
@@ -14,9 +15,9 @@ export function initMonitoring(): void {
 			tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? Number(process.env.SENTRY_TRACES_SAMPLE_RATE) : 0.1,
 			environment: ENVIRONMENT,
 		});
-		console.log('Monitoring initialized');
+		logger.info('Monitoring initialized');
 	} catch (err) {
 		const e = err as Error | unknown;
-		console.warn('Monitoring not initialized: optional package missing or failed to initialize', (e as Error)?.message ?? String(e));
+		logger.warn('Monitoring not initialized: optional package missing or failed to initialize', (e as Error)?.message ?? String(e));
 	}
 }

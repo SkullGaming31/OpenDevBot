@@ -1,5 +1,6 @@
 import mongoose, { ConnectOptions } from 'mongoose';
 import ENVIRONMENT from '../util/env';
+import logger from '../util/logger';
 import './models/userModel';
 
 class Database {
@@ -29,33 +30,33 @@ class Database {
 				dbName: 'opendevbot',
 			} as ConnectOptions);
 
-			// console.log('Database connection successful');
+			// logger.info('Database connection successful');
 
 			const connectionState = mongoose.connection.readyState;
 
 			switch (connectionState) {
 				case 0:
-					console.log('Database Disconnected');
+					logger.info('Database Disconnected');
 					break;
 				case 1:
-					console.log('Database Connected Successfully');
+					logger.info('Database Connected Successfully');
 					break;
 				case 2:
-					console.log('Database Connecting');
+					logger.info('Database Connecting');
 					break;
 				case 3:
-					console.log('Database Disconnecting');
+					logger.info('Database Disconnecting');
 					break;
 				default:
-					console.log('Unknown Database Connection State');
+					logger.info('Unknown Database Connection State');
 					break;
 			}
 			// Perform a no-op operation to ensure the database is created
 			await mongoose.connection.db?.command({ ping: 1 });
-			console.log(`Database '${mongoose.connection.db?.databaseName}' ensured.`);
+			logger.info(`Database '${mongoose.connection.db?.databaseName}' ensured.`);
 			// await this.dropUsersCollection();
 		} catch (error) {
-			console.error('Database connection error:', error);
+			logger.error('Database connection error:', error);
 			throw error;
 		}
 	}
@@ -68,9 +69,9 @@ class Database {
 	public async dropUsersCollection(): Promise<void> {
 		try {
 			await mongoose.connection.dropCollection('users');
-			console.log('Users collection dropped');
+			logger.info('Users collection dropped');
 		} catch (error) {
-			console.error('Error dropping users collection:', error);
+			logger.error('Error dropping users collection:', error);
 			throw error;
 		}
 	}

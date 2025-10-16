@@ -1,4 +1,5 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import logger from '../util/logger';
 
 class DiscordBot {
 	private client: Client;
@@ -47,13 +48,13 @@ class DiscordBot {
 			]
 		});
 
-		this.client.on('ready', () => { console.log(`Logged in as ${this.client.user?.globalName || this.client.user?.username}!`); });
+		this.client.on('ready', () => { logger.info(`Logged in as ${this.client.user?.globalName || this.client.user?.username}!`); });
 
-		this.client.on('error', (error: Error) => { console.error(`Something happen when trying to login: ${error}`); });
-		this.client.on('warn', (warn: string) => { console.info('Discord Warning', warn); });
-		this.client.on('shardDisconnect', (t) => { console.error('Shard Disconnect: ', t); });
-		this.client.on('shardError', (t: Error) => { console.error('Shard Error: ', t); });
-		this.client.on('shardReconnecting', (sr) => { console.error('Shard Reconnecting', sr); });
+		this.client.on('error', (error: Error) => { logger.error(`Something happen when trying to login: ${error}`); });
+		this.client.on('warn', (warn: string) => { logger.info('Discord Warning', warn); });
+		this.client.on('shardDisconnect', (t) => { logger.error('Shard Disconnect: ', t); });
+		this.client.on('shardError', (t: Error) => { logger.error('Shard Error: ', t); });
+		this.client.on('shardReconnecting', (sr) => { logger.error('Shard Reconnecting', sr); });
 	}
 
 	/**

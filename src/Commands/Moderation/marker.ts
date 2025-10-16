@@ -6,6 +6,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID, broadcasterInfo } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 axios.defaults;
 
@@ -102,7 +103,7 @@ const marker: Command = {
 			await chatClient.say(channel, `Stream Marker Created Successfully at ${streamTime}`);
 			await commandUsage.send({ embeds: [markerEmbed] });
 		} catch (error) {
-			console.error('Something went wrong creating a stream marker', error);
+			logger.error('Something went wrong creating a stream marker', error);
 			await chatClient.say(channel, 'An error occurred while processing your request');
 		}
 	},

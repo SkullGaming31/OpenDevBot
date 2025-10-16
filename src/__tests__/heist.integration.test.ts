@@ -12,6 +12,7 @@
 
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
+import logger from '../util/logger';
 jest.setTimeout(45000); // allow up to 45s for replica-set startup and test (we set Enviroment=dev to shorten delays)
 
 describe('heist integration (replica-set transactions)', () => {
@@ -106,14 +107,14 @@ describe('heist integration (replica-set transactions)', () => {
 		// After heist, inspect bank account balances to ensure total bank balance decreased
 		const updatedDonors = await BankAccountModel.find({}).lean();
 		const totalBankAfter = updatedDonors.reduce((s: number, d: any) => s + (d.balance || 0), 0);
-		console.debug('totalBankBefore', totalBankBefore, 'totalBankAfter', totalBankAfter);
+		logger.debug('totalBankBefore', totalBankBefore, 'totalBankAfter', totalBankAfter);
 		expect(totalBankAfter).toBeLessThan(totalBankBefore);
 
 		// Verify transaction logs recorded withdraws and deposits/transfers
 		const TransactionLog = require('../database/models/transactionLog').default;
 		const logs = await TransactionLog.find({}).lean();
 		const withdrawCount = logs.filter((l: any) => l.type === 'withdraw').length;
-		console.debug('transaction logs', logs);
+		logger.debug('transaction logs', logs);
 		expect(withdrawCount).toBeGreaterThan(0);
 		// Accept any of the following as evidence of winners being credited:
 		// - economyService.deposit was called
@@ -121,9 +122,9 @@ describe('heist integration (replica-set transactions)', () => {
 		// - a deposit/transfer TransactionLog exists
 		const depositOrTransferLogCount = logs.filter((l: any) => l.type === 'deposit' || l.type === 'transfer').length;
 		const credited = depositSpy.mock.calls.length > 0 || creditSpy.mock.calls.length > 0 || depositOrTransferLogCount > 0;
-		console.debug('creditSpy calls', creditSpy.mock.calls.length, creditSpy.mock.calls);
-		console.debug('depositSpy calls', depositSpy.mock.calls.length);
-		console.debug('deposit/transfer logs', depositOrTransferLogCount);
+		logger.debug('creditSpy calls', creditSpy.mock.calls.length, creditSpy.mock.calls);
+		logger.debug('depositSpy calls', depositSpy.mock.calls.length);
+		logger.debug('deposit/transfer logs', depositOrTransferLogCount);
 		expect(credited).toBe(true);
 
 		// Ensure chat was spoken to with results

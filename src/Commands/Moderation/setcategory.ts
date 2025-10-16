@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 const setcategory: Command = {
 	name: 'setcategory',
@@ -94,7 +95,7 @@ const setcategory: Command = {
 				await chatClient.say(channel, `${msg.userInfo.displayName} has changed the channel category to ${newGame.name}`);
 				await commandUsageWebhook.send({ embeds: [commandEmbed] });
 			} catch (error) {
-				console.error(error);
+				logger.error('Error sending command usage webhook:', error);
 			}
 		} else {
 			await chatClient.say(channel, `${msg.userInfo.displayName}, you are not a moderator or the broadcaster and do not have access to this command`);

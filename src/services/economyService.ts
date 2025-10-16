@@ -50,7 +50,7 @@ export async function deposit(userId: string, amount: number, session?: mongoose
         { upsert: true, new: true }
     ).lean();
     await TransactionLog.create([{ type: 'deposit', to: userId, amount, meta: meta ?? {}, }]);
-    return acct as IBankAccount;
+    return acct as unknown as IBankAccount;
 }
 
 export async function withdraw(userId: string, amount: number, session?: mongoose.ClientSession, meta?: Record<string, unknown>) {
@@ -74,7 +74,7 @@ export async function withdraw(userId: string, amount: number, session?: mongoos
     ).lean();
     if (!acct) throw new EconomyError('Insufficient funds');
     await TransactionLog.create([{ type: 'withdraw', from: userId, amount, meta: meta ?? {} }]);
-    return acct as IBankAccount;
+    return acct as unknown as IBankAccount;
 }
 
 export async function transfer(from: string, to: string, amount: number, meta?: Record<string, unknown>) {

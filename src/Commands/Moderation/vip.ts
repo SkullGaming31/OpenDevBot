@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 const vip: Command = {
 	name: 'vip',
@@ -93,7 +94,7 @@ const vip: Command = {
 			}
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				console.error(error.name + ': ' + error.message, error.stack);
+				logger.error(error.name + ': ' + error.message, error.stack);
 				await chatClient.say(channel, 'An error occurred while assigning the VIP role');
 			}
 		}

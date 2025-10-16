@@ -5,6 +5,7 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
+import logger from '../../util/logger';
 
 const uptime: Command = {
 	name: 'uptime',
@@ -37,7 +38,7 @@ const uptime: Command = {
 			const uptime = countdown(new Date(stream.startDate));
 			await chatClient.say(channel, `${msg.userInfo.displayName}, the stream has been live for ${uptime}`);
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 			await chatClient.say(channel, 'An error occurred while retrieving the stream uptime');
 		}
 	},

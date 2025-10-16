@@ -4,6 +4,7 @@ config();
 import fs from 'fs';
 import path from 'path';
 import ENVIRONMENT from '../util/env';
+import logger from '../util/logger';
 
 class ErrorHandler {
 	private logFile: string;
@@ -67,7 +68,7 @@ class ErrorHandler {
 				fs.writeFileSync(this.logFile, '');
 			}
 		} catch (err) {
-			console.error(`Error creating log file: ${err}`);
+			logger.error(`Error creating log file: ${err}`);
 			throw err;
 		}
 	}
@@ -80,16 +81,16 @@ class ErrorHandler {
 	 */
 	private async listenForEvents(): Promise<void> {
 		process.on('unhandledRejection', async (reason: unknown, p: Promise<unknown>) => {
-			console.error(reason, p);
+			logger.error(reason, p);
 			if (reason instanceof Error) {
 				await this.writeError(reason, 'Unhandled Rejection/Catch');
 			} else {
-				console.error('Unhandled rejection with unknown reason:', reason);
+				logger.error('Unhandled rejection with unknown reason:', reason);
 			}
 		});
 
 		process.on('uncaughtException', async (err: Error) => {
-			console.error(err);
+			logger.error(err);
 			await this.writeError(err, 'Uncaught Exception');
 		});
 	}

@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const accountage: Command = {
 	name: 'accountage',
@@ -26,7 +27,7 @@ const accountage: Command = {
 			}
 		} catch (error) {
 			const chatClient = await getChatClient();
-			console.error(error); // Log error for debugging
+			logger.error('Error fetching account age', error as Error);
 			await chatClient.say(channel, `${user}, there was an error retrieving account information.`);
 		}
 	}

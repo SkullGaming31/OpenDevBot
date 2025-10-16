@@ -1,5 +1,6 @@
 import { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat';
+import logger from '../../util/logger';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { withdraw } from '../../services/economyService';
@@ -30,7 +31,7 @@ const removepoints: Command = {
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
 
 		try {
-			console.log('Executing removepoints command...'); // Debugging line
+			logger.debug('Executing removepoints command...', { channel, user, argsLength: args.length }); // Debugging line
 
 			if (args.length < 2) {
 				await chatClient.say(channel, `${msg.userInfo.displayName}, Usage: ${removepoints.usage}`);
@@ -96,14 +97,14 @@ const removepoints: Command = {
 				if (err && err.message && err.message.includes('Insufficient')) {
 					await chatClient.say(channel, `Cannot remove more points than the user has.`);
 				} else {
-					console.error('Error removing points:', err);
+					logger.error('Error removing points:', err);
 					await chatClient.say(channel, 'An error occurred while processing your request');
 				}
 			}
 
 			// Completed above: response already sent when withdraw succeeded or failed
 		} catch (error) {
-			console.error('Error in removepoints command:', error);
+			logger.error('Error in removepoints command:', error);
 			await chatClient.say(channel, 'An error occurred while processing your request');
 		}
 	},

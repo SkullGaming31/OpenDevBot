@@ -3,6 +3,7 @@ import { getChatClient } from '../../chat';
 import { LurkMessageModel } from '../../database/models/LurkModel';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
+import logger from '../../util/logger';
 
 export const lurkingUsers: string[] = [];
 const lurk: Command = {
@@ -57,7 +58,7 @@ const lurk: Command = {
 			await sleep(5000);
 			await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking. ${numLurkers}`);
 		} catch (error) {
-			console.error('Error with the Lurk Command', error);
+			logger.error('Error with the Lurk Command', error);
 		}
 	},
 };

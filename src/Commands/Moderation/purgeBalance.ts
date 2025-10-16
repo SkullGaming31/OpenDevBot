@@ -3,6 +3,7 @@ import { getChatClient } from '../../chat';
 import BankAccount from '../../database/models/bankAccount';
 import TransactionLog from '../../database/models/transactionLog';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const purgebalance: Command = {
 	name: 'purgebalance',
@@ -40,7 +41,7 @@ const purgebalance: Command = {
 				await chatClient.say(channel, `@${targetUser}'s balance has been purged.`);
 			}
 		} catch (error) {
-			console.error('Error purging balances:', error);
+			logger.error('Error purging balances:', error);
 			await chatClient.say(channel, 'An error occurred while trying to purge balances.');
 		}
 	},

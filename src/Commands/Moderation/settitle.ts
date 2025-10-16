@@ -3,6 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
@@ -82,20 +83,20 @@ const settitle: Command = {
 
 				try {
 					await userApiClient.channels.updateChannelInfo(broadcasterResponse?.id as UserIdResolvable, { 'title': title });
-					// console.log('Broadcaster ID: ', broadcasterResponse?.id);
+					// logger.debug('Broadcaster ID: ', broadcasterResponse?.id);
 					await chatClient.say(channel, `${msg.userInfo.displayName} has updated the channel title to ${title}`);
 					await commandUsage.send({ embeds: [commandEmbed] });
 				} catch (error) {
-					console.error(error);
+					logger.error('settitle: error updating channel title', { error, channel, user: msg.userInfo.userId });
 				}
 			} else {
 				chatClient.say(channel, `${msg.userInfo.displayName}, Access denied. This command can only be used by broadcasters, moderators, and channel editors.`);
 			}
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				console.error(error.name + ': ' + error.message + error.stack);
+				logger.error(error.name + ': ' + error.message + error.stack);
 			} else {
-				console.error('Unknown error');
+				logger.error('Unknown error');
 			}
 		}
 	}

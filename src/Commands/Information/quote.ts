@@ -3,6 +3,7 @@ import { getChatClient } from '../../chat';
 import QuoteModel, { IQuote } from '../../database/models/Quote';
 import { Command } from '../../interfaces/Command';
 import { MongooseError } from 'mongoose';
+import logger from '../../util/logger';
 
 const quoteCommand: Command = {
 	name: 'quote',
@@ -28,63 +29,60 @@ const quoteCommand: Command = {
 					const quote = new QuoteModel({ content }); // create a new Quote document with the content
 					try {
 						const savedQuote = await quote.save();
-						console.log(`Quote added: "${savedQuote.content}"`);
+						logger.info(`Quote added: "${savedQuote.content}"`);
 						await chatClient.say(channel, 'Quote Added to database');
 					} catch (error) {
-						console.error(error);
+						logger.error(error);
 						// handle error
 					}
 
 					break;
 				case 'remove':
 					const quoteId = args[1]; // extract the quote ID from the arguments
-					QuoteModel.findByIdAndDelete(quoteId, async (err: MongooseError, removedQuote: IQuote | null) => {
-						if (err) {
-							console.error(err);
-							await chatClient.say(channel, 'An Error has Occured');
-							// handle error
-						} else if (!removedQuote) {
-							console.log(`Quote with ID ${quoteId} not found`);
+					try {
+						const removedQuote = await QuoteModel.findByIdAndDelete(quoteId).exec();
+						if (!removedQuote) {
 							await chatClient.say(channel, `Quote with ID ${quoteId} not found`);
-							// handle not found
 						} else {
-							console.log(`Quote removed: "${removedQuote.content}"`);
-							await chatClient.say(channel, 'Quote Removed to database');
-							// handle success
+							await chatClient.say(channel, 'Quote Removed from database');
 						}
-					});
+					} catch (err) {
+						logger.error(err);
+						await chatClient.say(channel, 'An Error has Occured');
+					}
 					break;
 				case 'list':
 					if (args[1]) {
 						// list specific quote by ID
 						const quoteId = args[1];
-						QuoteModel.findById(quoteId, (err: MongooseError, quote: IQuote | null) => {
-							if (err) {
-								console.error(err);
-								// handle error
-							} else if (!quote) {
+						try {
+							const quote = await QuoteModel.findById(quoteId).exec();
+							if (!quote) {
 								chatClient.say(channel, `Quote with ID ${quoteId} not found`);
-								// handle not found
 							} else {
 								chatClient.say(channel, `#${quote._id}: "${quote.content}"`);
-								// handle success
 							}
-						});
+						} catch (err) {
+							logger.error(err);
+						}
 					} else {
 						// list a random quote
-						QuoteModel.countDocuments().exec().then((count: number) => {
-							const randomIndex = Math.floor(Math.random() * count);
-
-							QuoteModel.findOne().skip(randomIndex).exec().then(async (quote: IQuote | null) => {
+						try {
+							const count = await QuoteModel.countDocuments().exec();
+							if (count === 0) {
+								await chatClient.say(channel, 'No quotes found');
+							} else {
+								const randomIndex = Math.floor(Math.random() * count);
+								const quote = await QuoteModel.findOne().skip(randomIndex).exec();
 								if (!quote) {
 									await chatClient.say(channel, 'No quotes found');
-									// handle no quotes
 								} else {
 									await chatClient.say(channel, `QuoteID:${quote._id}: "${quote.content}"`);
-									// handle success
 								}
-							}).catch((err) => { console.error(err); });
-						}); // <-- Add a closing parenthesis here
+							}
+						} catch (err) {
+							logger.error(err);
+						}
 					}
 					break;
 				default:
@@ -92,7 +90,7 @@ const quoteCommand: Command = {
 					break;
 			}
 		} catch (error) {
-			console.error('Error with Quotes', error);
+			logger.error('Error with Quotes', error);
 		}
 	}
 };

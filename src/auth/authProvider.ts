@@ -2,6 +2,7 @@ import { UserIdResolvable } from '@twurple/api';
 import { AccessToken, RefreshingAuthProvider, StaticAuthProvider } from '@twurple/auth';
 import { config } from 'dotenv';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
+import logger from '../util/logger';
 config();
 
 const clientId = process.env.TWITCH_CLIENT_ID as string;
@@ -21,18 +22,24 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 	const authProvider = new RefreshingAuthProvider({ clientId, clientSecret });
 
 	authProvider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
-		const tbd = await TokenModel.findOneAndUpdate(
-			{ user_id: userId },
-			{
-				access_token: newTokenData.accessToken,
-				refresh_token: newTokenData.refreshToken,
-				scope: newTokenData.scope,
-				expires_in: newTokenData.expiresIn,
-				obtainmentTimestamp: newTokenData.obtainmentTimestamp,
-			},
-			{ upsert: true, new: true }
-		);
-		// console.log('Tokens updated in the database', tbd);
+		try {
+			const tbd = await TokenModel.findOneAndUpdate(
+				{ user_id: userId },
+				{
+					access_token: newTokenData.accessToken,
+					refresh_token: newTokenData.refreshToken,
+					scope: newTokenData.scope,
+					expires_in: newTokenData.expiresIn,
+					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+				},
+				{ upsert: true, new: true }
+			);
+			// record metric success
+			try { (await import('../monitoring/metrics')).tokenRefreshes.inc({ userId, result: 'success' }); } catch (e) { /* ignore */ }
+		} catch (e) {
+			try { (await import('../monitoring/metrics')).tokenRefreshes.inc({ userId, result: 'error' }); } catch (ee) { /* ignore */ }
+			throw e;
+		}
 	});
 	for (const tokenData of tokenDataList) {
 		const { user_id, access_token, refresh_token, scope, expires_in, obtainmentTimestamp } = tokenData;
@@ -77,12 +84,12 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 				{ upsert: true, new: true }
 			);
 		} catch (e) {
-			console.warn('ChatAuthProvider: failed to persist refreshed token', e);
+			logger.warn('ChatAuthProvider: failed to persist refreshed token', e);
 		}
 	});
 
 	if (!botToken) {
-		console.warn('ChatAuthProvider: no bot token found in DB for', botEnvId);
+		logger.warn('ChatAuthProvider: no bot token found in DB for', botEnvId);
 		return provider;
 	}
 
@@ -114,28 +121,28 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 			const addUserForTokenFn = provRec.addUserForToken as ((token: AccessToken, opts?: unknown) => Promise<unknown>) | undefined;
 			if (typeof addUserForTokenFn === 'function') {
 				await addUserForTokenFn.call(provider, newTokenData, { intents: ['chat'] });
-				console.log('ChatAuthProvider: addUserForToken called with intents for', botEnvId);
+				logger.debug('ChatAuthProvider: addUserForToken called with intents for', botEnvId);
 			} else {
 				const addUserWithOpts = provRec.addUser as ((userId: string, token: AccessToken, scope?: string[] | string, opts?: unknown) => unknown) | undefined;
 				if (typeof addUserWithOpts === 'function') {
 					try {
 						addUserWithOpts.call(provider, String(botEnvId), newTokenData, newTokenData.scope ?? ['chat'], { intents: ['chat'] });
-						console.log('ChatAuthProvider: addUser called with intents for', botEnvId);
+						logger.debug('ChatAuthProvider: addUser called with intents for', botEnvId);
 					} catch (err) {
 						try {
 							provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
-							console.log('ChatAuthProvider: addUser called for', botEnvId);
+							logger.debug('ChatAuthProvider: addUser called for', botEnvId);
 						} catch (ee) {
-							console.warn('ChatAuthProvider: failed to register bot user', ee);
+							logger.warn('ChatAuthProvider: failed to register bot user', ee);
 							registrationFailed = true;
 						}
 					}
 				} else {
 					try {
 						provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
-						console.log('ChatAuthProvider: addUser called for', botEnvId);
+						logger.debug('ChatAuthProvider: addUser called for', botEnvId);
 					} catch (ee) {
-						console.warn('ChatAuthProvider: failed to register bot user', ee);
+						logger.warn('ChatAuthProvider: failed to register bot user', ee);
 						registrationFailed = true;
 					}
 				}
@@ -143,15 +150,15 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 		} catch (e) {
 			try {
 				provider.addUser(botEnvId as UserIdResolvable, newTokenData, newTokenData.scope ?? ['chat']);
-				console.log('ChatAuthProvider: addUser called for', botEnvId);
+				logger.debug('ChatAuthProvider: addUser called for', botEnvId);
 			} catch (ee) {
-				console.warn('ChatAuthProvider: failed to register bot user', ee);
+				logger.warn('ChatAuthProvider: failed to register bot user', ee);
 				registrationFailed = true;
 			}
 		}
 	} catch (e) {
 		// unexpected outer error
-		console.warn('ChatAuthProvider: unexpected error during registration', e);
+		logger.warn('ChatAuthProvider: unexpected error during registration', e);
 		registrationFailed = true;
 	}
 
@@ -170,9 +177,9 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 			try {
 				const fn = addIntents as (userId: string, intents: string[]) => unknown;
 				fn.call(provider, botEnvId, ['chat']);
-				console.log('ChatAuthProvider: addIntentsToUser called for', botEnvId);
+				logger.debug('ChatAuthProvider: addIntentsToUser called for', botEnvId);
 			} catch (e) {
-				console.warn('ChatAuthProvider: addIntentsToUser threw an error', String(e));
+				logger.warn('ChatAuthProvider: addIntentsToUser threw an error', String(e));
 			}
 		}
 	} catch (e) {
@@ -182,10 +189,10 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 	// Only fallback to StaticAuthProvider if registration actually failed above.
 	if (registrationFailed) {
 		try {
-			console.warn('ChatAuthProvider: registration failed; falling back to StaticAuthProvider for chat');
+			logger.warn('ChatAuthProvider: registration failed; falling back to StaticAuthProvider for chat');
 			return new StaticAuthProvider(clientId, newTokenData.accessToken ?? '');
 		} catch (e) {
-			console.warn('ChatAuthProvider: failed to create StaticAuthProvider fallback', e);
+			logger.warn('ChatAuthProvider: failed to create StaticAuthProvider fallback', e);
 		}
 	}
 

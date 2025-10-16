@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import BankAccount from '../../database/models/bankAccount';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
+import logger from '../../util/logger';
 import { ParticipantModel } from '../../database/models/Participant';
 import { InjuryModel } from '../../database/models/injury';
 
@@ -178,7 +179,7 @@ const heist: Command = {
 
 				return formattedData;
 			} catch (error) {
-				console.error('Error loading injury data from MongoDB:', error);
+				logger.error('Error loading injury data from MongoDB:', error);
 				return {};
 			}
 		}
@@ -204,10 +205,10 @@ const heist: Command = {
 
 		// Check if there are injuries in the database for the user attempting the command
 		if (existingInjuryData[user] && existingInjuryData[user].length > 0) {
-			// console.log('User has injuries in the database:', existingInjuryData[user]);
+			// logger.debug('User has injuries in the database:', existingInjuryData[user]);
 			// Additional logic here if needed
 		} else {
-			console.log('User does not have any injuries in the database.');
+			logger.debug('User does not have any injuries in the database.');
 		}
 
 
@@ -237,9 +238,7 @@ const heist: Command = {
 		const zoneName = args.slice(1).join(' ').trim().toLowerCase();
 		// Check if the lowercase zoneName exists in the zonesLowercase object
 		if (!(zoneName in zonesLowercase)) {
-			console.error('Specified zone does not exist');
-			// console.log('zoneName:', zoneName);
-			// console.log('zones:', zonesLowercase);
+			logger.error('Specified zone does not exist', { zoneName });
 			await chatClient.say(channel, `The specified zone "${zoneName}" does not exist. Available zones are: ${Object.values(zones).map(zone => zone.name).join(', ')}`);
 			return; // or handle the error appropriately
 		}
@@ -267,12 +266,12 @@ const heist: Command = {
 			participantData[user] = { injuries: [] };
 		}
 
-		// console.log('Participant Data:', participantData);
+		// logger.debug('Participant Data:', participantData);
 		if (participantData[user]) {
-			// console.log('Participant Data for User:', participantData[user]);
-			console.log('Injuries:', participantData[user]?.injuries);
+			// logger.debug('Participant Data for User:', participantData[user]);
+			logger.debug('Injuries:', participantData[user]?.injuries);
 		} else {
-			// console.log('Participant Data for User:', participantData[user]);
+			// logger.debug('Participant Data for User:', participantData[user]);
 		}
 
 		// Debit the initiating user's wallet for the bet amount (legacy wallet). If insufficient, abort.
@@ -375,16 +374,16 @@ const heist: Command = {
 						}
 						if (collected > 0) {
 							await session.commitTransaction();
-							console.debug('Heist: transaction committed', { collected, donorDetails });
+							logger.debug('Heist: transaction committed', { collected, donorDetails });
 							usedTransaction = true;
 						} else {
 							await session.abortTransaction();
-							console.debug('Heist: transaction aborted, collected=0');
+							logger.debug('Heist: transaction aborted, collected=0');
 						}
 						session.endSession();
 					} catch (err) {
 						// Transaction path unavailable or failed — fall back to non-transactional per-donor withdraws
-						console.warn('Bank heist transaction path failed, falling back to per-donor withdraws', err);
+						logger.warn('Bank heist transaction path failed, falling back to per-donor withdraws', err);
 					}
 
 					if (!usedTransaction) {
@@ -400,10 +399,10 @@ const heist: Command = {
 								donorDetails.push({ userId: donor.userId, amount: take });
 							} catch (err) {
 								// skip donors that couldn't be debited
-								console.warn('Failed to withdraw from donor in fallback path', donor.userId, err);
+								logger.warn('Failed to withdraw from donor in fallback path', donor.userId, err);
 							}
 						}
-						console.debug('Heist: fallback collected', { collected, donorDetails });
+						logger.debug('Heist: fallback collected', { collected, donorDetails });
 					}
 
 					loot = collected;
@@ -415,7 +414,7 @@ const heist: Command = {
 				stolenItems = lootResult.items;
 			}
 		}
-		// console.log('Stolen Items:', stolenItems);
+		// logger.debug('Stolen Items:', stolenItems);
 
 		//
 		const numWinners = randomInt(1, participants.length + 1);
@@ -430,16 +429,16 @@ const heist: Command = {
 			for (const winner of winners) {
 				// Credit each winner's wallet via adapter.creditWallet
 				try {
-					console.debug('Heist: crediting winner', { winner, winningAmount, channelId });
+					logger.debug('Heist: crediting winner', { winner, winningAmount, channelId });
 					if (zoneName === 'bank') {
 						// For bank heists, credit the BankAccount directly so deposits are recorded
-						console.debug('Heist: depositing to bank account for winner', { winner, winningAmount });
+						logger.debug('Heist: depositing to bank account for winner', { winner, winningAmount });
 						await economyService.deposit(winner, winningAmount);
 					} else {
 						await balanceAdapter.creditWallet(winner, winningAmount, winner, channelId);
 					}
 				} catch (err) {
-					console.warn('Failed to credit winner in heist', err);
+					logger.warn('Failed to credit winner in heist', err);
 				}
 			}
 
@@ -490,7 +489,7 @@ const heist: Command = {
 					await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
 
 					// Log the updated participantData
-					// console.log('Updated ParticipantData:', participantData);
+					// logger.debug('Updated ParticipantData:', participantData);
 
 					// Construct the result message with injury details
 					resultMessage += ` ${participant} received a ${injury.severity} injury and needs to recover for ${Math.floor(injury.duration / 60)} minutes. ${injury.description}`;
@@ -569,7 +568,7 @@ function assignInjury(participant: string, severity: string): Injury {
 	injuryData[participant].push(injury);
 
 	// Log the details of the injury for the participant
-	console.log(`Assigned injury to participant ${participant}:`, injury);
+	logger.debug(`Assigned injury to participant ${participant}:`, injury);
 
 	return injury;
 }
@@ -590,9 +589,9 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 				);
 			}
 		}
-		// console.log('Injury data saved to MongoDB');
+		// logger.debug('Injury data saved to MongoDB');
 	} catch (error) {
-		console.error('Error saving injury data to MongoDB:', error);
+		logger.error('Error saving injury data to MongoDB:', error);
 	}
 }
 
@@ -871,9 +870,9 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 	try {
 		// Find and delete the entry corresponding to the user from the database
 		await InjuryModel.deleteOne({ participant: user });
-		console.log(`Entry for ${user} deleted from the database.`);
+		logger.debug(`Entry for ${user} deleted from the database.`);
 	} catch (error) {
-		console.error(`Error deleting entry for ${user} from the database:`, error);
+		logger.error(`Error deleting entry for ${user} from the database:`, error);
 		throw error;
 	}
 }
@@ -896,7 +895,7 @@ async function deleteEntryFromDatabase(user: string): Promise<void> {
 					await chatClient.say(channel, `${user} has an injury and needs to wait ${remainingInjuryDuration} seconds to recover.`);
 					return;
 				} else {
-					// console.log(`No active injuries for ${user}.`);
+					// logger.debug(`No active injuries for ${user}.`);
 					await deleteEntryFromDatabase(user);
 				}
 			}

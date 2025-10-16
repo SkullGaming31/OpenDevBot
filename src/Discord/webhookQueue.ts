@@ -1,9 +1,11 @@
 import { WebhookClient, RESTPostAPIWebhookWithTokenJSONBody, WebhookMessageCreateOptions } from 'discord.js';
+import { webhookAttempts } from '../monitoring/metrics';
+import logger from '../util/logger';
 
 type QueueItem = {
-    payload: string | WebhookMessageCreateOptions | RESTPostAPIWebhookWithTokenJSONBody;
-    resolve: (value?: unknown) => void;
-    reject: (err?: unknown) => void;
+	payload: string | WebhookMessageCreateOptions | RESTPostAPIWebhookWithTokenJSONBody;
+	resolve: (value?: unknown) => void;
+	reject: (err?: unknown) => void;
 };
 
 const queues: Map<string, QueueItem[]> = new Map();
@@ -47,7 +49,9 @@ async function processQueue(id: string, token: string) {
 				res = await client.send(item.payload as WebhookMessageCreateOptions);
 			}
 			item.resolve(res);
+			try { webhookAttempts.inc({ provider: 'discord', status: 'success' }); } catch (e) { /* ignore metrics errors */ }
 		} catch (err) {
+			try { webhookAttempts.inc({ provider: 'discord', status: 'error' }); } catch (e) { /* ignore metrics errors */ }
 			item.reject(err);
 		}
 		// Respect per-webhook rate limit
@@ -76,7 +80,7 @@ export function clearWebhookCache() {
 		} catch (e) {
 			// log at debug level so we don't swallow unexpected errors silently
 			// eslint-disable-next-line no-console
-			console.debug('Failed to destroy webhook client', (e as Error).message);
+			logger.debug('Failed to destroy webhook client', (e as Error).message);
 		}
 	}
 	clients.clear();

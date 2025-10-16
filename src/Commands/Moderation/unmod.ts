@@ -3,6 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
@@ -69,19 +70,19 @@ const unmod: Command = {
 				}
 			} catch (error: unknown) {
 				if (error instanceof Error) {
-					console.error(error.name + ': ' + error.message, error.stack);
+					logger.error(error.name + ': ' + error.message, error.stack);
 					await chatClient.say(channel, `${error.message}`);
 				} else {
-					console.error('Unknown error');
+					logger.error('Unknown error');
 					await chatClient.say(channel, 'An unknown error occurred');
 				}
 			}
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				console.error(error.name + ': ' + error.message, error.stack);
+				logger.error(error.name + ': ' + error.message, error.stack);
 				await chatClient.say(channel, `${error.message}`);
 			} else {
-				console.error('Unknown error');
+				logger.error('Unknown error');
 				await chatClient.say(channel, 'An unknown error occurred');
 			}
 		}

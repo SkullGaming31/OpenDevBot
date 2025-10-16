@@ -1,5 +1,6 @@
 import { UserIdResolvable } from '@twurple/api/lib';
 import { ChatMessage } from '@twurple/chat/lib';
+import logger from '../../util/logger';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
@@ -24,11 +25,11 @@ const clipCommand: Command = {
 	 * @param msg - The chat message object containing metadata and user information.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
-		console.log('Clip command executed.');
+		logger.info('Clip command executed.');
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
-		console.log('Initialized chat client, user API client, and command usage webhook.');
+		logger.info('Initialized chat client, user API client, and command usage webhook.');
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
 		const isStaff = msg.userInfo.isBroadcaster || isEditor || msg.userInfo.isMod || msg.userInfo.isSubscriber || msg.userInfo.isVip;
@@ -51,33 +52,33 @@ const clipCommand: Command = {
 			])
 			.setFooter({ text: `${msg.userInfo.displayName} just created a clip in ${channel}'s twitch channel` })
 			.setTimestamp();
-		// console.log('Clip embed created:', clipEmbed);
+		// logger.debug('Clip embed created:', clipEmbed);
 
 		if (broadcasterInfo) {
 			const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-			// console.log('Stream info:', stream);
+			// logger.debug('Stream info:', stream);
 
 			if (stream !== null) {
 				if (isStaff) {
 					const clipId = await userApiClient.clips.createClip({ channel: broadcasterInfo[0].id as UserIdResolvable, createAfterDelay: true });
-					// console.log('Clip ID:', clipId);
+					// logger.debug('Clip ID:', clipId);
 
 					const clipUrl = `https://clips.twitch.tv/${clipId}`;
 					await chatClient.say(channel, `Clip Created: ${clipUrl}`);
-					// console.log('Clip URL sent to chat.', clipUrl);
+					// logger.info('Clip URL sent to chat.', clipUrl);
 
 					await commandUsage.send({ embeds: [clipEmbed] });
-					// console.log('Command usage webhook sent.');
+					// logger.info('Command usage webhook sent.');
 				} else {
 					await chatClient.say(channel, 'You must be the broadcaster, mod, sub, or a VIP to use this command.');
-					// console.log('User does not have required permissions.');
+					// logger.info('User does not have required permissions.');
 				}
 			} else {
 				await chatClient.say(channel, 'The stream must be live to use this command.');
-				// console.log('Stream is not live.');
+				// logger.info('Stream is not live.');
 			}
 		} else {
-			console.error('broadcasterInfo is undefined.');
+			logger.error('broadcasterInfo is undefined.');
 		}
 	}
 };

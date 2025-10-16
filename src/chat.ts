@@ -12,6 +12,7 @@ import { ITwitchToken, TokenModel } from './database/models/tokenModel';
 import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
+import logger from './util/logger';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 import { IUser, UserModel } from './database/models/userModel';
@@ -19,6 +20,8 @@ import { creditWallet } from './services/balanceAdapter';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
+// Ensure we only start the periodic social message once per process
+let periodicSocialTimerStarted = false;
 // Define your constants
 let PERIODIC_SAVE_INTERVAL: number;
 
@@ -79,9 +82,7 @@ interface ViewerWatchTime {
  * starts with a valid command and executes the corresponding command if it does.
  * The function also checks if the user is a moderator or broadcaster and
  * restricts access to moderator-only commands.
- *
- * The function also sets up an interval to send a message every 10 minutes with
- * a link to the social media profiles.
+ * Additionally, the function handles specific chat messages for lurk messages,
  *
  * @returns {Promise<void>} A promise that resolves when the chat client is
  * initialized and the event listeners are set up.
@@ -113,13 +114,13 @@ export async function initializeChat(): Promise<void> {
 				// Handle missing moderator scope or other 401 Unauthorized errors gracefully
 				const msgStr = err instanceof Error ? err.message : String(err);
 				if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
-					console.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
+					logger.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
 					if (process.env.Enviroment === 'debug') {
 						await chatClient.say(channel, 'Chatters list unavailable - bot needs \'moderator:read:chatters\' scope. Skipping chatter processing.');
 					}
 					chatters = [];
 				} else {
-					console.error('Error fetching chatters:', err);
+					logger.error('Error fetching chatters:', err);
 					throw err; // rethrow unexpected errors
 				}
 			}
@@ -140,7 +141,7 @@ export async function initializeChat(): Promise<void> {
 			let requestIndex = 0; // Counter for tracking the current request index
 
 			const channelId = msg.channelId;
-			// console.log('Broadcaster Channel ID: ', channelId);
+			// logger.debug('Broadcaster Channel ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {// TODO: Only allow points/gold/coins to be collected while the stream is live
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
@@ -156,14 +157,14 @@ export async function initializeChat(): Promise<void> {
 						if (isBot || !isIgnoredUser) {
 							const roles = isBot ? 'Bot' : 'User';
 							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
-							// console.log('existingUser:', existingUser);
+							// logger.debug('existingUser:', existingUser);
 
 							if (existingUser) {
 								// Credit the legacy wallet (UserModel.balance) rather than the BankAccount
 								try {
 									await creditWallet(chatter.userId, 100, existingUser.username, channelId);
 								} catch (err) {
-									console.error('Failed to credit wallet for existing user:', err);
+									logger.error('Failed to credit wallet for existing user:', err);
 								}
 							} else {
 								// Create the legacy user document but do not store canonical balance on UserModel
@@ -174,14 +175,14 @@ export async function initializeChat(): Promise<void> {
 									try {
 										await creditWallet(chatter.userId, 100, chatter.userName, channelId);
 									} catch (err) {
-										console.error('Failed to seed wallet for new user:', err);
+										logger.error('Failed to seed wallet for new user:', err);
 									}
 								} catch (err) {
 									// creation may race with another process inserting user
 									if (err instanceof Error && err.message.includes('E11000')) {
-										console.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
+										logger.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
 									} else {
-										console.error('Error creating new user:', err);
+										logger.error('Error creating new user:', err);
 									}
 								}
 							}
@@ -189,10 +190,10 @@ export async function initializeChat(): Promise<void> {
 					} catch (error: unknown) {
 						if (error instanceof Error) {
 							if (error.message.includes('E11000')) {
-								console.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
+								logger.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
 								// Handle or log the duplicate key error as needed
 							} else {
-								console.error('Error processing chatter:', error);
+								logger.error('Error processing chatter:', error);
 								// Handle other errors accordingly
 							}
 						}
@@ -236,7 +237,7 @@ export async function initializeChat(): Promise<void> {
 			}, intervalDuration);
 
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 
 		if (text.includes('overlay expert') && channel === '#skullgaminghq') {
@@ -294,19 +295,19 @@ export async function initializeChat(): Promise<void> {
 				// - Send embed to activity feed
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [banEmbed] });
 			} catch (error) {
-				console.error(error);
+				logger.error(error);
 			}
 		}
 		if (text.startsWith('!')) {
 			// log the raw command parsing for debugging
 			const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
-			// console.log(`[chat:command] Raw: ${preview}`);
+			// logger.debug(`[chat:command] Raw: ${preview}`);
 			const args = text.slice(1).split(' ');
 			const commandName = args.shift()?.toLowerCase();
-			// console.log(`[chat:command] Parsed commandName='${commandName}'`);
+			// logger.debug(`[chat:command] Parsed commandName='${commandName}'`);
 			if (commandName === undefined) return;
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
-			// console.log(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
+			// logger.debug(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
 			// const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterInfo[0].id as UserIdResolvable);
 			// const moderatorsData = moderatorsResponse.data; // Access the moderator data
 
@@ -317,7 +318,7 @@ export async function initializeChat(): Promise<void> {
 			const isStaff = isModerator || isBroadcaster || isEditor;
 
 			if (command) {
-				if (process.env.Enviroment === 'debug') { console.log(command); }
+				if (process.env.Enviroment === 'debug') { logger.info(command); }
 				try {
 					const currentTimestamp = Date.now();
 
@@ -357,8 +358,8 @@ export async function initializeChat(): Promise<void> {
 					userCooldowns.set(commandName, currentTimestamp);
 				} catch (error: unknown) {
 					// Safely log error
-					if (error instanceof Error) console.error(error.message);
-					else console.error(String(error));
+					if (error instanceof Error) logger.error(error.message);
+					else logger.error(String(error));
 				}
 			} else {
 				if (text.includes('!join') || text.includes('!pokecatch') || text.includes('!pokestart')) return;
@@ -367,23 +368,30 @@ export async function initializeChat(): Promise<void> {
 				}
 			}
 		}
+		// this should run every 10 minutes but runs once right away then once every 1 minute
+		// Schedule a single periodic social message runner (starts once per process)
+		if (!periodicSocialTimerStarted) {
+			periodicSocialTimerStarted = true;
+			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+			const socialChannel = 'skullgaminghq';
+			const sendSocial = async () => {
+				try {
+					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+				} catch (err) {
+					logger.error('Periodic social message failed', err as Error);
+				}
+			};
 
-		// const sendMessageEvery10Minutes = async () => {
-		// 	try {
-		// 		await chatClient.say('skullgaminghq', 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
-		// 	} catch (error) {
-		// 		console.error(error);
-		// 	} finally {
-		// 		// Schedule the next call 10 minutes from now
-		// 		setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
-		// 	}
-		// };
-
-		// // Initiate the first call with a delay
-		// setTimeout(sendMessageEvery10Minutes, 600000); // 600000 milliseconds = 10 minutes
+			// Start after an initial delay to avoid spamming on startup
+			setTimeout(() => {
+				// send immediately once after delay, then every interval
+				sendSocial().catch(() => { });
+				setInterval(() => sendSocial().catch(() => { }), SOCIAL_INTERVAL_MS);
+			}, SOCIAL_INTERVAL_MS);
+		}
 	};
 	chatClient.onMessage(commandHandler);
-	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { console.warn('Attempted to connect to a channel ', text, retryCount); });
+	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { logger.warn('Attempted to connect to a channel ', text, retryCount); });
 }
 
 /**
@@ -396,13 +404,13 @@ function registerCommand(newCommand: Command, name: string) {
 	// Register the command with the provided name
 	commands.add(name);
 	if (process.env.Enviroment === 'debug') {
-		console.log(`Registered command: ${name}`);
+		logger.debug(`Registered command: ${name}`);
 	}
 	if (newCommand.aliases) {
 		newCommand.aliases.forEach((alias) => {
 			commands.add(alias);
 			if (process.env.Enviroment === 'debug') {
-				console.log(`Registered alias for ${name}: ${alias}`);
+				logger.debug(`Registered alias for ${name}: ${alias}`);
 			}
 		});
 	}
@@ -418,7 +426,7 @@ let chatClientInstance: ChatClient;
  */
 export async function getChatClient(): Promise<ChatClient> {
 	// const TBD = await UserModel.deleteMany({});
-	// console.log('User Collection: ', TBD.deletedCount);
+	// logger.debug('User Collection: ', TBD.deletedCount);
 	const userApiClient = await getUserApi();
 	if (!chatClientInstance) {
 		// Use the chat-specific provider so the ChatClient connects using the bot account
@@ -428,11 +436,12 @@ export async function getChatClient(): Promise<ChatClient> {
 			const inspect = authProvider as unknown as Record<string, unknown>;
 			const intentMap = inspect._intentToUserId;
 			if (intentMap instanceof Map) {
-				console.log('Chat provider intentToUserId has chat ->', (intentMap as Map<string, unknown>).get('chat'));
+				logger.debug('Chat provider intentToUserId has chat ->', (intentMap as Map<string, unknown>).get('chat'));
 			} else if (intentMap && typeof intentMap === 'object') {
-				console.log('Chat provider intentToUserId has chat ->', (intentMap as Record<string, unknown>)['chat']);
+				logger.debug('Chat provider intentToUserId has chat ->', (intentMap as Record<string, unknown>)['chat']);
 			}
 		} catch (e) {
+			logger.error('Error inspecting authProvider internals:', e);
 			// ignore
 		}
 
@@ -451,7 +460,7 @@ export async function getChatClient(): Promise<ChatClient> {
 		chatClientInstance.onJoin(async (channel: string, user: string) => {
 			try {
 				if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-					console.log(`${user} has joined ${channel}'s channel`);
+					logger.info(`${user} has joined ${channel}'s channel`);
 				}
 
 				// Check if the channel is currently streaming
@@ -477,7 +486,7 @@ export async function getChatClient(): Promise<ChatClient> {
 
 				const channelId = channelInfo.id as string;
 				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-					console.log(`User ${user} joined channel ${channel} (${channelId})`);
+					logger.info(`User ${user} joined channel ${channel} (${channelId})`);
 				}
 
 				// Initialize the map with existing watch time and start an interval to update it
@@ -499,20 +508,20 @@ export async function getChatClient(): Promise<ChatClient> {
 
 							// if (updatedUser) {
 							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-							// 		console.log(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+							// 		logger.debug(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
 							// 	}
 							// } else {
 							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-							// 		console.log(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
+							// 		logger.debug(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
 							// 	}
 							// }
 						} catch (error: unknown) {
 							if (error instanceof Error) {
 								if (error.message.includes('11000')) {
-									console.error(`Duplicate key error for id ${userId.id}`);
+									logger.error(`Duplicate key error for id ${userId.id}`);
 									// Handle the duplicate key error appropriately
 								} else {
-									console.error('Error updating watch time:', error);
+									logger.error('Error updating watch time:', error);
 								}
 							}
 						}
@@ -532,16 +541,16 @@ export async function getChatClient(): Promise<ChatClient> {
 						await chatClientInstance.action(channel, '/mod opendevbot');
 					}
 				} else {
-					console.info('The chatClient is not connected or broadcasterInfo is undefined');
+					logger.info('The chatClient is not connected or broadcasterInfo is undefined');
 				}
 			} catch (error) {
-				console.error('Error handling onJoin event:', error);
+				logger.error('Error handling onJoin event:', error);
 			}
 		});
 
 		chatClientInstance.onPart(async (channel: string, user: string) => {
 			if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
-				console.log(`${user} has left ${channel}'s channel`);
+				logger.info(`${user} has left ${channel}'s channel`);
 			}
 
 			const viewer = viewerWatchTimes.get(user);
@@ -568,14 +577,14 @@ export async function getChatClient(): Promise<ChatClient> {
 							userRecord.channelId = channelId;
 						}
 						await userRecord.save();
-						// console.log('Updated User Record: ', userRecord);
+						// logger.debug('Updated User Record: ', userRecord);
 					} else {
 						const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 						await newUser.save();
-						// console.log('New User Data Created: ', newUser);
+						// logger.debug('New User Data Created: ', newUser);
 					}
 				} catch (error) {
-					console.error('Error updating watch time:', error);
+					logger.error('Error updating watch time:', error);
 				}
 			}
 		});
@@ -590,12 +599,12 @@ export async function getChatClient(): Promise<ChatClient> {
 			setTimeout(() => {
 				chatClientInstance.join(username);
 				if (process.env.Enviroment === 'dev') {
-					console.log(`Joined channel: ${username}`);
+					logger.info(`Joined channel: ${username}`);
 				} else { return; }
 			}, 2000);
 			chatClientInstance.reconnect();
 		}
-		console.log('ChatClient instance initialized and connected.');
+		logger.info('ChatClient instance initialized and connected.');
 	}
 
 	// Periodic check to ensure watch times are saved regularly
@@ -617,27 +626,27 @@ export async function getChatClient(): Promise<ChatClient> {
 				const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterId);
 
 				if (!streamerChannel || !streamerChannel.id) {
-					console.error(`Streamer channel not found for user ${user}`);
+					logger.error(`Streamer channel not found for user ${user}`);
 					continue;
 				}
 
 				const channelId = streamerChannel.id;
-				// console.log('Broadcaster Channel ID: ', channelId);
+				// logger.debug('Broadcaster Channel ID: ', channelId);
 
 				// Update or create user record in the database for the current channel
 				const userRecord = await UserModel.findOne({ id: userId.id, channelId });
-				// console.log('ExistingUser:', userRecord);
+				// logger.debug('ExistingUser:', userRecord);
 				if (userRecord) {
 					userRecord.watchTime = totalWatchTime;
 					await userRecord.save();
-					// console.log('Updated User Record: ', userRecord);
+					// logger.debug('Updated User Record: ', userRecord);
 				} else {
 					const newUser = new UserModel({ id: userId.id, username: user, channelId, watchTime: totalWatchTime, roles: 'User' });
 					await newUser.save();
-					// console.log('New User Data Created: ', newUser);
+					// logger.debug('New User Data Created: ', newUser);
 				}
 			} catch (error) {
-				console.error('Error updating watch time:', error);
+				logger.error('Error updating watch time:', error);
 			}
 		}
 	}, PERIODIC_SAVE_INTERVAL);
@@ -656,7 +665,7 @@ export async function getUsernamesFromDatabase(): Promise<string[]> {
 		return usernames;
 	} catch (error) {
 		// Handle any potential errors here
-		console.error('Error fetching usernames from MongoDB:', error);
+		logger.error('Error fetching usernames from MongoDB:', error);
 		throw error;
 	}
 }

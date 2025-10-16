@@ -6,6 +6,7 @@ import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { sleep } from '../../util/util';
+import logger from '../../util/logger';
 
 const mod: Command = {
 	name: 'mod',
@@ -74,7 +75,7 @@ const mod: Command = {
 
 			await commandUsage.send({ embeds: [moderatorEmbed] });
 		} catch (error) {
-			console.error('Error in mod command:', error);
+			logger.error('Error in mod command:', error);
 			await chatClient.say(channel, 'An error occurred while processing your request');
 		}
 	}

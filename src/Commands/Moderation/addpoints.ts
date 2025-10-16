@@ -6,6 +6,7 @@ import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
 import { deposit, getOrCreateAccount } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 
 /**
@@ -118,7 +119,7 @@ const addpoints: Command = {
 			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${acct.balance}`);
 			await commandUsage.send({ embeds: [addPointsEmbed] });
 		} catch (err: any) {
-			console.error('Error adding points:', err);
+			logger.error('Error adding points:', err);
 			await chatClient.say(channel, `Failed to add points: ${err?.message ?? 'unknown error'}`);
 		}
 	}

@@ -8,6 +8,7 @@ import ChamberStateModel from '../../database/models/roulette';
 import { randomInt } from 'node:crypto';
 import { UserModel } from '../../database/models/userModel';
 import balanceAdapter from '../../services/balanceAdapter';
+import logger from '../../util/logger';
 
 const MAX_BULLETS = 6;
 const GOLD_MIN = 500;
@@ -102,7 +103,7 @@ const roulette: Command = {
 
 			await chamberState.save();
 		} catch (error) {
-			console.error('Error in roulette command:', error);
+			logger.error('Error in roulette command:', error);
 			await chatClient.say(channel, 'An error occurred while playing roulette.');
 		}
 	},

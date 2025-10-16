@@ -4,6 +4,7 @@ import { getChatClient } from '../../chat';
 import { IUser, UserModel } from '../../database/models/userModel';
 import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const houseItems: {
 	tv: number;
@@ -108,7 +109,7 @@ const robber: Command = {
 				try {
 					await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, totalStolenValue, msg.userInfo.userName, msg.channelId);
 				} catch (err) {
-					console.error('Error crediting looter balance:', err);
+					logger.error('Error crediting looter balance:', err);
 				}
 
 				// Announce stolen items and their value
@@ -176,7 +177,7 @@ const robber: Command = {
 					finalSuccessRate = Math.min(startingSuccessRate * successOddsMultiplier, maxSuccessRate);
 				}
 				const formattedSuccessRate = (finalSuccessRate * 100).toFixed(2) + '%';
-				console.log('Robbery Success Rate:', formattedSuccessRate);
+				logger.debug('Robbery Success Rate:', formattedSuccessRate);
 
 				// **Limit the final success rate to the maximum success rate**
 				finalSuccessRate = Math.min(finalSuccessRate, maxSuccessRate);
@@ -191,7 +192,7 @@ const robber: Command = {
 					// Credit looter via adapter
 					await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, robberyAmount, msg.userInfo.userName, msg.channelId);
 					await chatClient.say(channel, `You successfully robbed ${botUserName} and gained ${robberyAmount} coins.`);
-					console.log('hit a success');
+					logger.debug('Robbery: success', { botUserName, robberyAmount });
 				} else {
 					// Define an array of funny failure messages
 					const failedRobberyMessages = [
@@ -205,13 +206,13 @@ const robber: Command = {
 					const randomIndex = Math.floor(Math.random() * failedRobberyMessages.length);
 					const randomMessage = failedRobberyMessages[randomIndex];
 					await chatClient.say(channel, randomMessage);
-					console.log('hit target');
+					logger.debug('Robbery: failure', { user, target: botUserName });
 				}
 
 				// Moved the line assigning stolenItems**
 				stolenItems = Object.keys(personItems);
-				console.log('successOddsMultiplier: ', successOddsMultiplier);
-				console.log('isSuccessful: ', isSuccessful);
+				logger.debug('successOddsMultiplier', successOddsMultiplier);
+				logger.debug('isSuccessful', isSuccessful);
 				break;
 
 			case 'store':
@@ -260,7 +261,7 @@ const robber: Command = {
 						await chatClient.say(channel, `You stole ${stolenItemsList} totaling ${stolenValue} coins!`);
 					}
 				} catch (error) {
-					console.error(error);
+					logger.error(error);
 				}
 				break;
 			default:

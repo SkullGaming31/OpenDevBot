@@ -5,6 +5,7 @@ import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
+import logger from '../../util/logger';
 
 const purge: Command = {
 	name: 'purge',
@@ -97,7 +98,7 @@ const purge: Command = {
 			await commandUsage.send({ embeds: [purgeEmbed] });
 			await chatClient.say(channel, `User ${username} has been purged for ${durationSeconds} seconds. Reason: ${reason}`);
 		} catch (error) {
-			console.error('Error in purge command:', error);
+			logger.error('Error in purge command:', error);
 			await chatClient.say(channel, 'An error occurred while processing your request');
 		}
 	},

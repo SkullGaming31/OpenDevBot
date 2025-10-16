@@ -1,4 +1,5 @@
 import { InjuryModel } from '../database/models/injury';
+import logger from '../util/logger';
 
 /**
  * Deletes all documents from the injuries collection.
@@ -6,9 +7,9 @@ import { InjuryModel } from '../database/models/injury';
 export async function deleteAllInjuries(): Promise<void> {
 	try {
 		const deleteResult = await InjuryModel.deleteMany({});
-		console.log(`Deleted ${deleteResult.deletedCount} entries from the injuries collection.`);
+		logger.info(`Deleted ${deleteResult.deletedCount} entries from the injuries collection.`);
 	} catch (error) {
-		console.error('Error deleting all injuries:', error);
+		logger.error('Error deleting all injuries:', error);
 		throw error;
 	}
 }
@@ -26,16 +27,16 @@ export async function deleteExpiredInjuries(): Promise<void> {
 
 		// Pull expired injuries from the injuries array across all documents
 		const result = await InjuryModel.updateMany({}, { $pull: { injuries: { timestamp: { $lt: cutoff } } } });
-		console.log(`Injury cleanup: removed expired injuries older than ${ttlMs}ms (cutoff=${new Date(cutoff).toISOString()}). Matched docs: ${result.matchedCount}, Modified docs: ${result.modifiedCount}`);
+		logger.info(`Injury cleanup: removed expired injuries older than ${ttlMs}ms (cutoff=${new Date(cutoff).toISOString()}). Matched docs: ${result.matchedCount}, Modified docs: ${result.modifiedCount}`);
 
 		// Optionally remove documents that now have an empty injuries array
 		const removeEmpty = process.env.INJURY_REMOVE_EMPTY === 'true';
 		if (removeEmpty) {
 			const del = await InjuryModel.deleteMany({ injuries: { $size: 0 } });
-			console.log(`Injury cleanup: removed ${del.deletedCount} documents with no injuries.`);
+			logger.info(`Injury cleanup: removed ${del.deletedCount} documents with no injuries.`);
 		}
 	} catch (error) {
-		console.error('Error during injury expiry cleanup:', error);
+		logger.error('Error during injury expiry cleanup:', error);
 	}
 }
 

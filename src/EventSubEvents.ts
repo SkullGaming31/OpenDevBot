@@ -11,6 +11,7 @@ import {
 	UserIdResolvable,
 } from '@twurple/api';
 import { StaticAuthProvider } from '@twurple/auth';
+import logger from './util/logger';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
@@ -110,7 +111,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: '@everyone', embeds: [liveEmbed] });
 					}
 				} catch (err: unknown) {
-					console.error('Error sending going live post', err);
+					logger.error('Error sending going live post', err);
 				}
 			},
 		);
@@ -149,7 +150,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					lurkingUsers.length = 0;
 					await LurkMessageModel.deleteMany({});
 				} catch (error) {
-					console.error(error);
+					logger.error(error);
 				}
 			},
 		);
@@ -157,7 +158,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (hts) => {
 				const userInfo = await hts.getBroadcaster();
-				console.log(
+				logger.info(
 					`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`,
 				);
 				chatClient.say(
@@ -170,7 +171,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
 				const userInfo = await hte.getBroadcaster();
-				console.log(
+				logger.info(
 					`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`,
 				);
 				chatClient.say(
@@ -226,7 +227,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		const giftedSubs = eventSubListener.onChannelSubscriptionGift(
 			info.id as UserIdResolvable,
 			async (gift) => {
-				// console.log(info.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
+				// logger.info(info.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 				const userInfo = await gift.getGifter();
 				const broadcasterInfoResult = await gift.getBroadcaster();
 				if (broadcasterInfoResult.broadcasterType === '') return;
@@ -312,7 +313,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`,
 					);
 				} catch (error) {
-					console.error(error);
+					logger.error(error);
 				}
 			},
 		);
@@ -340,7 +341,8 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					];
 					const userInfo = await e.getUser();
 					if (!broadcasterInfo) {
-						return console.error('broadcasterInfo is undefined');
+						logger.error('broadcasterInfo is undefined');
+						return;
 					}
 
 					const stream = await userApiClient.channels.getChannelInfoById(
@@ -349,16 +351,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					const isDescriptionEmpty = userInfo.description === '';
 					const gameId = stream?.gameId;
 					if (!gameId) {
-						console.error('No gameId found for the current stream.');
+						logger.error('No gameId found for the current stream.');
 						return;
 					}
 					let followMessage = await FollowMessage.findOne({ gameId });
 
 					if (!followMessage) {
-						console.error(`No follow messages found for gameId: ${gameId}`);
+						logger.error(`No follow messages found for gameId: ${gameId}`);
 						followMessage = await FollowMessage.findOne({ name: 'default' });
 						if (!followMessage) {
-							console.error('No default follow messages found.');
+							logger.error('No default follow messages found.');
 							return;
 						}
 					}
@@ -395,13 +397,13 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						.setTimestamp();
 
 					if (!isDescriptionEmpty) {
-						console.log(`Users Channel Description: ${userInfo.description}`);
+						logger.info(`Users Channel Description: ${userInfo.description}`);
 					}
 
 					await chatClient.say(info.name, `${randomMessage}`);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [followEmbed] });
 				} catch (error) {
-					console.error(
+					logger.error(
 						'An error occurred in the follower event handler:',
 						error,
 					);
@@ -448,7 +450,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					);
 					// await twitchActivity.send({ embeds: [subEmbed] });
 				} catch (error) {
-					console.error(error);
+					logger.error(error);
 				}
 			},
 		);
@@ -496,7 +498,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						);
 						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [cheerEmbed] });
 					} catch (error) {
-						console.error(error);
+						logger.error(error);
 					}
 				}
 			},
@@ -545,7 +547,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 					await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.id);
 				} catch (error) {
-					console.error('Error sending raid notification to Discord:', error);
+					logger.error('Error sending raid notification to Discord:', error);
 				}
 			},
 		);
@@ -553,7 +555,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (raidEvent) => { // raiding another streamer
 				try {
-					console.log('Raid To Event:', raidEvent);
+					logger.info('Raid To Event:', raidEvent);
 					const raidedBroadcaster = await raidEvent.getRaidedBroadcaster();
 					const raidingBroadcaster = await raidEvent.getRaidingBroadcaster();
 
@@ -581,7 +583,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
 				} catch (error) {
-					console.error(error);
+					logger.error(error);
 				}
 			},
 		);
@@ -589,14 +591,14 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (gb) => {
 				const userInfo = await gb.getBroadcaster();
-				console.log(
+				logger.info(
 					`${userInfo.displayName}, current ${gb.type} goal: ${gb.currentAmount} - ${gb.targetAmount}`,
 				);
 				// if (moderatorID?.id === undefined) return;
 				// if (info.id  as UserIdResolvable === undefined) return;
 				switch (gb.type) {
 					case 'follow':
-						console.log(
+						logger.info(
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
 						await chatClient.say(
@@ -611,11 +613,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 							},
 						).catch((err) => {
-							console.error(err);
+							logger.error(err);
 						});
 						break;
 					case 'subscription':
-						console.log(
+						logger.info(
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
 						await chatClient.say(
@@ -630,20 +632,20 @@ export async function initializeTwitchEventSub(): Promise<void> {
 									`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 							},
 						).catch((err) => {
-							console.error(err);
+							logger.error(err);
 						});
 						break;
 					// case 'subscription_count':
-					// 	console.log(`${gb.type}`);
+					// 	logger.debug(`${gb.type}`);
 					// 	break;
 					// case 'new_subscription_count':
-					// 	console.log(`${gb.type}`);
+					// 	logger.debug(`${gb.type}`);
 					// 	break;
 					// case 'new_subscription':
-					// 	console.log(`${gb.type}`);
+					// 	logger.debug(`${gb.type}`);
 					// 	break;
 					default:
-						console.log(`Default Case hit for: ${gb.type}`);
+						logger.info(`Default Case hit for: ${gb.type}`);
 						break;
 				}
 			},
@@ -653,7 +655,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			async (gp) => {
 				const userInfo = await gp.getBroadcaster();
 				setTimeout(() => {
-					console.log(
+					logger.info(
 						`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`,
 					);
 				}, 60000);
@@ -667,7 +669,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (ge) => {
 				const userInfo = await ge.getBroadcaster();
-				console.log(
+				logger.info(
 					`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 				);
 				if (broadcasterInfo) {
@@ -745,14 +747,14 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 
 	eventSubListener.onUserSocketDisconnect(async (userId: string, error?: Error) => {
 		if (isReconnecting) {
-			console.log('Reconnection attempt already in progress.');
+			logger.info('Reconnection attempt already in progress.');
 			return;
 		}
 
 		isReconnecting = true;
 
 		if (error) {
-			console.error(`Socket disconnected for user ${userId}`, error);
+			logger.error(`Socket disconnected for user ${userId}`, error);
 		}
 
 		try {
@@ -761,27 +763,27 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 
 			// Attempt to recreate EventSub listener
 			await getEventSubs();
-			console.log('EventSub listener reconnected successfully.');
+			logger.info('EventSub listener reconnected successfully.');
 		} catch (e) {
-			console.error('Failed to reconnect EventSub listener:', e);
+			logger.error('Failed to reconnect EventSub listener:', e);
 			process.exit(1);
 		} finally {
 			isReconnecting = false; // Reset reconnection flag
 		}
 	});
 	eventSubListener.onUserSocketConnect(async (userId: string) => {
-		console.log(`Socket connected for user ${userId}`);
+		logger.info(`Socket connected for user ${userId}`);
 	});
 	eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
 		const Enviroment = process.env.Enviroment as string;
 
 		try {
 			if (Enviroment === 'debug') {
-				console.log(
+				logger.debug(
 					`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
 				// await SubscriptionModel.deleteMany({});
-				console.log('All existing subscriptions deleted in dev environment.');
+				logger.info('All existing subscriptions deleted in dev environment.');
 			}
 			// Check if the subscription already exists in MongoDB
 			const existingSubscription = await SubscriptionModel.findOne({
@@ -791,7 +793,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 
 			if (existingSubscription) {
 				if (process.env.Enviroment === 'debug') {
-					console.log(
+					logger.debug(
 						`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 					);
 				}
@@ -804,30 +806,29 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				authUserId: subscription.authUserId,
 			});
 			await newSubscription.save();
-			console.log(
-				`New subscription saved to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
+			logger.debug(`New subscription saved to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 			);
 			// mark any retry record as succeeded
 			try {
 				await retryManager.markSucceeded(subscription.id, String(subscription.authUserId ?? ''));
 			} catch (e) {
-				console.warn('Failed to clear retry record on subscription success', e);
+				logger.warn('Failed to clear retry record on subscription success', e);
 			}
 		} catch (error) {
-			console.error('Error saving subscription to database:', error);
+			logger.error('Error saving subscription to database:', error);
 		}
 	});
 	eventSubListener.onSubscriptionCreateFailure(async (subscription, error) => {
 		const Enviroment = process.env.Enviroment as string;
 		if (Enviroment === 'debug') {
-			console.error(
+			logger.error(
 				`(SCF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				error,
 			);
 			// process.exit(1);
 		}
 		if (error instanceof Error && error.message.includes('409')) {
-			console.log('Handling duplicate subscription conflict.');
+			logger.info('Handling duplicate subscription conflict.');
 			// Here, you could attempt to delete the existing subscription and retry the creation
 			const tbd = await SubscriptionModel.findOneAndDelete({
 				subscriptionId: subscription.id,
@@ -840,16 +841,16 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		// Record failure in retry manager so it can be retried later
 		try {
 			await retryManager.markFailed(subscription.id, String(subscription.authUserId ?? ''), error?.toString?.() ?? String(error));
-			console.log('Recorded subscription create failure for retry:', subscription.id);
+			logger.debug('Recorded subscription create failure for retry:', subscription.id);
 		} catch (e) {
-			console.warn('Failed to record subscription retry state', e);
+			logger.warn('Failed to record subscription retry state', e);
 		}
 	});
 	eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {
 		try {
 			const Enviroment = process.env.Enviroment as string;
 			if (Enviroment === 'debug') {
-				console.log(
+				logger.debug(
 					`(SDS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
 			}
@@ -860,7 +861,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 
 			if (!existingSubscription) {
-				console.log(
+				logger.debug(
 					`(DS) Subscription not found in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
 				return; // Exit early if subscription not found
@@ -873,29 +874,29 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 
 			if (deletedSubscription) {
-				console.log(
+				logger.debug(
 					`(DS) Deleted Subscription: SubscriptionID: ${deletedSubscription.subscriptionId}, SubscriptionAuthUserId: ${deletedSubscription.authUserId}`,
 				);
 			} else {
-				console.log(
+				logger.debug(
 					`(DS) Subscription not found in database during delete operation: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
 			}
 		} catch (error) {
-			console.error('Error deleting subscription from database:', error);
+			logger.error('Error deleting subscription from database:', error);
 		}
 	});
 	eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
 		try {
 			const Enviroment = process.env.Enviroment as string;
 			if (Enviroment === 'debug') {
-				console.error(
+				logger.error(
 					`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 					error,
 				);
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	});
 
@@ -966,7 +967,7 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 			};
 			try {
 				await eventSubHelper.createSubscription(body);
-				console.log(`Created EventSub ${s.type} for ${authUserId} via Twurple`);
+				logger.debug(`Created EventSub ${s.type} for ${authUserId} via Twurple`);
 			} catch (err) {
 				// Attempt to read HTTP status code from several possible shapes without using `any`
 				const getStatus = (e: unknown): number | undefined => {
@@ -980,9 +981,9 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 				const status = getStatus(err);
 				const errStr = String(err);
 				if (status === 409 || errStr.includes('409')) {
-					console.log(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
+					logger.debug(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
 				} else {
-					console.warn(`Twurple EventSub create failed for ${s.type}:`, err);
+					logger.warn(`Twurple EventSub create failed for ${s.type}:`, err);
 					throw err;
 				}
 			}
@@ -1018,8 +1019,7 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 			}
 		} catch (e) {
 			// log unexpected stop errors at debug level
-			// eslint-disable-next-line no-console
-			console.debug('Failed to stop temp EventSub listener', (e as Error).message);
+			logger.debug('Failed to stop temp EventSub listener', (e as Error).message);
 		}
 	}
 }

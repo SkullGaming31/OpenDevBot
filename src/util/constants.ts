@@ -1,6 +1,7 @@
 import { HelixChannel, HelixGame, HelixUser, UserIdResolvable } from '@twurple/api/lib';
 import { getUserApi } from '../api/userApiClient';
 import { TokenModel, ITwitchToken } from '../database/models/tokenModel';
+import logger from './logger';
 
 interface ChannelInfo {
 	delay: number;
@@ -38,7 +39,7 @@ export async function initializeConstants() {
 		for (const userToken of userTokens) {
 			const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
 			// if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
-			// 	console.log(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
+			// 	logger.debug(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
 			// }
 			const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
 
@@ -75,7 +76,7 @@ export async function initializeConstants() {
 			});
 		}
 	} catch (error) {
-		console.error('Error initializing constants:', error);
+		logger.error('Error initializing constants:', error);
 		throw error; // Re-throw the error to propagate it further if needed
 	}
 }

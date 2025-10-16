@@ -1,6 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const minigames: Command = {
 	name: 'minigame',
@@ -18,7 +19,7 @@ const minigames: Command = {
 			await chatClient.say(channel, `${targetUsername} all minigames for this channel are: !roulette, !beg, !dig, !duel, !gamble, !heist(2+ players), !loot, have any other suggestions use the !feature command`);
 		} catch (error) {
 			const chatClient = await getChatClient();
-			console.error(error); // Log error for debugging
+			logger.error('Error showing minigames:', error);
 			await chatClient.say(channel, `${user}, there was an error Showing all the minigames for the channel`);
 		}
 	}

@@ -7,6 +7,7 @@ import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebho
 import { sleep } from '../../util/util';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { enqueueWebhook } from '../../Discord/webhookQueue';
+import logger from '../../util/logger';
 
 const shoutout: Command = {
 	name: 'shoutout',
@@ -82,7 +83,7 @@ const shoutout: Command = {
 			await enqueueWebhook(TwitchActivityWebhookID, TwitchActivityWebhookToken, { embeds: [shoutoutEmbed] });
 		} catch (error: unknown) {
 			if (error instanceof Error) {
-				console.error(error.name + ': ' + error.message, error.stack);
+				logger.error(error.name + ': ' + error.message, error.stack);
 				await chatClient.say(channel, `An error occurred: ${error.message}`);
 			}
 		}

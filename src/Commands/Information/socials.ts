@@ -2,6 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
+import logger from '../../util/logger';
 
 const socials: Command = {
 	name: 'socials',
@@ -53,9 +54,9 @@ const socials: Command = {
 			}
 		} catch (error) {
 			if (error instanceof Error) {
-				console.error(`Error: ${error.message}`);
+				logger.error(`Error: ${error.message}`);
 			} else {
-				console.error(`Unknown error: ${error}`);
+				logger.error(`Unknown error: ${error}`);
 			}
 		}
 	},

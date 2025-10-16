@@ -7,6 +7,7 @@ import { TokenModel } from '../../database/models/tokenModel';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 import { UserModel } from '../../database/models/userModel';
+import logger from '../../util/logger';
 
 const CHOICES = ['rock', 'paper', 'scissors'];
 
@@ -68,7 +69,7 @@ const rockPaperScissors: Command = {
 				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result}`);
 			}
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	},
 };

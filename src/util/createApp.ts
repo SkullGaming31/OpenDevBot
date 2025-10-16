@@ -2,6 +2,8 @@ import axios from 'axios';
 import express from 'express';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import { limiter } from './util';
+import logger from './logger';
+import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
 
 /**
  * Creates an Express.js app that handles the OAuth2 flow for getting an access token from Twitch.
@@ -24,6 +26,11 @@ export default function createApp(): express.Application {
 
 	app.use(express.json());
 	app.use(limiter);
+
+	// Monitoring endpoints (Prometheus scrape and simple health checks)
+	app.get('/metrics', metricsHandler());
+	app.get('/health', healthHandler());
+	app.get('/ready', readyHandler());
 
 	// List of scopes
 	const userScopes = [
@@ -140,7 +147,7 @@ export default function createApp(): express.Application {
 	// Step 1: Redirect to Twitch for authorization. Optional `type` query param selects the scope set.
 	app.get('/api/v1/twitch', (req: express.Request, res: express.Response) => {
 		const type = (req.query.type as string) || 'user';
-		console.log('Redirect URI:', redirectUri, 'type:', type); // Log the redirect URI and type
+		logger.debug('Redirect URI:', redirectUri, 'type:', type); // Log the redirect URI and type
 		const scopes = type === 'bot' ? botScopes : userScopes;
 		const authorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
 		res.redirect(authorizeUrl);
@@ -156,7 +163,7 @@ export default function createApp(): express.Application {
 	app.get('/api/v1/auth/twitch/callback', async (req: express.Request, res: express.Response) => {
 		const { code } = req.query;
 
-		console.log('OAuth callback invoked. code present?', !!code, 'redirectUri=', redirectUri);
+		logger.debug('OAuth callback invoked. code present?', !!code, 'redirectUri=', redirectUri);
 
 		if (code) {
 			try {
@@ -180,7 +187,7 @@ export default function createApp(): express.Application {
 					? returnedScopesRaw
 					: (typeof returnedScopesRaw === 'string' ? returnedScopesRaw.split(' ') : []);
 
-				console.log('Token Response: ', {
+				logger.debug('Token Response: ', {
 					has_access_token: !!access_token,
 					expires_in,
 					scopes: returnedScopes
@@ -193,7 +200,7 @@ export default function createApp(): express.Application {
 						'Client-Id': clientId
 					}
 				});
-				console.log('UserResponse: ', userResponse.data);
+				logger.debug('UserResponse: ', userResponse.data);
 
 				const userId = userResponse.data.data[0].id;
 				const username = userResponse.data.data[0].login;
@@ -215,7 +222,7 @@ export default function createApp(): express.Application {
 						obtainmentTimestamp,
 						broadcaster_type
 					});
-					console.log('Token Saved');
+					logger.info('Token Saved');
 				} else {
 					// If token is found, update it
 					tokenDoc.login = username;
@@ -229,7 +236,7 @@ export default function createApp(): express.Application {
 
 				// Save the token document
 				await tokenDoc.save();
-				console.log('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
+				logger.info('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
 
 				return res.json({
 					userId,
@@ -240,8 +247,8 @@ export default function createApp(): express.Application {
 				});
 			} catch (error: unknown) {
 				// Try to log axios error response body if present for easier debugging
-				if (error instanceof Error) console.error('Error during OAuth2 process:', error.message);
-				else console.error('Error during OAuth2 process:', String(error));
+				if (error instanceof Error) logger.error('Error during OAuth2 process:', error.message);
+				else logger.error('Error during OAuth2 process:', String(error));
 				const getAxiosResponseData = (e: unknown): unknown | undefined => {
 					if (!e || typeof e !== 'object') return undefined;
 					const rec = e as Record<string, unknown>;
@@ -250,7 +257,7 @@ export default function createApp(): express.Application {
 				};
 				const axiosResp = getAxiosResponseData(error);
 				if (axiosResp) {
-					console.error('Axios response data:', axiosResp);
+					logger.error('Axios response data:', axiosResp);
 				}
 				const details = axiosResp ?? (error instanceof Error ? error.message : String(error));
 				return res.status(500).json({ error: 'Error during OAuth2 process', details });

@@ -3,6 +3,7 @@ import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
+import logger from '../../util/logger';
 
 const feature: Command = {
 	name: 'feature',
@@ -54,7 +55,7 @@ const feature: Command = {
 			await chatClient.say(channel, 'Feature request recorded.');
 			await featureWebhook.send({ embeds: [featureEmbed] });
 		} catch (error) {
-			console.error(error);
+			logger.error('Error handling feature request:', error);
 			return;
 		}
 	}

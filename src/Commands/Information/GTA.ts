@@ -6,6 +6,7 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
+import logger from '../../util/logger';
 
 axios.defaults;
 
@@ -46,7 +47,7 @@ const gta: Command = {
 					break;
 				case 'modvlog':
 					await chatClient.say(channel, 'Eugene Dixon(61) War vet, backstory coming soon...');
-					// console.log('GTA command executed.', streamerChannel.gameName);
+					// logger.debug('GTA command executed.', streamerChannel.gameName);
 					break;
 				default:
 					await chatClient.say(channel, 'this channel is not in the database');
@@ -54,7 +55,7 @@ const gta: Command = {
 			}
 			//
 		} catch (error) {
-			console.error(error);
+			logger.error(error);
 		}
 	},
 };
