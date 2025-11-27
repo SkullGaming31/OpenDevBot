@@ -1,44 +1,58 @@
 The repository is a Twitch chatbot (OpenDevBot) using Twurple for Twitch integration and basic Discord webhooks for notifications.
+# Copilot / AI Agent Quick Guide — OpenDevBot
 
-Quick orientation (read these files first):
-- `src/index.ts` — app bootstrap: connects to MongoDB, starts Express server, conditionally starts Twitch EventSub (`ENABLE_EVENTSUB`) and Twitch chat (`ENABLE_CHAT`).
-- `src/chat.ts` — IRC chat client: loads commands from `src/Commands`, handles message parsing, cooldowns, moderator/dev-only checks, and registers commands via `registerCommand`.
-- `src/EventSubEvents.ts` — EventSub websocket listeners for stream online/offline, hype trains, follows, and other channel events. Sends Discord webhooks via `discord.js` `WebhookClient`.
-- `src/auth/authProvider.ts` & `src/api/userApiClient.ts` — Twurple Auth + ApiClient wiring. Tokens are stored in MongoDB (`src/database/models/tokenModel.ts`).
-- `src/database/index.ts` — Mongoose connection and DB health logging.
+This repo is a Twitch chatbot built on Twurple with Discord webhook notifications. The notes below focus on patterns and workflows an AI coding agent needs to be productive quickly.
 
-Important patterns & conventions
-- Commands are individual modules under `src/Commands/**`. The loader dynamically imports `.ts` files in non-prod and `.js` in prod. Each command exports a default object with at least `execute(channel, user, args, text, msg)` and optional `aliases`, `cooldown`, `moderator`, `devOnly`.
-- Environment/Mode flags:
-  - `Enviroment` (note misspelling) controls prod vs dev behavior — used widely. Check `.env` for `Enviroment`, `ENABLE_CHAT`, `ENABLE_EVENTSUB`, `PORT`, `MONGO_URI` / `DOCKER_URI`.
-  - Watch for both `Env` and `Enviroment` in code — they are used inconsistently.
-- Tokens & Auth: Twitch tokens live in Mongo (see `TokenModel`). `authProvider` auto-refreshes tokens and updates the DB on refresh (via `onRefresh`). `openDevBotID` (659523613) is a special user id.
-- Webhooks: Discord webhooks are configured via environment variables (e.g., `DEV_DISCORD_TWITCH_ACTIVITY_ID`/TOKEN). `EventSubEvents.ts` and `chat.ts` use `WebhookClient` directly.
+**Big picture**
+- `src/index.ts`: app bootstrap — connects to MongoDB, starts Express, conditionally starts EventSub and chat based on env flags.
+- `src/chat.ts`: IRC/chat client and command loader (dynamic imports). Commands live in `src/Commands/**`.
+- `src/EventSubEvents.ts`: EventSub websocket listeners and Discord webhook sends via `discord.js` `WebhookClient`.
+- `src/auth/authProvider.ts` + `src/api/userApiClient.ts`: Twurple auth wiring. Tokens live in Mongo (`src/database/models/tokenModel.ts`).
 
-Developer workflows (how to run & debug)
-- Local dev run: `npm run start` (uses `ts-node` to run `src/index.ts`).
-- Development watch: `npm run dev` (nodemon), or `npm run watch` (tsc watch). Production build: `npm run build` + `npm run prod`.
-- DB seed / utilities: `npm run seed` and `npm run log` run TypeScript scripts (`seedDatabase.ts`, `logDatabaseData.ts`).
+**Key conventions (project-specific)**
+- Commands are modules under `src/Commands/**`. Each default-exported object must include `execute(channel, user, args, text, msg)`. Optional keys: `aliases`, `cooldown`, `moderator`, `devOnly`.
+- Loader chooses `.ts` in dev and `.js` in prod — do not rename or move files without adjusting loader logic.
+- Environment flag misspelling: `Enviroment` (and sometimes `Env`) controls prod/dev behavior. Also use `ENABLE_CHAT` and `ENABLE_EVENTSUB` toggles.
+- Tokens: Twitch tokens stored in Mongo; `authProvider` refreshes tokens and updates the DB via `onRefresh`.
 
-Common troubleshooting notes for agents
-- If commands don't load, check `process.env.Enviroment` — loader expects `.ts` when not `prod` and `.js` in `prod`.
-- If Twitch API calls fail, ensure tokens exist in Mongo (`tokenModel`) and `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` are set. `authProvider` adds user 659523613 with `chat` scope.
-- EventSub issues: EventSub uses websockets via `@twurple/eventsub-ws` — ensure `ENABLE_EVENTSUB` is set and the token entries in DB map to broadcasters.
-- Discord webhook failures: check `DEV_DISCORD_*` env vars and that `WebhookClient` id/token are present.
+**Dev / run workflows**
+- Start (dev): `npm run start` (uses `ts-node` to run `src/index.ts`).
+- Watch / dev iterate: `npm run dev` (nodemon) or `npm run watch` (tsc watch).
+- Production: `npm run build` then `npm run prod`.
+- Tests: run the test suite with `npm test` (Jest). Individual tests live under `src/__tests__` and top-level `__tests__`.
+- DB helpers: `npm run seed`, `npm run log` (run TypeScript scripts that seed or log DB data).
 
-Files to reference when making changes
-- Command examples: `src/Commands/Fun/*` and `src/Commands/Information/*` show typical command shapes and DB interactions.
-- DB models: `src/database/models/*` for schema conventions (users, tokens, counters, events).
-- Utility helpers: `src/util/util.ts` and `src/util/constants.ts` for shared timeouts, webhook IDs, and environment helpers.
+**Integration points & important files**
+- Twitch auth & API: `src/auth/authProvider.ts`, `src/api/userApiClient.ts`.
+- DB connection: `src/database/index.ts` and models in `src/database/models/*` (see `tokenModel.ts`).
+- Commands: `src/Commands/*` (examples in `Fun` and `Information`).
+- Webhook sending: `src/EventSubEvents.ts` and `src/chat.ts` (uses env vars like `DEV_DISCORD_*`).
 
-Edge cases agents must respect
-- Inconsistent env var names (`Enviroment` vs `Env`) and occasional hard-coded ids (e.g., `1155035316` for skullgaminghq). Search before renaming.
-- Code mixes sync FS imports and dynamic `import()` for commands. Preserve dynamic import behavior when refactoring.
-- Side effects at startup: `src/index.ts` deletes the `injuries` collection on each start. Do not remove without discussing with maintainers.
+**Gotchas & rules to preserve**
+- Do not remove the startup side-effect in `src/index.ts` that clears the `injuries` collection without discussing with maintainers.
+- Preserve dynamic `import()` behavior for commands (mix of sync and dynamic imports exists).
+- Respect the `Enviroment` misspelling and search the repo before renaming env vars.
+- Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `1155035316`).
 
-Edit guidance
-- Small changes: update relevant command file under `src/Commands` and preserve exported shape (`default` with `execute`).
-- Adding a new command: create a `.ts` file under the appropriate subfolder, export default object { name?, aliases?, cooldown?, moderator?, devOnly?, execute(...) }.
-- Large changes (auth, EventSub): run local startup with `ENABLE_EVENTSUB` and `ENABLE_CHAT` toggles and verify DB tokens exist. Add migrations/tests for token schema changes.
+**How to add or edit a command (example)**
+1. Create `src/Commands/<Category>/myCommand.ts`.
+2. Export default object:
 
-If anything in these notes is unclear or you'd like the agent to expand any section (run steps, env var list, or sample command template), say which part and I'll iterate.
+```ts
+export default {
+  aliases: ['alias'],
+  cooldown: 5,
+  moderator: false,
+  devOnly: false,
+  async execute(channel, user, args, text, msg) {
+    // implementation
+  }
+}
+```
+
+**Testing & debugging tips**
+- If commands fail to load, confirm `process.env.Enviroment` value and file extension expectations.
+- If Twitch API calls fail, check that tokens are present in the `tokenModel` collection and `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` are set.
+- For EventSub problems, ensure `ENABLE_EVENTSUB` is set and DB token entries map to broadcasters.
+
+If you want, I can expand any of these sections (env vars list, sample .env, example command + test) — tell me which part to expand.

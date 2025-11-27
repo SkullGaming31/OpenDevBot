@@ -16,6 +16,10 @@ interface IChannelDocument extends Document {
 	 * Whether the channel is enabled or not.
 	 */
 	enabled: boolean;
+	/**
+	 * Whether channel-points redemption handling is enabled for this channel.
+	 */
+	channelPointsEnabled?: boolean;
 }
 
 const channelSchema = new Schema<IChannelDocument>({
@@ -31,6 +35,12 @@ const channelSchema = new Schema<IChannelDocument>({
 	enabled: {
 		type: Boolean,
 		required: true,
+		default: false,
+	},
+	// Whether the channel has enabled channel-points redemption handling
+	channelPointsEnabled: {
+		type: Boolean,
+		required: false,
 		default: false,
 	},
 });

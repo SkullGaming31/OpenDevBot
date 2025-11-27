@@ -25,12 +25,7 @@ class Database {
 				mongoose.set('debug', false);
 			}
 
-			await mongoose.connect(this.uri, {
-				serverSelectionTimeoutMS: 5000,
-				dbName: 'opendevbot',
-			} as ConnectOptions);
-
-			// logger.info('Database connection successful');
+			await mongoose.connect(this.uri, { serverSelectionTimeoutMS: 5000, dbName: 'opendevbot' } as ConnectOptions);
 
 			const connectionState = mongoose.connection.readyState;
 
@@ -51,7 +46,6 @@ class Database {
 					logger.info('Unknown Database Connection State');
 					break;
 			}
-			// Perform a no-op operation to ensure the database is created
 			await mongoose.connection.db?.command({ ping: 1 });
 			logger.info(`Database '${mongoose.connection.db?.databaseName}' ensured.`);
 			// await this.dropUsersCollection();

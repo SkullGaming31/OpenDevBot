@@ -36,7 +36,7 @@ describe('createApp callback', () => {
 			save() { return Promise.resolve(this); }
 			static findOne(query: any) { return Promise.resolve(null); }
 		}
-		// ensure findOne is a jest mock so tests can assert later if desired
+		// ensure findOne is a vi mock so tests can assert later if desired
 		(MockTokenModel as any).findOne = jest.fn().mockResolvedValue(null);
 
 		jest.doMock('../database/models/tokenModel', () => ({ TokenModel: MockTokenModel }));

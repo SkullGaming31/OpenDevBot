@@ -77,10 +77,11 @@ export function clearWebhookCache() {
 	for (const client of clients.values()) {
 		try {
 			client.destroy();
-		} catch (e) {
+		} catch (e: unknown) {
 			// log at debug level so we don't swallow unexpected errors silently
-			// eslint-disable-next-line no-console
-			logger.debug('Failed to destroy webhook client', (e as Error).message);
+			if (e instanceof Error) {
+				logger.debug('Failed to destroy webhook client ', e.message + e.stack);
+			}
 		}
 	}
 	clients.clear();

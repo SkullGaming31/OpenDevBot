@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### 2025-11-27 — Dynamic channel joins & Copilot instructions
+
+- **Updated AI guidance:** replaced and condensed `.github/copilot-instructions.md` with a focused Copilot/AI agent guide (repo big-picture, command shape, env quirks like `Enviroment`, run/test workflows, and gotchas). This helps AI agents onboard quickly.
+- **Dynamic channel join:** added `export async function joinChannel(username: string)` in `src/chat.ts` so the running `ChatClient` can join a Twitch channel at runtime without restarting the bot.
+- **Auto-join on OAuth signup:** after persisting a new token in the OAuth callback (`src/util/createApp.ts`), the app now lazily imports `../chat` and calls `joinChannel(username)` (best-effort, non-blocking) so newly onboarded users are joined immediately.
+- **Notes & caveats:** the bot's chat token must be present and have appropriate chat/intents; ensure `ENABLE_CHAT` is set for the process. Failures to join are logged and do not block the OAuth response. Consider MongoDB change streams or an admin join/part API for more robust automation.
+- **Admin API (runtime join/part):** added admin endpoints to manage joined channels at runtime without restarting the bot — `GET /api/v1/chat/channels`, `POST /api/v1/chat/join` and `POST /api/v1/chat/part`. Endpoints are protected by `ADMIN_API_TOKEN` and perform best-effort join/part operations via the running `ChatClient`.
+- **Test run:** executed the Jest suite locally: 44 suites / 127 tests passed. All tests passed but global coverage thresholds were below configured limits (coverage ~34% vs threshold 50%), causing Jest to exit non-zero — noted for follow-up.
+
 ### 2025-10-15 — Logging, metrics, and console->logger sweep
 
 - Added a centralized logger and Jest mock:
@@ -46,10 +55,10 @@ All notable changes to this project are documented in this file.
   - Applied changes in small batches (3–5 files) to reduce risk and make rollbacks easy.
 
 Next steps / open items
+
 - Finish migrating console usages in core runtime files (high-value targets: `src/index.ts`, `src/chat.ts`, `src/EventSubEvents.ts`, `src/auth/authProvider.ts`).
 - Decide how to map `console.time` / `console.timeEnd` profiling calls into the logger API (implement `logger.time`/`timeEnd` or convert to timestamped debug logs).
 - Run the full Jest suite and address any behavioral regressions; consider adding CI checks for the new metrics endpoints.
-
 
 ### 2025-10-15 — Heist integration test note
 
@@ -75,6 +84,7 @@ Next steps / open items
 This file documents the work completed on October 13, 2025. The changes focused on authentication, chat reliability, EventSub subscription stability, Discord webhook rate-limiting, tests, and CI. The list below is a condensed, actionable summary with the most important files and behaviors changed.
 
 Highlights
+
 - Implemented a chat-specific auth provider and hardened token refresh persistence.
 - Deferred EventSub subscription creation until the EventSub websocket is ready and added reconnect scaffolding.
 - Added a Discord webhook queue to serialize and rate-limit webhook sends and replaced direct webhook sends where appropriate.
@@ -126,6 +136,7 @@ Detailed changes
   - Minor debug prints and improved logging across startup flows (auth provider, chat initialization, EventSub connect/disconnect messages).
 
 Files changed (key ones)
+
 - `src/auth/authProvider.ts` — chat auth provider, token preload, onRefresh persistence
 - `src/chat.ts` — chat client switched to chat auth provider, command loading improvements
 - `src/EventSubEvents.ts` — deferred subscription creation, reconnect scaffolding, webhook queue usage
@@ -144,6 +155,7 @@ Use the same steps as CI. If you want to run the tests the way CI runs them (fas
 npm ci
 npm test --silent -- -i
 ```
+
 ## [0.8.3] - 2025-10-13
 
 ### Changed
@@ -161,17 +173,19 @@ npm test --silent -- -i
 
 - This release introduces persistent retry state but does not yet include an active retry worker that replays pending retries on a schedule — that is next.
 
-
 Notes about CI and branch protection
+
 - CI initially failed because `package.json` and `package-lock.json` were out of sync. I updated `package.json` (devDependencies) and regenerated the lockfile so `npm ci` succeeds.
 - Several commits were pushed directly to `master` and GitHub logged that the pushes bypassed a branch-protection rule requiring PRs. If you require a PR-based audit trail, consider creating non-destructive "record" PRs that point to the merge commits (I can do this for you).
 
 Recommended next steps
+
 - Optionally create record PRs for the merges so GitHub's PR history contains the review record.
 - Remove the temporary developer-only Twurple mapping in `getChatAuthProvider()` once the SDK surface is stabilized or the workaround is no longer needed.
 - Harden EventSub subscription reconciliation with exponential backoff and idempotent create-or-ensure logic.
 
 Recent follow-up (2025-10-13)
+
 - Removed developer-only mutation of Twurple provider internals from `src/auth/authProvider.ts` and added a unit test `src/__tests__/authProviderInternals.test.ts` that asserts internals are not mutated. This reduces tech-debt and keeps provider behavior within supported APIs.
 
 ---

@@ -8,3 +8,5 @@ dist/
 /src/devlogs
 /src/scripts
 NOTES.txt
+/logs
+/coverage

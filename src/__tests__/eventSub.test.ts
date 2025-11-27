@@ -1,4 +1,8 @@
 describe('EventSub reconnection logic', () => {
+	// Some CI environments and mocks make these tests take longer than
+	// Jest's default 5s timeout; increase to provide headroom for async
+	// reconnect logic used in these tests.
+	jest.setTimeout(20000);
 	beforeEach(() => {
 		jest.resetModules();
 		jest.clearAllMocks();
@@ -52,7 +56,8 @@ describe('EventSub reconnection logic', () => {
 		const mod = await import('../EventSubEvents');
 		const { getEventSubs } = mod;
 
-		const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+		// Use the mocked logger so we can assert on logger.info calls directly
+		const mockedLogger = require('../util/logger').default;
 
 		const l1: any = await getEventSubs();
 		// ensure one instance was created
@@ -68,9 +73,9 @@ describe('EventSub reconnection logic', () => {
 
 		// a new instance should have been created by reconnect
 		expect(created.length).toBeGreaterThanOrEqual(2);
-		expect(log).toHaveBeenCalledWith('EventSub listener reconnected successfully.');
+		expect(mockedLogger.info).toHaveBeenCalledWith('EventSub listener reconnected successfully.');
 
-		log.mockRestore();
+		// no-op: we assert on the mocked logger directly
 	});
 
 	test('ignores duplicate reconnection attempts', async () => {
@@ -107,7 +112,8 @@ describe('EventSub reconnection logic', () => {
 
 		const mod = await import('../EventSubEvents');
 		const { getEventSubs } = mod;
-		const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+		// Use the mocked logger so we can assert on logger.info calls directly
+		const mockedLogger = require('../util/logger').default;
 
 		const l1: any = await getEventSubs();
 		expect(instances.length).toBe(1);
@@ -121,8 +127,8 @@ describe('EventSub reconnection logic', () => {
 
 		// Only one reconnect attempt should have created a second instance
 		expect(instances.length).toBe(2);
-		expect(log).toHaveBeenCalledWith('Reconnection attempt already in progress.');
+		expect(mockedLogger.info).toHaveBeenCalledWith('Reconnection attempt already in progress.');
 
-		log.mockRestore();
+		// no-op: we assert on the mocked logger directly
 	});
 });

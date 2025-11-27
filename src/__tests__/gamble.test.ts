@@ -29,7 +29,7 @@ describe('gamble command', () => {
 
 		const chatClient = await (chat as any).getChatClient();
 		expect(chatClient.say).toHaveBeenCalled();
-		expect((chatClient.say as jest.Mock).mock.calls[0][1]).toMatch(/do not have enough coins/);
+		expect((chatClient.say as any).mock.calls[0][1]).toMatch(/do not have enough coins/);
 	});
 
 	test('winning credits user and announces win', async () => {
@@ -61,6 +61,6 @@ describe('gamble command', () => {
 		expect((balanceAdapter as any).debitWallet).toHaveBeenCalledWith('testuser', 10, 'testuser', 'chan1');
 		expect((balanceAdapter as any).creditWallet).toHaveBeenCalledWith('testuser', 20, 'testuser', 'chan1');
 		expect(chatClient.say).toHaveBeenCalled();
-		expect((chatClient.say as jest.Mock).mock.calls[0][1]).toMatch(/You won/);
+		expect((chatClient.say as any).mock.calls[0][1]).toMatch(/You won/);
 	});
 });

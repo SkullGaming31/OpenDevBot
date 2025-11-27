@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+
 import { InjuryModel } from '../database/models/injury';
 import { deleteExpiredInjuries } from '../services/injuryCleanup';
 

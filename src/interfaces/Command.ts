@@ -8,6 +8,6 @@ export interface Command {
   moderator?: boolean;
   devOnly?: boolean;
   cooldown?: number; // in seconds
-  lastExecuted?: number; // store the timestamp of the last execution
+  lastExecuted?: number;
   execute: (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => void;
 }

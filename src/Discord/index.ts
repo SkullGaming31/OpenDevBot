@@ -33,9 +33,12 @@ class DiscordBot {
 		this.client = new Client({
 			intents: [
 				GatewayIntentBits.Guilds,
+				GatewayIntentBits.GuildMembers,
 				GatewayIntentBits.GuildMessages,
 				GatewayIntentBits.MessageContent,
-				GatewayIntentBits.GuildMembers
+				GatewayIntentBits.GuildWebhooks,
+				GatewayIntentBits.GuildMessageReactions,
+				GatewayIntentBits.GuildIntegrations
 			],
 			partials: [
 				Partials.Channel,
@@ -44,7 +47,9 @@ class DiscordBot {
 				Partials.Message,
 				Partials.Reaction,
 				Partials.ThreadMember,
-				Partials.User
+				Partials.User,
+				Partials.Poll,
+				Partials.PollAnswer
 			]
 		});
 
@@ -54,7 +59,7 @@ class DiscordBot {
 		this.client.on('warn', (warn: string) => { logger.info('Discord Warning', warn); });
 		this.client.on('shardDisconnect', (t) => { logger.error('Shard Disconnect: ', t); });
 		this.client.on('shardError', (t: Error) => { logger.error('Shard Error: ', t); });
-		this.client.on('shardReconnecting', (sr) => { logger.error('Shard Reconnecting', sr); });
+		this.client.on('shardReconnecting', (sr: number) => { logger.error('Shard Reconnecting', sr); });
 	}
 
 	/**

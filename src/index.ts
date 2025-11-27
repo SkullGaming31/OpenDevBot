@@ -15,19 +15,15 @@ import ENVIRONMENT from './util/env';
 import logger from './util/logger';
 
 /**
- * Deletes all documents from the injuries collection.
- *
  * @returns {Promise<void>}
+ *
+ * Represents the OpenDevBot application.
  */
 
 class OpenDevBot {
 	startTime: number;
-
-	/**
-	 * Initializes the start time of the OpenDevBot instance.
-	 */
 	constructor() {
-		this.startTime = Date.now(); // Record the start time
+		this.startTime = Date.now();
 	}
 
 	getUptime(): number { return Date.now() - this.startTime; }
@@ -193,4 +189,8 @@ const client = new OpenDevBot();
 // Initialize monitoring (Sentry/LogDNA) if configured
 initMonitoring();
 
-client.start().then(() => logger.info('Bot started successfully')).catch((error) => logger.error('Failed to start bot:', error));
+client.start().then(() => logger.info('Bot started successfully')).catch((error: unknown) => {
+	if (error instanceof Error) {
+		logger.error('Failed to start bot: ', error.message + error.stack);
+	}
+});

@@ -1,6 +1,13 @@
 import rateLimit from 'express-rate-limit';
 
-export async function sleep(ms: number): Promise<void> { await new Promise(resolve => setTimeout(resolve, ms)); }
+export async function sleep(ms: number): Promise<void> {
+	await new Promise<void>((resolve) => {
+		const t = setTimeout(resolve, ms);
+		// ensure timer does not keep node event loop alive in test environments
+		// (unref is available on Node timers)
+		if (t && typeof (t as any).unref === 'function') (t as any).unref();
+	});
+}
 
 export const limiter = rateLimit({
 	windowMs: 15 * 60 * 1000,

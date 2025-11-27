@@ -67,13 +67,13 @@ describe('authProvider', () => {
 			}
 			jest.doMock('@twurple/auth', () => ({ RefreshingAuthProvider: MockProvider }));
 
-			const consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+			const mockedLogger = require('../util/logger').default;
 			const { getChatAuthProvider } = await import('../auth/authProvider');
 			const provider: any = await getChatAuthProvider();
 
-			expect(consoleWarn).toHaveBeenCalled();
+			expect(mockedLogger.warn).toHaveBeenCalled();
 			expect(provider).toBeInstanceOf(MockProvider as any);
-			consoleWarn.mockRestore();
+			// mockedLogger is a jest mock from src/__mocks__/util/logger.ts; no restore needed
 		});
 	});
 

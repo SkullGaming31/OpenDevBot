@@ -6,12 +6,12 @@ const time = jest.fn();
 const timeEnd = jest.fn();
 
 export default {
-    info,
-    warn,
-    error,
-    debug,
-    time,
-    timeEnd,
+	info,
+	warn,
+	error,
+	debug,
+	time,
+	timeEnd,
 };
 
 export { info, warn, error, debug };

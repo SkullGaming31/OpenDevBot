@@ -27,6 +27,59 @@ export default function createApp(): express.Application {
 	app.use(express.json());
 	app.use(limiter);
 
+	// Simple admin auth middleware. Set `ADMIN_API_TOKEN` in env and supply it
+	// in the `x-admin-token` header for protected endpoints.
+	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+		const token = process.env.ADMIN_API_TOKEN;
+		if (!token) return res.status(403).json({ error: 'Admin API not configured' });
+		const provided = (req.header('x-admin-token') || req.query.admin_token || '') as string;
+		if (!provided || provided !== token) return res.status(401).json({ error: 'Unauthorized' });
+		next();
+	}
+
+	// Admin endpoints: list / join / part channels dynamically
+	app.get('/api/v1/chat/channels', requireAdmin, async (req, res) => {
+		try {
+			const { joinedChannels } = await import('../chat');
+			return res.json({ channels: Array.from(joinedChannels) });
+		} catch (e) {
+			logger.error('Failed to list joined channels', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	app.post('/api/v1/chat/join', requireAdmin, async (req, res) => {
+		const username = (req.body?.username || req.query.username) as string | undefined;
+		if (!username) return res.status(400).json({ error: 'username required' });
+		try {
+			const { joinChannel } = await import('../chat');
+			await joinChannel(username);
+			return res.json({ ok: true, joined: username });
+		} catch (e) {
+			logger.error('Admin join failed', e as Error);
+			return res.status(500).json({ error: 'failed to join' });
+		}
+	});
+
+	app.post('/api/v1/chat/part', requireAdmin, async (req, res) => {
+		const username = (req.body?.username || req.query.username) as string | undefined;
+		if (!username) return res.status(400).json({ error: 'username required' });
+		try {
+			const { getChatClient, joinedChannels } = await import('../chat');
+			const client = await getChatClient();
+			const normalized = username.startsWith('#') ? username.slice(1) : username;
+			const partFn = (client as any).part || (client as any).leave || (client as any).quit || undefined;
+			if (typeof partFn === 'function') {
+				await partFn.call(client, normalized);
+			}
+			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
+			return res.json({ ok: true, parted: normalized });
+		} catch (e) {
+			logger.error('Admin part failed', e as Error);
+			return res.status(500).json({ error: 'failed to part' });
+		}
+	});
+
 	// Monitoring endpoints (Prometheus scrape and simple health checks)
 	app.get('/metrics', metricsHandler());
 	app.get('/health', healthHandler());
@@ -237,6 +290,16 @@ export default function createApp(): express.Application {
 				// Save the token document
 				await tokenDoc.save();
 				logger.info('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
+
+				// Try to dynamically join the chat client to the newly registered user's channel
+				try {
+					// Import lazily to avoid any startup ordering issues
+					const { joinChannel } = await import('../chat');
+					// best-effort — don't block the response
+					void joinChannel(username).catch((e) => logger.warn('Failed to join new channel after signup', e));
+				} catch (e) {
+					logger.warn('Dynamic joinChannel import failed', e);
+				}
 
 				return res.json({
 					userId,

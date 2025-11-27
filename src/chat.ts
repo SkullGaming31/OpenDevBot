@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
@@ -8,7 +9,6 @@ import { getUserApi } from './api/userApiClient';
 import { getAuthProvider, getChatAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
-import { ITwitchToken, TokenModel } from './database/models/tokenModel';
 import { Command } from './interfaces/Command';
 import { TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, openDevBotID } from './util/constants';
 import { sleep } from './util/util';
@@ -17,6 +17,8 @@ import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 import { IUser, UserModel } from './database/models/userModel';
 import { creditWallet } from './services/balanceAdapter';
+import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from './util/commandHelpers';
+import { getUsernamesFromDatabase } from './database/tokenStore';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
@@ -32,6 +34,8 @@ if (process.env.Enviroment === 'prod') {
 }
 
 export const commands: Set<string> = new Set<string>();
+// Tracks channels the bot has joined in this process (best-effort cache)
+export const joinedChannels: Set<string> = new Set<string>();
 /**
  * Recursively loads all commands in a given directory and its subdirectories.
  * @param commandsDir The directory to load commands from
@@ -236,8 +240,10 @@ export async function initializeChat(): Promise<void> {
 				}
 			}, intervalDuration);
 
-		} catch (error) {
-			logger.error(error);
+		} catch (error: unknown) {
+			if (error instanceof Error) {
+				logger.error(error);
+			}
 		}
 
 		if (text.includes('overlay expert') && channel === '#skullgaminghq') {
@@ -294,17 +300,17 @@ export async function initializeChat(): Promise<void> {
 				await chatClient.say(channel, `${msg.userInfo.displayName} bugger off with your scams and frauds, you have been removed from this channel, have a good day`);
 				// - Send embed to activity feed
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [banEmbed] });
-			} catch (error) {
-				logger.error(error);
+			} catch (error: unknown) {
+				if (error instanceof Error) {
+					logger.error(error);
+				}
 			}
 		}
 		if (text.startsWith('!')) {
 			// log the raw command parsing for debugging
 			const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
 			// logger.debug(`[chat:command] Raw: ${preview}`);
-			const args = text.slice(1).split(' ');
-			const commandName = args.shift()?.toLowerCase();
-			// logger.debug(`[chat:command] Parsed commandName='${commandName}'`);
+			const { args, commandName } = parseCommandText(text);
 			if (commandName === undefined) return;
 			const command = commands[commandName] || Object.values(commands).find(cmd => cmd.aliases?.includes(commandName));
 			// logger.debug(`[chat:command] Found command? ${command ? 'yes' : 'no'}`);
@@ -314,7 +320,8 @@ export async function initializeChat(): Promise<void> {
 			const isModerator = msg.userInfo.isMod;
 			const isBroadcaster = msg.userInfo.isBroadcaster;
 			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
-			const isEditor = channelEditor.map(editor => editor.userId === msg.userInfo.userId);
+			// getChannelEditors returns an array of editor objects; use `some` to compute a boolean
+			const isEditor = Array.isArray(channelEditor) ? channelEditor.some(editor => editor.userId === msg.userInfo.userId) : false;
 			const isStaff = isModerator || isBroadcaster || isEditor;
 
 			if (command) {
@@ -329,30 +336,27 @@ export async function initializeChat(): Promise<void> {
 						commandCooldowns.set(user, userCooldowns);
 					}
 
-					// Check if the command has a cooldown and if enough time has passed since the last execution
+					// Cooldown check
 					const lastExecuted = userCooldowns.get(commandName);
-					if (lastExecuted && currentTimestamp - lastExecuted < (command.cooldown || 0)) {
-						const remainingTime = Math.ceil((lastExecuted + command.cooldown! - currentTimestamp) / 1000);
-						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remainingTime} seconds.`);
+					const remaining = getCooldownRemaining(lastExecuted, command.cooldown || 0, currentTimestamp);
+					if (remaining > 0) {
+						return chatClient.say(channel, `@${user}, this command is on cooldown. Please wait ${remaining} seconds.`);
 					}
 
-					// If the command is marked as moderator-only and the user is not a moderator, restrict access
-					if (command.moderator && !isStaff) {
+					// Permission checks
+					const editorFlag = isEditor; // computed earlier
+					const isStaffNow = isModerator || isBroadcaster || editorFlag;
+					const permission = checkCommandPermission(command, isModerator, isBroadcaster, editorFlag, msg.channelId);
+					if (!permission.allowed) {
+						if (permission.reason === 'devOnly') {
+							return chatClient.say(channel, 'This command is a devOnly command and can only be used in skullgaminghq\'s Channel, https://twitch.tv/skullgaminghq');
+						}
+						// default to moderator-only messaging
 						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
 					}
 
-					// If the command is marked as devOnly and the user is NOT a moderator or broadcaster in the specific channel, restrict access
-					if (command.devOnly && msg.channelId !== '1155035316' && !(msg.userInfo.isBroadcaster || msg.userInfo.isMod)) {
-						return chatClient.say(channel, 'This command is a devOnly command and can only be used in skullgaminghq\'s Channel, https://twitch.tv/skullgaminghq');
-					}
-
-					// If the command is restricted to the broadcaster and moderators, enforce the restriction
-					if (msg.channelId === '1155035316' && (command.moderator && !isStaff)) {
-						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
-					}
-
-					// Execute the command
-					command.execute(channel, user, args, text, msg);
+					// Execute the command (await in case command returns a promise)
+					await command.execute(channel, user, args, text, msg);
 
 					// Update the last executed timestamp of the command
 					userCooldowns.set(commandName, currentTimestamp);
@@ -383,10 +387,10 @@ export async function initializeChat(): Promise<void> {
 			};
 
 			// Start after an initial delay to avoid spamming on startup
-			setTimeout(() => {
+			socialTimeoutId = setTimeout(() => {
 				// send immediately once after delay, then every interval
-				sendSocial().catch(() => { });
-				setInterval(() => sendSocial().catch(() => { }), SOCIAL_INTERVAL_MS);
+				sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); });
+				socialIntervalId = setInterval(() => sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); }), SOCIAL_INTERVAL_MS);
 			}, SOCIAL_INTERVAL_MS);
 		}
 	};
@@ -416,8 +420,14 @@ function registerCommand(newCommand: Command, name: string) {
 	}
 }
 
+// command helpers have been moved to `src/util/commandHelpers.ts`
+
 // holds the ChatClient
 let chatClientInstance: ChatClient;
+// IDs for timers started by this module so they can be cleared on shutdown
+let periodicSaveIntervalId: NodeJS.Timeout | null = null;
+let socialTimeoutId: NodeJS.Timeout | null = null;
+let socialIntervalId: NodeJS.Timeout | null = null;
 /**
  * Returns the ChatClient instance which is used to interact with the Twitch chat.
  * If the instance does not exist, it is created and connected to the channels
@@ -543,8 +553,10 @@ export async function getChatClient(): Promise<ChatClient> {
 				} else {
 					logger.info('The chatClient is not connected or broadcasterInfo is undefined');
 				}
-			} catch (error) {
-				logger.error('Error handling onJoin event:', error);
+			} catch (error: unknown) {
+				if (error instanceof Error) {
+					logger.error('Error handling onJoin event:', error);
+				}
 			}
 		});
 
@@ -583,8 +595,10 @@ export async function getChatClient(): Promise<ChatClient> {
 						await newUser.save();
 						// logger.debug('New User Data Created: ', newUser);
 					}
-				} catch (error) {
-					logger.error('Error updating watch time:', error);
+				} catch (error: unknown) {
+					if (error instanceof Error) {
+						logger.error('Error updating watch time:', error);
+					}
 				}
 			}
 		});
@@ -598,6 +612,8 @@ export async function getChatClient(): Promise<ChatClient> {
 			}
 			setTimeout(() => {
 				chatClientInstance.join(username);
+				// update in-memory joinedChannels cache (best-effort)
+				try { joinedChannels.add(username); } catch { /* ignore */ }
 				if (process.env.Enviroment === 'dev') {
 					logger.info(`Joined channel: ${username}`);
 				} else { return; }
@@ -608,7 +624,7 @@ export async function getChatClient(): Promise<ChatClient> {
 	}
 
 	// Periodic check to ensure watch times are saved regularly
-	setInterval(async () => {
+	periodicSaveIntervalId = setInterval(async () => {
 		for (const [user, viewer] of viewerWatchTimes) {
 			const watchTime = Date.now() - viewer.joinedAt;
 			const totalWatchTime = viewer.watchTime + watchTime;
@@ -645,27 +661,90 @@ export async function getChatClient(): Promise<ChatClient> {
 					await newUser.save();
 					// logger.debug('New User Data Created: ', newUser);
 				}
-			} catch (error) {
-				logger.error('Error updating watch time:', error);
+			} catch (error: unknown) {
+				if (error instanceof Error) {
+					logger.error('Error updating watch time:', error);
+				}
 			}
 		}
 	}, PERIODIC_SAVE_INTERVAL);
 
 	return chatClientInstance;
 }
-// Define a function to retrieve usernames from MongoDB
-export async function getUsernamesFromDatabase(): Promise<string[]> {
+/**
+ * Gracefully shutdown the chat client and clear timers started by this module.
+ * Useful for tests and for clean process exit.
+ */
+export async function shutdownChat(): Promise<void> {
 	try {
-		// Use Mongoose to query the database and fetch user documents
-		const tokens: ITwitchToken[] = await TokenModel.find({}, 'login'); // Assuming 'login' field contains usernames
+		if (socialTimeoutId) {
+			clearTimeout(socialTimeoutId);
+			socialTimeoutId = null;
+		}
+		if (socialIntervalId) {
+			clearInterval(socialIntervalId);
+			socialIntervalId = null;
+		}
+		if (periodicSaveIntervalId) {
+			clearInterval(periodicSaveIntervalId);
+			periodicSaveIntervalId = null;
+		}
 
-		// Extract usernames from the fetched documents
-		const usernames: string[] = tokens.map((token) => token.login);
+		// clear per-user watch time intervals
+		for (const [, viewer] of viewerWatchTimes) {
+			try { clearInterval(viewer.intervalId); } catch { /* ignore */ }
+		}
+		viewerWatchTimes.clear();
+		periodicSocialTimerStarted = false;
 
-		return usernames;
-	} catch (error) {
-		// Handle any potential errors here
-		logger.error('Error fetching usernames from MongoDB:', error);
-		throw error;
+		if (chatClientInstance) {
+			// Twurple ChatClient exposes disconnect/quit depending on version — try both
+			try {
+				if (typeof (chatClientInstance as any).disconnect === 'function') {
+					await (chatClientInstance as any).disconnect();
+				} else if (typeof (chatClientInstance as any).quit === 'function') {
+					await (chatClientInstance as any).quit();
+				}
+			} catch (e) {
+				logger.error('Error disconnecting chat client during shutdown', e as Error);
+			}
+		}
+	} catch (err) {
+		logger.error('Error during shutdownChat', err as Error);
 	}
 }
+/**
+ * Join a single channel at runtime. Useful for onboarding a new user/token
+ * so the bot starts listening to their chat without a restart.
+ * @param username Twitch login name (without #)
+ */
+export async function joinChannel(username: string): Promise<void> {
+	try {
+		if (!username) return;
+		const client = await getChatClient();
+		if (!client) {
+			logger.warn('joinChannel: chat client not available');
+			return;
+		}
+		const normalized = username.startsWith('#') ? username.slice(1) : username;
+		if (normalized.toLowerCase() === 'opendevbot') return;
+		await client.join(normalized);
+		// track joined channel locally
+		try { joinedChannels.add(normalized); } catch { /* ignore */ }
+		if (process.env.Enviroment === 'dev') logger.info(`Dynamically joined channel: ${normalized}`);
+	} catch (err: unknown) {
+		if (err instanceof Error) {
+			if (err.message.includes('Already joined')) {
+				logger.info('joinChannel: already joined', username);
+				return;
+			}
+			// logger.error('joinChannel failed for', username, err as Error);
+		}
+	}
+}
+
+// Define a function to retrieve usernames from MongoDB
+// username/token DB access lives in src/database/tokenStore.ts
+
+// Re-export token store helper to preserve backwards compatibility for tests
+export { getUsernamesFromDatabase } from './database/tokenStore';

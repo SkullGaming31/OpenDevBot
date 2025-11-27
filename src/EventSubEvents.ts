@@ -16,6 +16,8 @@ import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
 import { getChatClient } from './chat';
 import { LurkMessageModel } from './database/models/LurkModel';
+import ChannelModel from './database/models/channel';
+import { creditWallet } from './services/balanceAdapter';
 import {
 	broadcasterInfo,
 	moderatorIDs,
@@ -57,91 +59,21 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				const stream = await o.getStream();
 				const userInfo = await o.getBroadcaster();
 
-				try {
-					const game = await userApiClient.games.getGameById(
-						stream?.gameId as string,
-					);
-
-					const liveEmbed = new EmbedBuilder()
-						.setTitle('Twitch Event[NOW LIVE]')
-						.setAuthor({
-							name: `${o.broadcasterName}`,
-							iconURL: `${userInfo.profilePictureUrl}`,
-						})
-						.addFields([
-							{
-								name: 'Stream Title',
-								value: `${stream?.title || 'No Title Set'}`,
-								inline: true,
-							},
-							{
-								name: 'game: ',
-								value: `${stream?.gameName || 'No Game Set'}`,
-								inline: true,
-							},
-							{
-								name: 'Viewers: ',
-								value: `${stream?.viewers || 0}`,
-								inline: true,
-							},
-						])
-						.setURL(`https://twitch.tv/${userInfo.name}`)
-						.setImage(`${game?.boxArtUrl}`)
-						.setColor('Green')
-						.setTimestamp();
-
-					if (stream?.thumbnailUrl) {
-						liveEmbed.setImage(`${stream.thumbnailUrl}`);
-					}
-					if (userInfo.profilePictureUrl) {
-						liveEmbed.setThumbnail(userInfo.profilePictureUrl);
-					}
-
-					await sleep(60000);
-					await userApiClient.chat.sendAnnouncement(
-						info.id as UserIdResolvable,
-						{
-							color: 'green',
-							message:
-								`${o.broadcasterDisplayName} has just gone live playing ${broadcasterInfo[0].gameName} - (${stream?.title})`,
-						},
-					);
-					if (info.id === '1155035316') {
-						await sleep(60000);
-						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: '@everyone', embeds: [liveEmbed] });
-					}
-				} catch (err: unknown) {
-					logger.error('Error sending going live post', err);
-				}
-			},
-		);
-
-		const offline = eventSubListener.onStreamOffline(
-			info.id as UserIdResolvable,
-			async (stream) => {
-				if (!streamStartTime) return;
-				const caster = await stream.getBroadcaster();
-				const duration = new Date().getTime() - streamStartTime.getTime();
-				const hours = Math.floor(duration / (1000 * 60 * 60));
-				const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
-				const seconds = Math.floor((duration % (1000 * 60)) / 1000);
-
-				const offlineEmbed = new EmbedBuilder()
-					.setAuthor({ name: caster.displayName, iconURL: caster.profilePictureUrl })
-					.setDescription(`${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`)
-					.setColor('Red')
-					.setFooter({ text: `Ended Stream at ${new Date().toLocaleTimeString()} after ${hours}h ${minutes}m ${seconds}s` })
-					.setTimestamp();
+				// guard nullable stream shape and derive a display name safely
+				const displayName = (stream as unknown as Record<string, unknown>)?.broadcasterDisplayName
+					|| (userInfo && (userInfo as unknown as Record<string, unknown>).displayName)
+					|| info.name;
 
 				try {
 					await sleep(2000);
 					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'primary',
-						message: `${stream.broadcasterDisplayName} has gone offline, thank you for stopping by!`,
+						message: `${displayName} has gone offline, thank you for stopping by!`,
 					});
 					await sleep(2000);
 					if (info.id === '1155035316') {
-						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { embeds: [offlineEmbed] });
+						// send a simple offline notice to promote webhook when configured
+						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
 						await sleep(2000);
 						if (info.name === 'skullgaminghq') {
 							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
@@ -680,6 +612,65 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
+
+		// Defensive registration for channel points / custom reward redemption events
+		// Twurple API versions differ in method names. Inspect the listener for any method
+		// that looks like a reward/redemption subscriber and register the first available.
+		try {
+			const listenerProto = Object.getPrototypeOf(eventSubListener) || eventSubListener;
+			const candidateMethodNames = Object.getOwnPropertyNames(listenerProto).concat(Object.keys(eventSubListener as unknown as Record<string, unknown>));
+			const redemptionMethodName = candidateMethodNames.find((n) => /reward|redemption|customreward/i.test(n));
+			if (redemptionMethodName) {
+				const fn = (eventSubListener as unknown as Record<string, unknown>)[redemptionMethodName] as unknown;
+				if (typeof fn === 'function') {
+					// register handler
+					(fn as (...args: unknown[]) => unknown).call(eventSubListener, info.id as UserIdResolvable, async (redemptionEvent: unknown) => {
+						try {
+							// defensive casts
+							const r = redemptionEvent as Record<string, unknown>;
+							// Try common shapes used by twurple: reward, reward.cost, reward.title, userDisplayName, userId, userInput
+							const reward = (r['reward'] as Record<string, unknown> | undefined) || (r['customReward'] as Record<string, unknown> | undefined) || {};
+							const costRaw = reward && ((reward['cost'] as unknown) ?? (r['rewardCost'] ?? (reward['cost'] as unknown)));
+							const cost = typeof costRaw === 'number' ? costRaw : Number(costRaw ?? 0) || 0;
+							const userDisplayName = String(r['userDisplayName'] ?? (r['user'] as Record<string, unknown>)?.['displayName'] ?? r['userName'] ?? (r['user'] as Record<string, unknown>)?.['userName'] ?? 'Unknown');
+							const userId = String(r['userId'] ?? (r['user'] as Record<string, unknown>)?.['id'] ?? (r['user'] as Record<string, unknown>)?.['userId'] ?? (r['user'] as Record<string, unknown>)?.['user_id'] ?? '');
+							const userMessage = String(r['userInput'] ?? r['message'] ?? r['input'] ?? '');
+							const rewardTitle = String((reward['title'] as unknown) ?? (reward['rewardTitle'] as unknown) ?? (reward['name'] as unknown) ?? 'Channel Point Redemption');
+							const embed = new EmbedBuilder()
+								.setTitle('Twitch Event[Channel Points Redemption]')
+								.setAuthor({ name: userDisplayName })
+								.addFields([
+									{ name: 'Reward', value: rewardTitle, inline: true },
+									{ name: 'Cost', value: String(cost), inline: true },
+									{ name: 'Message', value: userMessage || 'None', inline: false },
+								])
+								.setTimestamp();
+							// enqueue to the activity webhook
+							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [embed] });
+							// if this channel has channelPointsEnabled in DB, credit the user's wallet
+							try {
+								const channelDoc = await ChannelModel.findOne({ user_id: info.id });
+								const cpEnabled = Boolean((channelDoc as unknown as { channelPointsEnabled?: unknown })?.channelPointsEnabled);
+								if (channelDoc && cpEnabled) {
+									// credit with cost if available, otherwise fallback to a small default (e.g., 100)
+									const creditAmount = cost > 0 ? cost : 100;
+									await creditWallet(userId || userDisplayName, creditAmount, userDisplayName, info.id);
+								}
+							} catch (e) {
+								logger.warn('Failed to process channelPoints wallet credit', e);
+							}
+						} catch (e) {
+							logger.error('Error in channel points redemption handler', e);
+						}
+					});
+					logger.info('Registered EventSub redemption handler (' + redemptionMethodName + ') for ' + info.name);
+				}
+			} else {
+				logger.debug('No EventSub redemption handler found on listener for ' + info.name);
+			}
+		} catch (e) {
+			logger.warn('Failed to register channel points redemption handler', e);
+		}
 		let previousTitle: string = '';
 		let previousCategory: string = '';
 
@@ -965,6 +956,7 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 				condition: { broadcaster_user_id: authUserId },
 				transport: { method: 'websocket' },
 			};
+
 			try {
 				await eventSubHelper.createSubscription(body);
 				logger.debug(`Created EventSub ${s.type} for ${authUserId} via Twurple`);

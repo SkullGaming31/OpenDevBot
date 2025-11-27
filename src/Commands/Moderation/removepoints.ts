@@ -95,7 +95,7 @@ const removepoints: Command = {
 				await commandUsage.send({ embeds: [removePointsEmbed] });
 			} catch (err: any) {
 				if (err && err.message && err.message.includes('Insufficient')) {
-					await chatClient.say(channel, `Cannot remove more points than the user has.`);
+					await chatClient.say(channel, 'Cannot remove more points than the user has.');
 				} else {
 					logger.error('Error removing points:', err);
 					await chatClient.say(channel, 'An error occurred while processing your request');

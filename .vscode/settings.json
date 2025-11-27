@@ -3,5 +3,7 @@
     "editor.defaultFormatter": "vscode.typescript-language-features",
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features"
-    }
+    },
+    "editor.autoIndentOnPaste": true,
+    "editor.tabSize": 2
 }

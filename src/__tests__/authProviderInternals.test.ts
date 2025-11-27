@@ -1,5 +1,3 @@
-import { jest } from '@jest/globals';
-
 describe('authProvider internals safety', () => {
 	beforeEach(() => {
 		jest.resetModules();
@@ -12,7 +10,7 @@ describe('authProvider internals safety', () => {
 			const findOne = (jest.fn() as any);
 			findOne.mockResolvedValue(botToken);
 			const TokenModel = { findOne } as any;
-			jest.doMock('../database/models/tokenModel', () => ({ TokenModel }));
+			jest.doMock('../src/database/models/tokenModel', () => ({ TokenModel }));
 
 			// Create a mock provider that exposes _intentToUserId and _userIdToIntents
 			const onRefresh = jest.fn();
