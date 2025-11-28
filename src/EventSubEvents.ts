@@ -1,16 +1,11 @@
-import { EventSubWsListener } from '@twurple/eventsub-ws';
+import type { EventSubWsListener } from '@twurple/eventsub-ws';
 import { config } from 'dotenv';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 config();
 
-import {
-	ApiClient,
-	HelixPaginatedEventSubSubscriptionsResult,
-	HelixPagination,
-	UserIdResolvable,
-} from '@twurple/api';
-import { StaticAuthProvider } from '@twurple/auth';
+import type { ApiClient, UserIdResolvable, } from '@twurple/api';
+import type { StaticAuthProvider } from '@twurple/auth';
 import logger from './util/logger';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
@@ -18,18 +13,12 @@ import { getChatClient } from './chat';
 import { LurkMessageModel } from './database/models/LurkModel';
 import ChannelModel from './database/models/channel';
 import { creditWallet } from './services/balanceAdapter';
-import {
-	broadcasterInfo,
-	moderatorIDs,
-	PromoteWebhookID,
-	PromoteWebhookToken,
-	TwitchActivityWebhookID,
-	TwitchActivityWebhookToken,
-} from './util/constants';
+import { broadcasterInfo, moderatorIDs, openDevBotID, PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
 import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
 import FollowMessage from './database/models/followMessages';
+import { warn } from 'console';
 
 export async function initializeTwitchEventSub(): Promise<void> {
 	const userApiClient = await getUserApi();
@@ -48,7 +37,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 	//#region EventSub
 	for (const info of broadcasterInfo) {
-
 
 		let streamStartTime: Date | undefined;// testing for stream end message for discord when stream goes offline and shows how long the stream was live
 		const online = eventSubListener.onStreamOnline(
@@ -161,6 +149,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			async (gift) => {
 				// logger.info(info.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
 				const userInfo = await gift.getGifter();
+				if (userInfo === null) return;
 				const broadcasterInfoResult = await gift.getBroadcaster();
 				if (broadcasterInfoResult.broadcasterType === '') return;
 				chatClient.say(
@@ -195,7 +184,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					.setThumbnail(`${userInfo.profilePictureUrl}`)
 					// .setColor('Random')
 					.setFooter({
-						text: 'DragonFire Lair',
+						text: 'SkullGaming HQ',
 						iconURL: `${userInfo.profilePictureUrl}`,
 					})
 					.setTimestamp();
@@ -612,6 +601,53 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
+		const ChannelWarning = eventSubListener.onChannelWarningSend(info.id as UserIdResolvable, info.id as UserIdResolvable, async (warning) => {
+			const userInfo = await warning.getBroadcaster();
+			// Narrow the warning to a record so we can read fields without `any`.
+			const warningRecord = warning as unknown as Record<string, unknown>;
+			const userDisplayName = String(warningRecord['userDisplayName'] ?? warningRecord['userName'] ?? 'Unknown');
+			const citedRaw = warningRecord['chatRulesCited'] as unknown | undefined;
+			const reasonRaw = warningRecord['reason'] as unknown | undefined;
+			// Prefer explicit reason; if missing, and a rule was cited, show the cited rule(s) instead.
+			let reasonDisplay: string;
+			if (typeof reasonRaw === 'string' && reasonRaw.trim() !== '') {
+				reasonDisplay = reasonRaw;
+			} else if (Array.isArray(citedRaw) && citedRaw.length > 0) {
+				reasonDisplay = citedRaw.join(' – ');
+			} else {
+				reasonDisplay = String(reasonRaw ?? 'null');
+			}
+
+			try {
+				if (Array.isArray(citedRaw)) {
+					if (citedRaw.length === 0) {
+						logger.info('chatRulesCited for %s: none or custom (empty array)', userDisplayName);
+					} else {
+						logger.info('chatRulesCited (array) for %s: %s', userDisplayName, citedRaw.join(', '));
+					}
+				} else if (citedRaw instanceof Map) {
+					const keys = Array.from(citedRaw.keys());
+					logger.info('chatRulesCited (map keys) for %s: %s', userDisplayName, keys.length ? keys.join(', ') : 'none');
+				} else if (citedRaw && typeof citedRaw === 'object') {
+					const keys = Object.keys(citedRaw as Record<string, unknown>);
+					logger.info('chatRulesCited (object keys) for %s: %s', userDisplayName, keys.length ? keys.join(', ') : 'none');
+				} else if (citedRaw === undefined || citedRaw === null) {
+					logger.info('chatRulesCited for %s: none or custom (missing)', userDisplayName);
+				} else {
+					logger.info('chatRulesCited (value) for %s: %s', userDisplayName, String(citedRaw));
+				}
+			} catch (e) {
+				logger.error('Failed to read chatRulesCited for warning', e);
+			}
+
+			logger.info('Warning Event for %s: Warning Reason: %s', userDisplayName, reasonDisplay);
+			await chatClient.say(userInfo.name, `Warning Event for ${userDisplayName}, Warning Reason: ${reasonDisplay}`);
+		});
+		const ChanWarningAcknowledge = eventSubListener.onChannelWarningAcknowledge(broadcasterInfo[0].id as UserIdResolvable, broadcasterInfo[0].id as UserIdResolvable, async (ack) => {
+			const userInfo = await ack.getBroadcaster();
+			logger.info(`Warning Acknowledged Event for ${ack.userDisplayName}`);
+			await userApiClient.whispers.sendWhisper(openDevBotID, '1155035316' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
+		});
 
 		// Defensive registration for channel points / custom reward redemption events
 		// Twurple API versions differ in method names. Inspect the listener for any method
@@ -725,7 +761,11 @@ let eventSubListenerPromise: Promise<EventSubWsListener> | null = null;
  */
 async function createEventSubListener(): Promise<EventSubWsListener> {
 	const userApiClient: ApiClient = await getUserApi();
-	const eventSubListener = new EventSubWsListener({
+	// Dynamically import the ESM-only Twurple EventSub websocket package at runtime
+	const eventsubWs = await import('@twurple/eventsub-ws');
+	if (!('EventSubWsListener' in eventsubWs)) throw new Error('EventSubWsListener not found in @twurple/eventsub-ws');
+	const EventSubWsListenerCtor = (eventsubWs as unknown as { EventSubWsListener: new (opts: { apiClient: unknown; logger?: unknown }) => EventSubWsListener }).EventSubWsListener;
+	const eventSubListener = new EventSubWsListenerCtor({
 		apiClient: userApiClient,
 		logger: { minLevel: 'ERROR' },
 	});
@@ -939,7 +979,12 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 		{ type: 'channel.cheer', version: '1' },
 	];
 
-	const apiClient = new ApiClient({ authProvider: new StaticAuthProvider(clientId, accessToken), logger: { minLevel: 'ERROR' } });
+	// Dynamically import ApiClient and StaticAuthProvider at runtime to avoid ESM-only import errors
+	const apiModule = await import('@twurple/api');
+	const authModule = await import('@twurple/auth');
+	const ApiClientCtor = apiModule.ApiClient as new (opts: { authProvider: unknown; logger?: unknown }) => ApiClient;
+	const StaticAuthProviderCtor = authModule.StaticAuthProvider as new (clientId: string, token: string) => StaticAuthProvider;
+	const apiClient = new ApiClientCtor({ authProvider: new StaticAuthProviderCtor(clientId, accessToken), logger: { minLevel: 'ERROR' } });
 
 	// Twurple exposes EventSub helpers on the ApiClient in recent versions. Prefer that.
 	type EventSubHelper = { createSubscription: (body: unknown) => Promise<unknown> };
@@ -949,6 +994,7 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 
 	if (eventSubHelper && typeof eventSubHelper.createSubscription === 'function') {
 		// use Twurple helper to create subscriptions
+		let helperFailed = false;
 		for (const s of subs) {
 			const body = {
 				type: s.type,
@@ -975,8 +1021,12 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 				if (status === 409 || errStr.includes('409')) {
 					logger.debug(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
 				} else {
+					// If the helper fails for an unexpected reason (for example due to
+					// SDK mismatch or missing transport support), log and fall back to
+					// creating a short-lived EventSubWsListener instead of throwing.
 					logger.warn(`Twurple EventSub create failed for ${s.type}:`, err);
-					throw err;
+					helperFailed = true;
+					break;
 				}
 			}
 
@@ -984,11 +1034,19 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 			// eslint-disable-next-line no-await-in-loop
 			await sleep(250);
 		}
-		return;
+
+		if (!helperFailed) {
+			return;
+		}
+		logger.info('Twurple helper failed, falling back to temporary EventSubWsListener for subscription creation');
 	}
 
 	// Fallback: if helper not available, create a short-lived listener to register handlers
-	const tempListener = new EventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
+	// Dynamically import and construct a temporary EventSub listener for subscription creation
+	const _es = await import('@twurple/eventsub-ws');
+	if (!('EventSubWsListener' in _es)) throw new Error('EventSubWsListener not found in @twurple/eventsub-ws');
+	const TempEventSubWsListener = (_es as unknown as { EventSubWsListener: new (opts: { apiClient: unknown; logger?: unknown }) => EventSubWsListener }).EventSubWsListener;
+	const tempListener = new TempEventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
 	try {
 		tempListener.start();
 		// register minimal no-op handlers so the listener creates subscriptions

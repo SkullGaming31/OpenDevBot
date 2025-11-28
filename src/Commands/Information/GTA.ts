@@ -1,4 +1,4 @@
-import { UserIdResolvable } from '@twurple/api';
+import type { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 

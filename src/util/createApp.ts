@@ -68,7 +68,7 @@ export default function createApp(): express.Application {
 			const { getChatClient, joinedChannels } = await import('../chat');
 			const client = await getChatClient();
 			const normalized = username.startsWith('#') ? username.slice(1) : username;
-			const partFn = (client as any).part || (client as any).leave || (client as any).quit || undefined;
+			const partFn = (client).part || (client).quit || undefined;
 			if (typeof partFn === 'function') {
 				await partFn.call(client, normalized);
 			}
@@ -126,6 +126,8 @@ export default function createApp(): express.Application {
 		'moderator:read:guest_star',
 		'moderator:read:shield_mode',
 		'moderator:read:shoutouts',
+		'moderator:read:warnings',
+		'moderator:manage:warnings',
 		'user:edit',
 		'user:edit:broadcast',
 		'user:edit:follows',
@@ -162,6 +164,7 @@ export default function createApp(): express.Application {
 		'channel:read:redemptions',
 		'channel:read:subscriptions',
 		'channel:read:vips',
+		'channel:bot',
 		'chat:edit',
 		'chat:read',
 		'clips:edit',

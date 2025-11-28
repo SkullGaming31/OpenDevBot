@@ -1,4 +1,4 @@
-import { ApiClient, HelixChannelEditor, UserIdResolvable, UserNameResolvable } from '@twurple/api';
+import type { ApiClient, HelixChannelEditor, UserIdResolvable, UserNameResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';

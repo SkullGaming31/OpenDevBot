@@ -1,5 +1,5 @@
-import { UserIdResolvable } from '@twurple/api';
-import { AccessToken, RefreshingAuthProvider, StaticAuthProvider } from '@twurple/auth';
+import type { UserIdResolvable } from '@twurple/api';
+import type { AccessToken, RefreshingAuthProvider, StaticAuthProvider } from '@twurple/auth';
 import { config } from 'dotenv';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import logger from '../util/logger';
@@ -19,7 +19,10 @@ const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 	const tokenDataList: (ITwitchToken & { user_id: string })[] = await TokenModel.find();
 
-	const authProvider = new RefreshingAuthProvider({ clientId, clientSecret });
+	// Dynamically import the RefreshingAuthProvider at runtime to avoid ESM/CJS import issues
+	const authModule = await import('@twurple/auth');
+	const RefreshingAuthProviderCtor = authModule.RefreshingAuthProvider as new (opts: { clientId: string; clientSecret: string }) => RefreshingAuthProvider;
+	const authProvider = new RefreshingAuthProviderCtor({ clientId, clientSecret });
 
 	authProvider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
 		try {
@@ -68,7 +71,10 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 	type BotTokenRecord = ITwitchToken & { user_id: string; scope: string[] | string };
 	const botToken = await TokenModel.findOne({ user_id: String(botEnvId) }) as BotTokenRecord | null;
 
-	const provider = new RefreshingAuthProvider({ clientId, clientSecret });
+	// Dynamically import RefreshingAuthProvider (and possibly StaticAuthProvider later)
+	const authModule = await import('@twurple/auth');
+	const RefreshingAuthProviderCtor = authModule.RefreshingAuthProvider as new (opts: { clientId: string; clientSecret: string }) => RefreshingAuthProvider;
+	const provider = new RefreshingAuthProviderCtor({ clientId, clientSecret });
 
 	provider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
 		try {
@@ -190,7 +196,9 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 	if (registrationFailed) {
 		try {
 			logger.warn('ChatAuthProvider: registration failed; falling back to StaticAuthProvider for chat');
-			return new StaticAuthProvider(clientId, newTokenData.accessToken ?? '');
+			const authModule2 = await import('@twurple/auth');
+			const StaticAuthProviderCtor = authModule2.StaticAuthProvider as new (clientId: string, token: string) => StaticAuthProvider;
+			return new StaticAuthProviderCtor(clientId, newTokenData.accessToken ?? '');
 		} catch (e) {
 			logger.warn('ChatAuthProvider: failed to create StaticAuthProvider fallback', e);
 		}

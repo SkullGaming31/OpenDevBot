@@ -1,4 +1,4 @@
-import { UserIdResolvable } from '@twurple/api/lib';
+import type { UserIdResolvable } from '@twurple/api/lib';
 import { ChatMessage } from '@twurple/chat/lib';
 import logger from '../../util/logger';
 import { getUserApi } from '../../api/userApiClient';

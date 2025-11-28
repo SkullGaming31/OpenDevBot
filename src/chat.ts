@@ -6,7 +6,7 @@ import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple
 import fs, { existsSync } from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
-import { getAuthProvider, getChatAuthProvider } from './auth/authProvider';
+import { getChatAuthProvider } from './auth/authProvider';
 import { LurkMessageModel } from './database/models/LurkModel';
 import knownBotsModel, { Bots } from './database/models/knownBotsModel';
 import { Command } from './interfaces/Command';

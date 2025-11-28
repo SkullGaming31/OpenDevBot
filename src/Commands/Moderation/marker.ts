@@ -1,4 +1,4 @@
-import { HelixChannelEditor, UserIdResolvable } from '@twurple/api';
+import type { HelixChannelEditor, UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
