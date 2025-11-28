@@ -1,6 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import countdown from 'countdown';
-import { ApiClient, UserIdResolvable } from '@twurple/api';
+import type { ApiClient, UserIdResolvable } from '@twurple/api';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';

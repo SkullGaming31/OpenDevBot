@@ -1,5 +1,5 @@
-import { ApiClient } from '@twurple/api';
-import { RefreshingAuthProvider } from '@twurple/auth';
+import type { ApiClient } from '@twurple/api';
+import type { RefreshingAuthProvider } from '@twurple/auth';
 import { getAuthProvider } from '../auth/authProvider';
 import ENVIRONMENT from '../util/env';
 
@@ -15,7 +15,10 @@ export async function getUserApi(): Promise<ApiClient> {
 	const minLevel: 'ERROR' | 'INFO' | 'CRITICAL' | 'DEBUG' | 'WARNING' | 'TRACE' =
 		environment === 'dev' || environment === 'debug' ? 'INFO' : 'CRITICAL';
 
-	const userApiClient = new ApiClient({ authProvider: userAuthProvider, logger: { minLevel } });
+	// Dynamically import ApiClient at runtime to avoid loading an ESM-only package
+	const apiModule = await import('@twurple/api');
+	const ApiClientCtor = apiModule.ApiClient as new (opts: { authProvider: unknown; logger?: unknown }) => ApiClient;
+	const userApiClient = new ApiClientCtor({ authProvider: userAuthProvider, logger: { minLevel } });
 
 	return userApiClient;
 }

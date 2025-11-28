@@ -1,4 +1,12 @@
-# Changelog
+# Changelog for OpenDevBot
+
+## Unreleased - 2025-11-28
+
+- Fix: Improve EventSub compatibility and logging
+  - Use runtime/dynamic imports for Twurple EventSub/API packages to avoid ESM/CJS import errors (partial conversion on the `chore/deps-update-2025-11-27` branch).
+  - Fix: `chatRulesCited` handling in `src/EventSubEvents.ts` — treat empty `string[]` as "none/custom" and prefer cited rule text when `reason` is null.
+  - Cleanup: remove `any` casts in the warning handler and improve logging/chat messages to show the cited rule when available.
+  - Dev: created branch `chore/deps-update-2025-11-27` and pushed local changes.
 
 All notable changes to this project are documented in this file.
 

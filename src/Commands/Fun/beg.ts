@@ -5,7 +5,7 @@ import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 import { getUserApi } from '../../api/userApiClient';
 import { broadcasterInfo } from '../../util/constants';
-import { UserIdResolvable } from '@twurple/api';
+import type { UserIdResolvable } from '@twurple/api';
 import { UserModel } from '../../database/models/userModel';
 
 const beg: Command = {
