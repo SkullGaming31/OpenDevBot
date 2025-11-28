@@ -10,6 +10,8 @@ module.exports = {
 	moduleNameMapper: {
 		'^\\.\\./src/(.*)$': '<rootDir>/src/$1',
 		'^src/(.*)$': '<rootDir>/src/$1',
+		'^@twurple/chat$': '<rootDir>/src/__mocks__/@twurple_chat.ts',
+		'^@twurple/chat/lib$': '<rootDir>/src/__mocks__/@twurple_chat.ts',
 	},
 	testPathIgnorePatterns: ['<rootDir>/src/scripts/'],
 	coveragePathIgnorePatterns: ['<rootDir>/src/scripts/'],
