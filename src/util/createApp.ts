@@ -124,9 +124,13 @@ export default function createApp(): express.Application {
 			const { getChatClient, joinedChannels } = await import('../chat');
 			const client = await getChatClient();
 			const normalized = username.startsWith('#') ? username.slice(1) : username;
-			const partFn = (client).part || (client).quit || undefined;
-			if (typeof partFn === 'function') {
-				await partFn.call(client, normalized);
+			// Ensure we only call functions — some ChatClient variants expose
+			// `part` or `quit` as non-callable values in different versions.
+			// Check the property type explicitly to avoid CodeQL type-confusion warnings.
+			if (typeof (client as any)?.part === 'function') {
+				await (client as any).part(normalized);
+			} else if (typeof (client as any)?.quit === 'function') {
+				await (client as any).quit(normalized);
 			}
 			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
 			return res.json({ ok: true, parted: normalized });
