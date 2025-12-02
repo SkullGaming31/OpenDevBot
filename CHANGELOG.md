@@ -35,6 +35,11 @@ All notable changes to this project are documented in this file.
 
 - Result: full typecheck and test run locally — `tsc --noEmit` passes and all Jest suites pass (48 suites, 136 tests).
 
+- CI: Fix GitHub Actions `mongodb-memory-server` startup
+  - Added a CI-safe Jest mapping to redirect `mongodb-memory-server` to a lightweight mock when running in CI (`GITHUB_ACTIONS`/`CI` env).
+  - Added `test-mocks/mongodb-memory-server.mock.ts` which uses the workflow-provided `MONGO_URI` (the `mongo` service) so CI doesn't attempt to spawn native MongoDB binaries that depend on `libcrypto.so.1.1`.
+  - Result: avoids OpenSSL 1.1 (`libcrypto.so.1.1`) failures in GitHub Actions while preserving local `mongodb-memory-server` behavior.
+
 ## [Unreleased]
 
 ### 2025-11-27 — Dynamic channel joins & Copilot instructions
