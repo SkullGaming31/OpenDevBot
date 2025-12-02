@@ -5,5 +5,11 @@
         "editor.defaultFormatter": "vscode.json-language-features"
     },
     "editor.autoIndentOnPaste": true,
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "[markdown]": {
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
 }

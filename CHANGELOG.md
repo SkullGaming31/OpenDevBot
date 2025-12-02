@@ -13,6 +13,13 @@
   - Aligned test mocks for webhook constants (`commandUsageWebhookID`, `CommandUsageWebhookTOKEN`) and ensured moderator/editor checks in tests pass.
   - Result: all Jest suites pass locally (47 suites, 133 tests).
 
+- Persistence: Durable Discord webhook queue (2025-12-02)
+  - Added a Mongo-backed webhook queue model: `src/database/models/webhookQueue.ts`.
+  - `enqueueWebhook` now persists queued webhook items to MongoDB (best-effort) and hydrates pending items at startup or when the DB reconnects (`src/Discord/webhookQueue.ts`).
+  - After a webhook is successfully sent the corresponding DB record is deleted to avoid collection clutter; failed items keep `attempts` and `lastError` for inspection and retrying.
+  - Behavior: queued items survive process restarts for single-instance deployments (the module re-queues pending DB items on load). Promises returned by `enqueueWebhook` resolve only in-process (they won't survive process exit) — callers should treat the operation as durable but asynchronous.
+  - Note: current implementation assumes a single bot instance; if you run multiple instances later we recommend adding atomic-claim semantics (findOneAndUpdate claim) to prevent duplicate sends.
+
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
