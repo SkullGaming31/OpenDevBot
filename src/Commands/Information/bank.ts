@@ -93,8 +93,9 @@ const bank: Command = {
 						// Now credit the bank
 						await economyService.deposit(key, amount);
 						return chatClient.say(channel, `@${user}, deposited ${amount} to your bank.`);
-					} catch (err: any) {
-						return chatClient.say(channel, `@${user}, deposit failed: ${err.message}`);
+					} catch (err: unknown) {
+						const message = err instanceof Error ? err.message : String(err);
+						return chatClient.say(channel, `@${user}, deposit failed: ${message}`);
 					}
 				} else {
 					// Moderator depositing into another user's bank (no wallet deduction)
@@ -134,8 +135,9 @@ const bank: Command = {
 					}
 
 					return chatClient.say(channel, `@${user}, withdrew ${amount} from bank and added to wallet.`);
-				} catch (err: any) {
-					return chatClient.say(channel, `@${user}, failed to withdraw: ${err.message}`);
+				} catch (err: unknown) {
+					const message = err instanceof Error ? err.message : String(err);
+					return chatClient.say(channel, `@${user}, failed to withdraw: ${message}`);
 				}
 			}
 
@@ -150,14 +152,16 @@ const bank: Command = {
 					const toKey = await resolveKey(target);
 					await economyService.transfer(fromKey, toKey, amount);
 					return chatClient.say(channel, `@${user}, transferred ${amount} to ${target}.`);
-				} catch (err: any) {
-					return chatClient.say(channel, `@${user}, transfer failed: ${err.message}`);
+				} catch (err: unknown) {
+					const message = err instanceof Error ? err.message : String(err);
+					return chatClient.say(channel, `@${user}, transfer failed: ${message}`);
 				}
 			}
 
 			return chatClient.say(channel, `@${user}, unknown subcommand. ${bank.usage}`);
-		} catch (err: any) {
-			return chatClient.say(channel, `@${user}, error: ${err.message}`);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			return chatClient.say(channel, `@${user}, error: ${message}`);
 		}
 	}
 };

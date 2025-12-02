@@ -2,10 +2,11 @@ import rateLimit from 'express-rate-limit';
 
 export async function sleep(ms: number): Promise<void> {
 	await new Promise<void>((resolve) => {
-		const t = setTimeout(resolve, ms);
+		const t: ReturnType<typeof setTimeout> = setTimeout(resolve, ms);
 		// ensure timer does not keep node event loop alive in test environments
-		// (unref is available on Node timers)
-		if (t && typeof (t as any).unref === 'function') (t as any).unref();
+		// (unref is available on Node timers). Use `unknown` casts to avoid `any`.
+		const maybeUnref = t as unknown as { unref?: () => void };
+		if (typeof maybeUnref.unref === 'function') maybeUnref.unref();
 	});
 }
 

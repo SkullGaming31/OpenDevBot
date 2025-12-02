@@ -22,6 +22,19 @@
 
 All notable changes to this project are documented in this file.
 
+### 2025-12-02 — Linting, typing, and test fixes
+
+- Fix: replace unsafe `Function` / `any` usages across the codebase to satisfy ESLint/TS rules.
+  - `src/__mocks__/@twurple_chat.ts` — tightened handler typing so tests can register typed callbacks without `Function` (fixes `@typescript-eslint/ban-types`).
+  - `src/monitoring/metrics.ts` — use Express `Request`/`Response` types and accept optional `next` to match handler call-sites used in tests.
+  - `src/util/util.ts`, `src/services/economyService.ts`, and several command files — removed `any` in `catch` clauses and replaced with `unknown` + normalized error messages; typed timeout/unref usage.
+
+- Test: added and adjusted mocks so admin webhook endpoints and various command tests run cleanly.
+  - `src/__tests__/admin_webhooks.test.ts` — improved `find()` mock to return a chainable query (supports `.sort().skip().limit().lean()`).
+  - Resolved duplicate manual-mock warnings by ignoring `dist/` in `jest.config.js`.
+
+- Result: full typecheck and test run locally — `tsc --noEmit` passes and all Jest suites pass (48 suites, 136 tests).
+
 ## [Unreleased]
 
 ### 2025-11-27 — Dynamic channel joins & Copilot instructions

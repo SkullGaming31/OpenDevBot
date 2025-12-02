@@ -1,5 +1,6 @@
 import client from 'prom-client';
 import mongoose from 'mongoose';
+import { Request, Response, RequestHandler, NextFunction } from 'express';
 
 // Create a registry so we can register custom metrics without polluting global
 const register = new client.Registry();
@@ -32,13 +33,14 @@ export const dbUp = new client.Gauge({
 });
 
 // Register metrics individually (avoid TS label-name incompatibilities)
-register.registerMetric(webhookAttempts as any);
-register.registerMetric(eventSubRetries as any);
-register.registerMetric(tokenRefreshes as any);
-register.registerMetric(dbUp as any);
+// `prom-client` typing for registerMetric can be picky about generics; cast via `unknown` to avoid `any`.
+register.registerMetric(webhookAttempts as unknown as client.Counter<string>);
+register.registerMetric(eventSubRetries as unknown as client.Counter<string>);
+register.registerMetric(tokenRefreshes as unknown as client.Counter<string>);
+register.registerMetric(dbUp as unknown as client.Gauge<string>);
 
 // Health check helpers
-export async function getDbHealth() {
+export async function getDbHealth(): Promise<boolean> {
 	try {
 		const state = mongoose.connection.readyState;
 		// readyState 1 == connected
@@ -48,8 +50,8 @@ export async function getDbHealth() {
 	}
 }
 
-export function metricsHandler() {
-	return async (_req: any, res: any) => {
+export function metricsHandler(): (req: Request, res: Response, next?: NextFunction) => Promise<void> {
+	return async (_req: Request, res: Response, _next?: NextFunction) => {
 		try {
 			// update db gauge
 			const healthy = await getDbHealth();
@@ -65,7 +67,7 @@ export function metricsHandler() {
 }
 
 export function healthHandler() {
-	return async (_req: any, res: any) => {
+	return async (_req: Request, res: Response, _next?: NextFunction) => {
 		const healthy = await getDbHealth();
 		if (!healthy) return res.status(500).json({ status: 'unhealthy', db: false });
 		return res.json({ status: 'ok', db: true });
@@ -73,7 +75,7 @@ export function healthHandler() {
 }
 
 export function readyHandler() {
-	return async (_req: any, res: any) => {
+	return async (_req: Request, res: Response, _next?: NextFunction) => {
 		const healthy = await getDbHealth();
 		if (!healthy) return res.status(503).json({ ready: false });
 		return res.json({ ready: true });

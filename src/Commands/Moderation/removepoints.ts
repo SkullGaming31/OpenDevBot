@@ -93,8 +93,9 @@ const removepoints: Command = {
 
 				await chatClient.say(channel, `Removed ${amountToRemove} points from ${targetUser}. New balance: ${newBalance}`);
 				await commandUsage.send({ embeds: [removePointsEmbed] });
-			} catch (err: any) {
-				if (err && err.message && err.message.includes('Insufficient')) {
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (message.includes('Insufficient')) {
 					await chatClient.say(channel, 'Cannot remove more points than the user has.');
 				} else {
 					logger.error('Error removing points:', err);

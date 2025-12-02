@@ -30,7 +30,8 @@ const purgebalance: Command = {
 
 			if (targetUser === 'all') {
 				const res = await BankAccount.updateMany({}, { $set: { balance: 0 } });
-				const count = (res as any)?.modifiedCount ?? (res as any)?.nModified ?? 0;
+				const resTyped = res as unknown as { modifiedCount?: number; nModified?: number };
+				const count = resTyped.modifiedCount ?? resTyped.nModified ?? 0;
 				// Log admin purge
 				await TransactionLog.create([{ type: 'withdraw', from: 'system', to: 'all', amount: 0, meta: { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, action: 'purge_all', count } }]);
 				await chatClient.say(channel, `All user balances have been purged. (${count} accounts updated)`);

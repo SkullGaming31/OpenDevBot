@@ -43,8 +43,9 @@ const transfer: Command = {
 			try {
 				await balanceAdapter.transfer(sender.toLowerCase(), recipient.replace(/^@/, '').toLowerCase(), parsedAmount);
 				await chatClient.say(channel, `@${user}, you have transferred ${parsedAmount} gold to ${recipient.replace(/^@/, '')}.`);
-			} catch (err: any) {
-				await chatClient.say(channel, `@${user}, transfer failed: ${err.message}`);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				await chatClient.say(channel, `@${user}, transfer failed: ${message}`);
 			}
 
 		} catch (error) {

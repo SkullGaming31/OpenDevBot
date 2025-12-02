@@ -28,7 +28,7 @@ async function transactionsSupported(): Promise<boolean> {
 
 export async function deposit(userId: string, amount: number, session?: mongoose.ClientSession, meta?: Record<string, unknown>) {
 	if (amount <= 0) throw new EconomyError('Amount must be positive');
-	const opts = session ? { session } : undefined as any;
+	const opts: { session: mongoose.ClientSession } | undefined = session ? { session } : undefined;
 	if (session) {
 		// session-based: keep existing document load/save to participate in transaction
 		let acct = await BankAccount.findOne({ userId }).session(session);
@@ -55,7 +55,7 @@ export async function deposit(userId: string, amount: number, session?: mongoose
 
 export async function withdraw(userId: string, amount: number, session?: mongoose.ClientSession, meta?: Record<string, unknown>) {
 	if (amount <= 0) throw new EconomyError('Amount must be positive');
-	const opts = session ? { session } : undefined as any;
+	const opts: { session: mongoose.ClientSession } | undefined = session ? { session } : undefined;
 	if (session) {
 		// session-based: existing load/save to participate in transaction
 		const acct = await BankAccount.findOne({ userId }).session(session);

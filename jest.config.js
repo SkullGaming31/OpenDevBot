@@ -13,6 +13,8 @@ module.exports = {
 		'^@twurple/chat$': '<rootDir>/src/__mocks__/@twurple_chat.ts',
 		'^@twurple/chat/lib$': '<rootDir>/src/__mocks__/@twurple_chat.ts',
 	},
+	// Ignore built artifacts to avoid duplicate manual mock detection
+	modulePathIgnorePatterns: ['<rootDir>/dist/'],
 	testPathIgnorePatterns: ['<rootDir>/src/scripts/'],
 	coveragePathIgnorePatterns: ['<rootDir>/src/scripts/'],
 	collectCoverage: true,

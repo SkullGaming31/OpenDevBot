@@ -31,9 +31,10 @@ const debugbalance: Command = {
 
 			await chatClient.say(channel, `DEBUG ${target} -> ${bankMsg} | ${walletMsg}`);
 			logger.debug('DEBUGBALANCE', { target, key, bank, wallet });
-		} catch (err: any) {
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
 			logger.error('debugbalance error', err as Error);
-			await chatClient.say(channel, `Error inspecting balances: ${err.message}`);
+			await chatClient.say(channel, `Error inspecting balances: ${message}`);
 		}
 	}
 };
