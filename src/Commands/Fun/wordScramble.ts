@@ -99,8 +99,8 @@ const wordScramble: Command = {
 				};
 				activeGames.set(normalizedChannel, state);
 
-				await chatClient.say(channel, `Word Scramble started! Unscramble: ${scrambled} — first correct guess wins! Use \\!scramble <word> to answer.`);
-				logger.info('Scramble started', { channel: normalizedChannel, startedBy: user, answerLen: word.length });
+				await chatClient.say(channel, `Word Scramble started! Unscramble: ${scrambled} — first correct guess wins! Use !scramble <word> to answer.`);
+				// logger.info('Scramble started', { channel: normalizedChannel, startedBy: user, answerLen: word.length });
 				return;
 			}
 
@@ -114,7 +114,7 @@ const wordScramble: Command = {
 				if (state.timeoutId) clearTimeout(state.timeoutId);
 				activeGames.delete(normalizedChannel);
 				await chatClient.say(channel, `🎉 ${user} guessed it! The word was: ${state.answer}`);
-				logger.info('Scramble won', { channel: normalizedChannel, winner: user, answer: state.answer });
+				// logger.info('Scramble won', { channel: normalizedChannel, winner: user, answer: state.answer });
 				return;
 			}
 

@@ -42,6 +42,16 @@ All notable changes to this project are documented in this file.
     warnings and avoid CodeQL type-confusion findings.
   - Linted and type-checked after the change; tests continue to pass locally.
 
+- Feature: Hangman chat game + tests (2025-12-02)
+  - Added a new Hangman chat command: `src/Commands/Fun/hangman.ts`.
+    - Commands: start/status/end, guess a letter or the whole word, per-channel in-memory
+      state, 7 attempts, and a 5-minute auto-expire timeout.
+    - Designed for single-instance bots (no cross-instance persistence).
+  - Tests: added `src/__tests__/commands_hangman.test.ts` and improved
+    `src/__tests__/commands_wordscramble.test.ts` to assert chat output for start,
+    letter guesses and full-word guesses.
+  - Linted, type-checked, and ran Jest — all tests pass locally after these additions.
+
 - CI: Fix GitHub Actions `mongodb-memory-server` startup
   - Added a CI-safe Jest mapping to redirect `mongodb-memory-server` to a lightweight mock when running in CI (`GITHUB_ACTIONS`/`CI` env).
   - Added `test-mocks/mongodb-memory-server.mock.ts` which uses the workflow-provided `MONGO_URI` (the `mongo` service) so CI doesn't attempt to spawn native MongoDB binaries that depend on `libcrypto.so.1.1`.
