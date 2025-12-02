@@ -4,8 +4,11 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import knownBotsModel, { Bots } from '../../database/models/knownBotsModel';
 import { Command } from '../../interfaces/Command';
-import { broadcasterInfo } from '../../util/constants';
+import { broadcasterInfo, commandUsageWebhookID, CommandUsageWebhookTOKEN } from '../../util/constants';
 import logger from '../../util/logger';
+import { enqueueWebhook } from '../../Discord/webhookQueue';
+import { EmbedBuilder } from 'discord.js';
+import command from './help';
 
 // TODO: add the channel the bot was added from and who from that channel added the bot
 // TODO: add logs to discord to show channel, user and bot name that was added to the database ex: modvlog(user) added drapsnatt(bot) from modvlog(channel)
@@ -13,7 +16,7 @@ import logger from '../../util/logger';
 const bots: Command = {
 	name: 'bots',
 	description: 'All known Bot names on Twitch(Known by me)',
-	usage: '!bots [add|remove|list]',
+	usage: '!bots [add|info|remove|list]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
@@ -42,6 +45,9 @@ const bots: Command = {
 								const newBot: Bots = new knownBotsModel({
 									id: userToGet.id,
 									username: usernameToAdd.toLowerCase(),
+									addedBy: msg.userInfo.displayName || msg.userInfo.userId,
+									addedFromChannel: channel.startsWith('#') ? channel.slice(1) : channel,
+									addedAt: new Date()
 								});
 								newBots.push(newBot);
 							}
@@ -50,6 +56,23 @@ const bots: Command = {
 						if (newBots.length > 0) {
 							await knownBotsModel.insertMany(newBots);
 							await chatClient.say(channel, `Successfully added ${newUsernamesToAdd.join(', ')} to the database.`);
+							// Send Discord log via enqueueWebhook if webhook configured
+							try {
+								if (commandUsageWebhookID && CommandUsageWebhookTOKEN) {
+									const embed = new EmbedBuilder()
+										.setTitle('Bot(s) Added')
+										.setColor('Green')
+										.addFields([
+											{ name: 'Added By', value: msg.userInfo.displayName || msg.userInfo.userId, inline: true },
+											{ name: 'Channel', value: channel.startsWith('#') ? channel.slice(1) : channel, inline: true },
+											{ name: 'Bots', value: newUsernamesToAdd.join(', '), inline: false }
+										])
+										.setTimestamp();
+									await enqueueWebhook(commandUsageWebhookID, CommandUsageWebhookTOKEN, { embeds: [embed] });
+								}
+							} catch (e: unknown) {
+								logger.error('Failed to enqueue promote webhook', String(e));
+							}
 						} else {
 							await chatClient.say(channel, 'All usernames provided are already in the database.');
 						}
@@ -59,6 +82,25 @@ const bots: Command = {
 					}
 				} else {
 					await chatClient.say(channel, 'You must be a moderator or the broadcaster to use this command');
+				}
+				break;
+
+			case 'info':
+				if (!args[1]) return chatClient.say(channel, 'Usage: !bots info <name>');
+				try {
+					const name = args[1].toLowerCase();
+					const bot = await knownBotsModel.findOne({ username: name }).lean();
+					if (!bot) {
+						await chatClient.say(channel, `No information found for ${args[1]}.`);
+						break;
+					}
+					const addedBy = bot.addedBy ?? 'unknown';
+					const addedFrom = bot.addedFromChannel ?? 'unknown';
+					const addedAt = bot.addedAt ? new Date(bot.addedAt).toLocaleString() : 'unknown';
+					await chatClient.say(channel, `${bot.username} — added by ${addedBy} on ${addedAt} in channel ${addedFrom}`);
+				} catch (error: unknown) {
+					logger.error('Error retrieving bot info:', String(error));
+					await chatClient.say(channel, 'An error occurred while retrieving bot information.');
 				}
 				break;
 
@@ -93,6 +135,23 @@ const bots: Command = {
 					} else {
 						await knownBotsModel.deleteMany({ username: { $in: existingUsernamesToRemove } });
 						await chatClient.say(channel, `${existingUsernamesToRemove.length} user(s) have been removed from the database: ${existingUsernamesToRemove.join(', ')}.`);
+						// Send Discord removal log via enqueueWebhook if webhook configured
+						try {
+							if (commandUsageWebhookID && CommandUsageWebhookTOKEN) {
+								const embed = new EmbedBuilder()
+									.setTitle('Bot(s) Removed')
+									.setColor('Red')
+									.addFields([
+										{ name: 'Removed By', value: msg.userInfo.displayName || msg.userInfo.userId, inline: true },
+										{ name: 'Channel', value: channel.startsWith('#') ? channel.slice(1) : channel, inline: true },
+										{ name: 'Bots Removed', value: existingUsernamesToRemove.join(', '), inline: false }
+									])
+									.setTimestamp();
+								await enqueueWebhook(commandUsageWebhookID, CommandUsageWebhookTOKEN, { embeds: [embed] });
+							}
+						} catch (e: unknown) {
+							logger.error('Failed to enqueue promote webhook for removals', String(e));
+						}
 					}
 				} catch (error: unknown) {
 					logger.error('Error removing users:', String(error));

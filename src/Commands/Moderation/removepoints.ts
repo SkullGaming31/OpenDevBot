@@ -5,7 +5,7 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { withdraw } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const removepoints: Command = {
@@ -28,7 +28,7 @@ const removepoints: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 
 		try {
 			logger.debug('Executing removepoints command...', { channel, user, argsLength: args.length }); // Debugging line

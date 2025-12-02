@@ -1,3 +1,5 @@
+# TODO List
+
 * [x] Connected auth to account
 * [x] Connected ChatClient
 * [x] Removed PubSub
@@ -26,4 +28,4 @@
 * [x] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
 NOTES:
-Channel points no longer exist as i cant test them without a streamer account that has channel points enabled.
+Channel points no longer exist as i can't test them without a streamer account that has channel points enabled.

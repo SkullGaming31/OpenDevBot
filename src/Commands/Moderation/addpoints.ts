@@ -7,7 +7,7 @@ import { IUser, UserModel } from '../../database/models/userModel';
 import { deposit, getOrCreateAccount } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 
 /**
  * Checks if a user is authorized to execute a command.
@@ -53,7 +53,7 @@ const addpoints: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 
 		// Check if the user is a mod, broadcaster, or ChannelEditor
 		const broadcaster = await userApiClient.users.getUserByName(channel as UserNameResolvable);
@@ -118,9 +118,11 @@ const addpoints: Command = {
 			// Send a message to the chat confirming the points added
 			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${acct.balance}`);
 			await commandUsage.send({ embeds: [addPointsEmbed] });
-		} catch (err: any) {
-			logger.error('Error adding points:', err);
-			await chatClient.say(channel, `Failed to add points: ${err?.message ?? 'unknown error'}`);
+		} catch (err: unknown) {
+			if (err instanceof Error) {
+				logger.error('Error adding points:', err);
+				await chatClient.say(channel, `Failed to add points: ${err?.message ?? 'unknown error'}`);
+			}
 		}
 	}
 };

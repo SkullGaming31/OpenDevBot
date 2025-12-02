@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import logger from '../../util/logger';
 
@@ -30,7 +30,7 @@ const setcategory: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
-		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 
 		if (!args[0]) return chatClient.say(channel, `Usage: ${setcategory.usage}`);
 

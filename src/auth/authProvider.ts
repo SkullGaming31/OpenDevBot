@@ -26,7 +26,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 
 	authProvider.onRefresh(async (userId: string, newTokenData: AccessToken) => {
 		try {
-			const tbd = await TokenModel.findOneAndUpdate(
+			await TokenModel.findOneAndUpdate(
 				{ user_id: userId },
 				{
 					access_token: newTokenData.accessToken,

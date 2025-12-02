@@ -3,7 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, TwitchActivityWebhookID, TwitchActivityWebhookToken, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { sleep } from '../../util/util';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import { enqueueWebhook } from '../../Discord/webhookQueue';
@@ -27,7 +27,7 @@ const shoutout: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 		const TwitchActivity = new WebhookClient({ id: TwitchActivityWebhookID, token: TwitchActivityWebhookToken });
 
 		try {
@@ -78,7 +78,7 @@ const shoutout: Command = {
 			await sleep(5000);
 			if (broadcasterStream !== null) await userApiClient.chat.shoutoutUser(broadcasterInfo[0].id as UserIdResolvable, userSearch.id as UserIdResolvable);
 			await sleep(3000);
-			await enqueueWebhook(commandUsageWebhookID, CommandUssageWebhookTOKEN, { embeds: [commandUsageEmbed] });
+			await enqueueWebhook(commandUsageWebhookID, CommandUsageWebhookTOKEN, { embeds: [commandUsageEmbed] });
 			await sleep(5000);
 			await enqueueWebhook(TwitchActivityWebhookID, TwitchActivityWebhookToken, { embeds: [shoutoutEmbed] });
 		} catch (error: unknown) {

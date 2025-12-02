@@ -1,7 +1,7 @@
 // Unit tests for moderation commands: addpoints, removepoints, purgebalance
 
 // Provide constants and discord mocks used by the moderation commands
-jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: '1', name: 'skullgaminghq' }], CommandUssageWebhookTOKEN: 'token', commandUsageWebhookID: 'id' }));
+jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: '1', name: 'skullgaminghq' }], CommandUsageWebhookTOKEN: 'token', commandUsageWebhookID: 'id' }));
 jest.doMock('discord.js', () => ({ __esModule: true, WebhookClient: function () { return { send: jest.fn().mockResolvedValue(undefined) }; }, EmbedBuilder: class { setTitle() { return this; } setAuthor() { return this; } setColor() { return this; } addFields() { return this; } setFooter() { return this; } setTimestamp() { return this; } } }));
 
 beforeEach(() => {

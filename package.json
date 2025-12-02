@@ -14,6 +14,7 @@
     "test:coverage": "jest --coverage",
     "seed": "npx ts-node seedDatabase.ts",
     "log": "npx ts-node logDatabaseData.ts",
+    "migrate:backfill-bots": "npx ts-node ./src/scripts/backfillKnownBots.ts",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit"

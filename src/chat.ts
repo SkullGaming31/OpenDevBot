@@ -87,9 +87,6 @@ interface ViewerWatchTime {
  * The function also checks if the user is a moderator or broadcaster and
  * restricts access to moderator-only commands.
  * Additionally, the function handles specific chat messages for lurk messages,
- *
- * @returns {Promise<void>} A promise that resolves when the chat client is
- * initialized and the event listeners are set up.
  */
 export async function initializeChat(): Promise<void> {
 	// Load commands
@@ -435,8 +432,6 @@ let socialIntervalId: NodeJS.Timeout | null = null;
  * @returns {Promise<ChatClient>} The ChatClient instance.
  */
 export async function getChatClient(): Promise<ChatClient> {
-	// const TBD = await UserModel.deleteMany({});
-	// logger.debug('User Collection: ', TBD.deletedCount);
 	const userApiClient = await getUserApi();
 	if (!chatClientInstance) {
 		// Use the chat-specific provider so the ChatClient connects using the bot account

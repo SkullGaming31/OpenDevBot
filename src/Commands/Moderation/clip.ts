@@ -4,7 +4,7 @@ import logger from '../../util/logger';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const clipCommand: Command = {
@@ -28,7 +28,7 @@ const clipCommand: Command = {
 		logger.info('Clip command executed.');
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 		logger.info('Initialized chat client, user API client, and command usage webhook.');
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);

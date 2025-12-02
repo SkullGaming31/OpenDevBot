@@ -4,7 +4,7 @@ import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID, broadcasterInfo } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, commandUsageWebhookID, broadcasterInfo } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 import logger from '../../util/logger';
 
@@ -44,7 +44,7 @@ const marker: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 
 		try {
 			const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id as UserIdResolvable);

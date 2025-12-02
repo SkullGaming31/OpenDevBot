@@ -90,5 +90,5 @@ export const TwitchActivityWebhookToken = process.env.DEV_DISCORD_TWITCH_ACTIVIT
 export const PromoteWebhookID = process.env.DEV_DISCORD_PROMOTE_WEBHOOK_ID as string;
 export const PromoteWebhookToken = process.env.DEV_DISCORD_PROMOTE_WEBHOOK_TOKEN as string;
 export const commandUsageWebhookID = process.env.DISCORD_COMMAND_USAGE_ID as string;
-export const CommandUssageWebhookTOKEN = process.env.DISCORD_COMMAND_USAGE_TOKEN as string;
+export const CommandUsageWebhookTOKEN = process.env.DISCORD_COMMAND_USAGE_TOKEN as string;
 export const openDevBotID: UserIdResolvable = '659523613';

@@ -8,6 +8,11 @@
   - Cleanup: remove `any` casts in the warning handler and improve logging/chat messages to show the cited rule when available.
   - Dev: created branch `chore/deps-update-2025-11-27` and pushed local changes.
 
+- Test: Fix `!bots` command unit tests (2025-12-01)
+  - Adjusted `src/__tests__/commands_bots.test.ts` to mock `knownBotsModel` as a constructible model and to return Mongoose-style `.lean()` results where the command expects them.
+  - Aligned test mocks for webhook constants (`commandUsageWebhookID`, `CommandUsageWebhookTOKEN`) and ensured moderator/editor checks in tests pass.
+  - Result: all Jest suites pass locally (47 suites, 133 tests).
+
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]

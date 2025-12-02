@@ -649,9 +649,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			await userApiClient.whispers.sendWhisper(openDevBotID, '1155035316' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
 		});
 
-		// Defensive registration for channel points / custom reward redemption events
-		// Twurple API versions differ in method names. Inspect the listener for any method
-		// that looks like a reward/redemption subscriber and register the first available.
 		try {
 			const listenerProto = Object.getPrototypeOf(eventSubListener) || eventSubListener;
 			const candidateMethodNames = Object.getOwnPropertyNames(listenerProto).concat(Object.keys(eventSubListener as unknown as Record<string, unknown>));
@@ -859,14 +856,12 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			// process.exit(1);
 		}
 		if (error instanceof Error && error.message.includes('409')) {
+			const retry = 3;
 			logger.info('Handling duplicate subscription conflict.');
-			// Here, you could attempt to delete the existing subscription and retry the creation
-			const tbd = await SubscriptionModel.findOneAndDelete({
+			await SubscriptionModel.findOneAndDelete({
 				subscriptionId: subscription.id,
 				authUserId: subscription.authUserId,
 			});
-			// Optionally, attempt to re-create the subscription if necessary
-			// await recreateSubscription(subscription);
 		}
 
 		// Record failure in retry manager so it can be retried later

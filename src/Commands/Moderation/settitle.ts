@@ -4,7 +4,7 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-import { CommandUssageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const settitle: Command = {
@@ -31,7 +31,7 @@ const settitle: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 
 		if (!args[0]) return chatClient.say(channel, `Usage: ${settitle.usage}`);
 

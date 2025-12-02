@@ -4,7 +4,7 @@ import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-import { CommandUssageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
+import { CommandUsageWebhookTOKEN, broadcasterInfo, commandUsageWebhookID } from '../../util/constants';
 import { EmbedBuilder, WebhookClient } from 'discord.js';
 
 const unmod: Command = {
@@ -31,7 +31,7 @@ const unmod: Command = {
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;
 
-		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUssageWebhookTOKEN });
+		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 		if (!args[0]) return chatClient.say(channel, `${display}, Usage: ${unmod.usage}`);
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);

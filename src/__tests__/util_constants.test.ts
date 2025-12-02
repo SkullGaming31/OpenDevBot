@@ -22,7 +22,7 @@ describe('util/constants exports', () => {
 		expect(c.PromoteWebhookID).toBe('pid');
 		expect(c.PromoteWebhookToken).toBe('ptoken');
 		expect(c.commandUsageWebhookID).toBe('cuid');
-		expect(c.CommandUssageWebhookTOKEN).toBe('cutoken');
+		expect(c.CommandUsageWebhookTOKEN).toBe('cutoken');
 
 		// broadcaster info arrays should be present and start empty
 		expect(Array.isArray(c.broadcasterInfo)).toBe(true);

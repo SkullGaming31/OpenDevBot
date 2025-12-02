@@ -91,9 +91,42 @@ class OpenDevBot {
 					throw new Error(`Unknown environment: ${environment}`);
 			}
 
+			// Expand placeholders and trim quoted env values (support templated MONGO_URI)
+			const trimQuotes = (s: string | undefined) => (s ?? '').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+			const userEnv = trimQuotes(process.env.MONGO_USER);
+			const passEnv = trimQuotes(process.env.MONGO_PASS);
+			const dbEnv = trimQuotes(process.env.MONGO_DB);
+
+			let finalMongoURI = mongoURI;
+			if (finalMongoURI.includes('{MONGO_USER}') || finalMongoURI.includes('{MONGO_PASS}') || finalMongoURI.includes('{MONGO_DB}')) {
+				if (!userEnv || !passEnv) {
+					logger.error('MONGO_URI contains placeholders but MONGO_USER or MONGO_PASS is not set. Aborting.');
+					process.exit(1);
+				}
+				const encUser = encodeURIComponent(userEnv);
+				const encPass = encodeURIComponent(passEnv);
+				finalMongoURI = finalMongoURI.replace(/\{MONGO_USER\}/g, encUser).replace(/\{MONGO_PASS\}/g, encPass).replace(/\{MONGO_DB\}/g, encodeURIComponent(dbEnv || ''));
+			}
+
+			// Log a masked URI (avoid printing password)
+			try {
+				const schemeIndex = finalMongoURI.indexOf('://');
+				let masked = finalMongoURI;
+				if (schemeIndex !== -1) {
+					const atIndex = finalMongoURI.indexOf('@', schemeIndex + 3);
+					if (atIndex !== -1) {
+						masked = finalMongoURI.slice(0, schemeIndex + 3) + '****' + finalMongoURI.slice(atIndex);
+					}
+				}
+				logger.info(`Connecting to MongoDB: ${masked}`);
+			} catch (e) {
+				logger.info('Connecting to MongoDB (masked)');
+			}
+
 			// Initialize database connection
-			const database = new Database(mongoURI);
+			const database = new Database(finalMongoURI);
 			await database.connect();
+
 
 			// Injury cleanup strategy:
 			// - If RESET_INJURIES=true, delete all injuries (legacy behavior)

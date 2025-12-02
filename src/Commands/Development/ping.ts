@@ -81,12 +81,7 @@ const ping: Command = {
 	},
 };
 
-/**
- * Checks the ping to the Twitch API.
- *
- * @returns {Promise<number>} The ping in milliseconds to the Twitch API.
- */
-async function checkTwitchApiPing() {
+async function checkTwitchApiPing(): Promise<number> {
 	const apiEndpoint = 'https://api.twitch.tv/helix/streams';
 	const start = Date.now();
 
@@ -105,16 +100,12 @@ async function checkTwitchApiPing() {
 		return ping;
 	} catch (error) {
 		logger.error('Error checking Twitch API ping', error as Error);
-		throw error; // Rethrow the error to be caught in the calling function
+		throw error;
 	}
 }
 
-/**
- * Calculates the uptime of the bot based on the process uptime.
- * 
- * @returns {string} The formatted uptime string in the format "X days Y hours Z minutes W seconds".
- */
-function getBotUptime() {
+
+function getBotUptime(): string {
 	const uptimeMilliseconds = process.uptime() * 1000;
 	const uptimeSeconds = Math.floor(uptimeMilliseconds / 1000);
 	const days = Math.floor(uptimeSeconds / (3600 * 24));
