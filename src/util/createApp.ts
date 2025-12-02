@@ -70,11 +70,18 @@ export default function createApp(): express.Application {
 	app.get('/api/v1/admin/webhooks', requireAdmin, async (req, res) => {
 		try {
 			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
-			const status = (req.query.status as string) || 'pending';
-			const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-			const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
+			// Validate and sanitize query params coming from the client to avoid
+			// building queries directly from user-controlled input.
+			const allowedStatuses = new Set(['pending', 'processing', 'sent', 'failed']);
+			const statusRaw = req.query.status as string | undefined;
+			const status = statusRaw && typeof statusRaw === 'string' && allowedStatuses.has(statusRaw) ? statusRaw : 'pending';
+			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 50 : 50;
+			if (limit < 1) limit = 1;
+			if (limit > 200) limit = 200;
 			const filter: Record<string, unknown> = {};
-			if (status) filter.status = status;
+			// Only include status in the filter when it is one of the allowed values
+			if (allowedStatuses.has(status)) filter.status = status;
 			const total = await WebhookQueueModel.countDocuments(filter);
 			const items = await WebhookQueueModel.find(filter, { token: 0, __v: 0 }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
 			return res.json({ total, page, limit, items });
