@@ -30,7 +30,7 @@
     "discord-api-types": "^0.38.31",
     "discord.js": "^14.24.0",
     "dotenv": "^16.4.1",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "express-rate-limit": "^7.4.0",
     "jsondiffpatch": "^0.7.2",
     "mongoose": "^8.1.1",
