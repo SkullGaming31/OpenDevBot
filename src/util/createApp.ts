@@ -45,6 +45,11 @@ export default function createApp(): express.Application {
 		return s;
 	}
 
+	// A minimal chat client interface used to avoid `any` casts when calling
+	// chat client methods that may or may not be present depending on the
+	// chat client implementation/version.
+	type ChatClientLike = { part?: (ch: string) => Promise<void>; quit?: (ch: string) => Promise<void> };
+
 	// Simple admin auth middleware. Set `ADMIN_API_TOKEN` in env and supply it
 	// in the `x-admin-token` header for protected endpoints.
 	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -152,11 +157,11 @@ export default function createApp(): express.Application {
 			const normalized = username.startsWith('#') ? username.slice(1) : username;
 			// Ensure we only call functions — some ChatClient variants expose
 			// `part` or `quit` as non-callable values in different versions.
-			// Check the property type explicitly to avoid CodeQL type-confusion warnings.
-			if (typeof (client as any)?.part === 'function') {
-				await (client as any).part(normalized);
-			} else if (typeof (client as any)?.quit === 'function') {
-				await (client as any).quit(normalized);
+			// Use a small typed interface to avoid `any` and silence ESLint warnings.
+			if (typeof ((client as unknown as ChatClientLike).part) === 'function') {
+				await (client as unknown as ChatClientLike).part!(normalized);
+			} else if (typeof ((client as unknown as ChatClientLike).quit) === 'function') {
+				await (client as unknown as ChatClientLike).quit!(normalized);
 			}
 			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
 			return res.json({ ok: true, parted: normalized });
