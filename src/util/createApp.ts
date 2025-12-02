@@ -48,6 +48,24 @@ export default function createApp(): express.Application {
 		}
 	});
 
+	// Admin: list webhook queue items (pending/failed)
+	app.get('/api/v1/admin/webhooks', requireAdmin, async (req, res) => {
+		try {
+			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
+			const status = (req.query.status as string) || 'pending';
+			const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+			const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
+			const filter: any = {};
+			if (status) filter.status = status;
+			const total = await WebhookQueueModel.countDocuments(filter);
+			const items = await WebhookQueueModel.find(filter, { token: 0, __v: 0 }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			return res.json({ total, page, limit, items });
+		} catch (e) {
+			logger.error('Failed to list webhook queue items', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
 	app.post('/api/v1/chat/join', requireAdmin, async (req, res) => {
 		const username = (req.body?.username || req.query.username) as string | undefined;
 		if (!username) return res.status(400).json({ error: 'username required' });
