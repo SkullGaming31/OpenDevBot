@@ -1,16 +1,34 @@
+// Lightweight mock used in CI to avoid spawning native MongoDB binaries.
+// Exports both `MongoMemoryServer` and `MongoMemoryReplSet` with a
+// synchronous `getUri()` to match callers that do not `await` it.
+const DEFAULT_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/test';
+
 export class MongoMemoryServer {
-  static async create() {
-    return new MongoMemoryServer();
-  }
+	static create() {
+		return new MongoMemoryServer();
+	}
 
-  async getUri(): Promise<string> {
-    // Use MONGO_URI when provided (CI workflow sets this to the service),
-    // otherwise fall back to a localhost URI so local dev still works
-    return process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/test';
-  }
+	// Keep `getUri()` synchronous to match call-sites in tests that expect a string.
+	getUri(): string {
+		return DEFAULT_URI;
+	}
 
-  async stop(): Promise<void> {
-    // noop for mocked server
-    return;
-  }
+	stop(): void {
+		// noop for mocked server
+		return;
+	}
+}
+
+export class MongoMemoryReplSet {
+	static create(_opts?: unknown) {
+		return new MongoMemoryReplSet();
+	}
+
+	getUri(): string {
+		return DEFAULT_URI;
+	}
+
+	stop(): void {
+		return;
+	}
 }
