@@ -28,6 +28,23 @@ export default function createApp(): express.Application {
 	app.use(express.json());
 	app.use(limiter);
 
+	// Normalize username inputs from req.body or req.query which may be
+	// `string | string[] | undefined` depending on how Express parses the
+	// incoming request. Return a trimmed single string or `undefined`.
+	function normalizeUsername(input: unknown): string | undefined {
+		if (input === undefined || input === null) return undefined;
+		let val: unknown = input;
+		if (Array.isArray(val)) {
+			val = val.length > 0 ? val[0] : undefined;
+		}
+		if (typeof val !== 'string') return undefined;
+		const s = val.trim();
+		if (s.length === 0) return undefined;
+		// Basic sanitization: disallow suspicious control characters and limit length
+		if (s.length > 100) return undefined;
+		return s;
+	}
+
 	// Simple admin auth middleware. Set `ADMIN_API_TOKEN` in env and supply it
 	// in the `x-admin-token` header for protected endpoints.
 	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -105,7 +122,8 @@ export default function createApp(): express.Application {
 	});
 
 	app.post('/api/v1/chat/join', requireAdmin, async (req, res) => {
-		const username = (req.body?.username || req.query.username) as string | undefined;
+		const raw = req.body?.username ?? req.query.username;
+		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
 		try {
 			const { joinChannel } = await import('../chat');
@@ -118,7 +136,8 @@ export default function createApp(): express.Application {
 	});
 
 	app.post('/api/v1/chat/part', requireAdmin, async (req, res) => {
-		const username = (req.body?.username || req.query.username) as string | undefined;
+		const raw = req.body?.username ?? req.query.username;
+		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
 		try {
 			const { getChatClient, joinedChannels } = await import('../chat');
