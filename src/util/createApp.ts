@@ -1,6 +1,7 @@
 import axios from 'axios';
 import express from 'express';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
+import mongoose from 'mongoose';
 import { limiter } from './util';
 import logger from './logger';
 import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
@@ -55,13 +56,50 @@ export default function createApp(): express.Application {
 			const status = (req.query.status as string) || 'pending';
 			const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
 			const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || '50', 10)));
-			const filter: any = {};
+			const filter: Record<string, unknown> = {};
 			if (status) filter.status = status;
 			const total = await WebhookQueueModel.countDocuments(filter);
 			const items = await WebhookQueueModel.find(filter, { token: 0, __v: 0 }).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
 			return res.json({ total, page, limit, items });
 		} catch (e) {
 			logger.error('Failed to list webhook queue items', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: requeue webhook items by id (set status back to 'pending')
+	app.post('/api/v1/admin/webhooks/requeue', requireAdmin, async (req, res) => {
+		try {
+			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
+			const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids : req.body?.id ? [req.body.id] : (req.query.id ? [req.query.id as string] : []);
+			if (ids.length === 0) return res.status(400).json({ error: 'id or ids required' });
+			const validIds = ids.filter(i => mongoose.Types.ObjectId.isValid(i)).map(i => new mongoose.Types.ObjectId(i));
+			if (validIds.length === 0) return res.status(400).json({ error: 'no valid ids provided' });
+			const result = await WebhookQueueModel.updateMany({ _id: { $in: validIds } }, { $set: { status: 'pending', updatedAt: new Date() }, $unset: { lastError: '' } });
+			// `result` is an UpdateWriteOpResult; normalize counts where available
+			// Some mongoose types differ by driver version; safely extract counts
+			const resultObj = result as unknown as Record<string, unknown>;
+			const matched = typeof resultObj['matchedCount'] === 'number' ? (resultObj['matchedCount'] as number) : (typeof resultObj['n'] === 'number' ? (resultObj['n'] as number) : 0);
+			const modified = typeof resultObj['modifiedCount'] === 'number' ? (resultObj['modifiedCount'] as number) : (typeof resultObj['nModified'] === 'number' ? (resultObj['nModified'] as number) : 0);
+			return res.json({ ok: true, matched, modified });
+		} catch (e) {
+			logger.error('Failed to requeue webhook items', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: delete webhook items by id (single or multiple)
+	app.delete('/api/v1/admin/webhooks', requireAdmin, async (req, res) => {
+		try {
+			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
+			const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids : req.body?.id ? [req.body.id] : (req.query.id ? [req.query.id as string] : []);
+			if (ids.length === 0) return res.status(400).json({ error: 'id or ids required' });
+			const validIds = ids.filter(i => mongoose.Types.ObjectId.isValid(i)).map(i => new mongoose.Types.ObjectId(i));
+			if (validIds.length === 0) return res.status(400).json({ error: 'no valid ids provided' });
+			const result = await WebhookQueueModel.deleteMany({ _id: { $in: validIds } });
+			return res.json({ ok: true, deleted: result.deletedCount ?? 0 });
+		} catch (e) {
+			logger.error('Failed to delete webhook items', e as Error);
 			return res.status(500).json({ error: 'failed' });
 		}
 	});
