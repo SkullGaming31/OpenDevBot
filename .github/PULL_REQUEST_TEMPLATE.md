@@ -2,6 +2,8 @@
 
 Provide a short description of the change and the motivation.
 
+Note: This repository enforces a PR-only workflow for protected branches. Create a pull request for all changes and do not push directly to protected branches.
+
 ## Checklist
 - [ ] My code follows the project's style guidelines
 - [ ] I have added tests that prove my fix is effective or that my feature works
