@@ -25,6 +25,7 @@ const feature: Command = {
 	 * Note: This command is restricted to the 'skullgaminghq' channel.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		try {
 			const chatClient = await getChatClient();
 			const userApiClient = await getUserApi();

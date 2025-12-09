@@ -3,8 +3,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { WebhookClient, EmbedBuilder } from 'discord.js';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { IUser, UserModel } from '../../database/models/userModel';
-import { deposit, getOrCreateAccount } from '../../services/economyService';
+import { deposit } from '../../services/economyService';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
 import { CommandUsageWebhookTOKEN, commandUsageWebhookID } from '../../util/constants';
@@ -19,11 +18,11 @@ import { CommandUsageWebhookTOKEN, commandUsageWebhookID } from '../../util/cons
  */
 function isAuthorized(msg: ChatMessage, userApiClient: ApiClient): Promise<boolean> {
 	return new Promise((resolve) => {
-		const broadcaster = userApiClient.users.getUserById(msg.channelId as UserIdResolvable).then((broadcaster) => {
+		userApiClient.users.getUserById(msg.channelId as UserIdResolvable).then((broadcaster) => {
 			if (!broadcaster) {
 				resolve(false);
 			} else {
-				const channelEditor = userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable).then((channelEditor) => {
+				userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable).then((channelEditor) => {
 					const isEditor = channelEditor.some((editor: HelixChannelEditor) => editor.userId === msg.userInfo.userId);
 					const isStaff = msg.userInfo.isMod || msg.userInfo.isBroadcaster || isEditor;
 					resolve(isStaff);
@@ -51,6 +50,7 @@ const addpoints: Command = {
 	 * @param msg - The chat message object containing metadata and user information.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
@@ -63,6 +63,7 @@ const addpoints: Command = {
 
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcaster.id as UserIdResolvable);
 		const isEditor = channelEditor.some(editor => editor.userId === msg.userInfo.userId);
+		void isEditor;
 		const isStaff = isAuthorized(msg, userApiClient);
 
 		// Extract the target user and amount from the command arguments

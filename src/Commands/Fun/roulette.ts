@@ -6,7 +6,6 @@ import { Command } from '../../interfaces/Command';
 import { broadcasterInfo } from '../../util/constants';
 import ChamberStateModel from '../../database/models/roulette';
 import { randomInt } from 'node:crypto';
-import { UserModel } from '../../database/models/userModel';
 import balanceAdapter from '../../services/balanceAdapter';
 import logger from '../../util/logger';
 
@@ -43,6 +42,7 @@ const roulette: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void args; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 

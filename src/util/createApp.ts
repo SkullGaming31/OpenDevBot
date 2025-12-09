@@ -1,5 +1,7 @@
 import axios from 'axios';
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import mongoose from 'mongoose';
 import { limiter } from './util';
@@ -19,14 +21,15 @@ import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metri
 export default function createApp(): express.Application {
 	const app = express();
 
-	const port = process.env.PORT || 3000;
-
 	const clientId = process.env.TWITCH_CLIENT_ID as string;
 	const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
 	const redirectUri = process.env.TWITCH_REDIRECT_URL as string;
 
 	app.use(express.json());
 	app.use(limiter);
+
+	// Serve static admin assets (JS/CSS) from the `public/assets` folder
+	app.use('/assets', express.static(path.join(process.cwd(), 'public', 'assets')));
 
 	// Normalize username inputs from req.body or req.query which may be
 	// `string | string[] | undefined` depending on how Express parses the
@@ -52,16 +55,36 @@ export default function createApp(): express.Application {
 
 	// Simple admin auth middleware. Set `ADMIN_API_TOKEN` in env and supply it
 	// in the `x-admin-token` header for protected endpoints.
+	function parseCookie(header: string | undefined, name: string): string | undefined {
+		if (!header) return undefined;
+		const parts = header.split(';').map(p => p.trim());
+		for (const p of parts) {
+			const [k, ...rest] = p.split('=');
+			if (k === name) return decodeURIComponent(rest.join('='));
+		}
+		return undefined;
+	}
+
+	function getProvidedAdminToken(req: express.Request): string | undefined {
+		const header = req.header('x-admin-token') || undefined;
+		if (header) return header;
+		if (req.query && typeof req.query.admin_token === 'string') return req.query.admin_token as string;
+		const cookieHeader = req.headers?.cookie as string | undefined;
+		const cookieToken = parseCookie(cookieHeader, 'admin_token');
+		if (cookieToken) return cookieToken;
+		return undefined;
+	}
+
 	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
 		const token = process.env.ADMIN_API_TOKEN;
 		if (!token) return res.status(403).json({ error: 'Admin API not configured' });
-		const provided = (req.header('x-admin-token') || req.query.admin_token || '') as string;
+		const provided = getProvidedAdminToken(req);
 		if (!provided || provided !== token) return res.status(401).json({ error: 'Unauthorized' });
 		next();
 	}
 
 	// Admin endpoints: list / join / part channels dynamically
-	app.get('/api/v1/chat/channels', requireAdmin, async (req, res) => {
+	app.get('/api/v1/chat/channels', requireAdmin, async (_req, res) => {
 		try {
 			const { joinedChannels } = await import('../chat');
 			return res.json({ channels: Array.from(joinedChannels) });
@@ -147,6 +170,148 @@ export default function createApp(): express.Application {
 		}
 	});
 
+	// Simple admin UI for webhook queue management. Requires `x-admin-token` header
+	// or the token provided via the UI (stored in localStorage). This serves the
+	// static HTML file from the repository `public` folder.
+	app.get('/admin/webhooks', requireAdmin, (_req: express.Request, res: express.Response) => {
+		try {
+			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'webhooks.html'));
+		} catch (e) {
+			logger.error('Failed to serve admin webhooks UI', e as Error);
+			return res.status(500).send('failed to load admin UI');
+		}
+	});
+
+	// Setup endpoint: allow setting ADMIN_API_TOKEN at runtime when the server
+	// was started with a one-time `ADMIN_SETUP_TOKEN`. This is intended for
+	// initial bootstrap in local/dev environments only. The endpoint will also
+	// persist the token to a local `.env` file in the repository root so the
+	// token survives restarts. WARNING: treat the setup token and resulting
+	// ADMIN_API_TOKEN as secrets — avoid enabling this on public-facing servers.
+
+	// Serve a small HTML form for browser-based bootstrapping of the admin token.
+	// This is a convenience UI that POSTs to the same `/api/v1/admin/setup` endpoint
+	// using the `x-setup-token` header so you can perform the one-time bootstrap
+	// from a browser without needing curl/PowerShell.
+	app.get('/api/v1/admin/setup', (_req: express.Request, res: express.Response) => {
+		try {
+			return res.type('html').send(`<!doctype html>
+			<html>
+			<head><meta charset="utf-8"><title>OpenDevBot — Admin Setup</title></head>
+			<body style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:20px">
+				<h1>OpenDevBot — Admin Setup</h1>
+				<p>This form lets you set the <code>ADMIN_API_TOKEN</code> when the server
+				is started with a one-time <code>ADMIN_SETUP_TOKEN</code>. Enter both values below
+				and submit.</p>
+				<form id="setupForm">
+					<div style="margin:8px 0"><label>Setup Token<br><input id="setup" name="setup" style="width:360px" /></label></div>
+					<div style="margin:8px 0"><label>Admin Token to set<br><input id="token" name="token" style="width:360px" /></label></div>
+					<div style="margin:8px 0"><button type="submit">Set Admin Token</button></div>
+				</form>
+				<pre id="result" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border-radius:4px;max-width:760px"></pre>
+				<script>
+				const form = document.getElementById('setupForm');
+				const result = document.getElementById('result');
+				form.addEventListener('submit', async (e) => {
+					e.preventDefault();
+					const setup = document.getElementById('setup').value.trim();
+					const token = document.getElementById('token').value.trim();
+					if (!setup || !token) { result.textContent = 'Both fields are required.'; return; }
+					result.textContent = 'Sending...';
+					try {
+						const resp = await fetch('/api/v1/admin/setup', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json', 'x-setup-token': setup },
+							body: JSON.stringify({ token })
+						});
+						let body = '';
+						try { body = await resp.text(); } catch (_) { body = '' }
+						if (resp.ok) {
+							result.textContent = 'Success: ' + (body || JSON.stringify({ ok: true }));
+						} else {
+							result.textContent = 'Error ' + resp.status + ': ' + body;
+						}
+					} catch (err) {
+						result.textContent = 'Network error: ' + String(err);
+					}
+				});
+				</script>
+			</body>
+			</html>`);
+		} catch (e) {
+			logger.error('Failed to serve admin setup UI', e as Error);
+			return res.status(500).send('failed to load setup UI');
+		}
+	});
+
+	app.post('/api/v1/admin/setup', async (req: express.Request, res: express.Response) => {
+		const setupToken = process.env.ADMIN_SETUP_TOKEN;
+		if (!setupToken) return res.status(403).json({ error: 'Setup not enabled' });
+		const provided = (req.header('x-setup-token') || req.query.setup_token || '') as string;
+		if (!provided || provided !== setupToken) return res.status(401).json({ error: 'Unauthorized' });
+		const token = (req.body?.token || req.query.token) as string | undefined;
+		if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
+		if (process.env.ADMIN_API_TOKEN) return res.status(400).json({ error: 'Admin API token already set' });
+		// Set in-process
+		process.env.ADMIN_API_TOKEN = token;
+		// Persist to .env (append or replace existing key)
+		try {
+			const envPath = path.join(process.cwd(), '.env');
+			let content = '';
+			if (fs.existsSync(envPath)) {
+				content = fs.readFileSync(envPath, 'utf8');
+				if (/^ADMIN_API_TOKEN=/m.test(content)) {
+					content = content.replace(/^ADMIN_API_TOKEN=.*$/m, `ADMIN_API_TOKEN=${token}`);
+				} else {
+					if (content.length && !content.endsWith('\n')) content += '\n';
+					content += `ADMIN_API_TOKEN=${token}\n`;
+				}
+				fs.writeFileSync(envPath, content, 'utf8');
+			} else {
+				fs.writeFileSync(envPath, `ADMIN_API_TOKEN=${token}\n`, 'utf8');
+			}
+			return res.json({ ok: true });
+		} catch (e) {
+			logger.error('Failed to persist admin token', e as Error);
+			return res.status(500).json({ error: 'failed to persist' });
+		}
+	});
+
+	// Admin login (sets a HttpOnly cookie). Accepts JSON { token } and if it
+	// matches `ADMIN_API_TOKEN` sets a cookie so the dashboard can authenticate
+	// without storing tokens in localStorage. Cookie name: `admin_token`.
+	app.post('/api/v1/admin/login', async (req: express.Request, res: express.Response) => {
+		const token = (req.body?.token || req.query.token) as string | undefined;
+		if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
+		const expected = process.env.ADMIN_API_TOKEN;
+		if (!expected) return res.status(503).json({ error: 'Admin API not configured' });
+		if (token !== expected) return res.status(401).json({ error: 'Unauthorized' });
+		// Set cookie; for production set Secure as appropriate
+		const cookieOpts: Record<string, unknown> = { httpOnly: true, sameSite: 'lax' };
+		if (process.env.ENVIRONMENT === 'prod') (cookieOpts).secure = true;
+		res.cookie('admin_token', token, cookieOpts);
+		return res.json({ ok: true });
+	});
+
+	app.post('/api/v1/admin/logout', requireAdmin, async (_req: express.Request, res: express.Response) => {
+		res.cookie('admin_token', '', { httpOnly: true, expires: new Date(0) });
+		return res.json({ ok: true });
+	});
+
+	// Admin: reload chat and eventsub listeners at runtime
+	app.post('/api/v1/admin/reload', requireAdmin, async (_req: express.Request, res: express.Response) => {
+		try {
+			const { restartChat } = await import('../chat');
+			const { recreateEventSubs } = await import('../EventSubEvents');
+			// best-effort non-blocking but wait for operations to complete
+			await Promise.allSettled([restartChat().catch((e) => { throw e; }), recreateEventSubs().catch((e) => { throw e; })]);
+			return res.json({ ok: true });
+		} catch (e) {
+			logger.error('Admin reload failed', e as Error);
+			return res.status(500).json({ error: 'failed to reload' });
+		}
+	});
+
 	app.post('/api/v1/chat/part', requireAdmin, async (req, res) => {
 		const raw = req.body?.username ?? req.query.username;
 		const username = normalizeUsername(raw);
@@ -175,6 +340,27 @@ export default function createApp(): express.Application {
 	app.get('/metrics', metricsHandler());
 	app.get('/health', healthHandler());
 	app.get('/ready', readyHandler());
+
+	// Root UI: small index with links to admin pages and API endpoints
+	app.get('/', (_req: express.Request, res: express.Response) => {
+		res.type('html').send(`
+			<!doctype html>
+			<html>
+			<head><meta charset="utf-8"><title>OpenDevBot — Admin</title></head>
+			<body style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:20px">
+				<h1>OpenDevBot</h1>
+				<p>Admin links and API endpoints. Admin endpoints require the <code>x-admin-token</code> header or <code>admin_token</code> query parameter.</p>
+				<ul>
+					<li><a href="/admin/webhooks">Admin UI — Webhook Queue</a></li>
+					<li><a href="/api/v1/admin/webhooks?status=pending&page=1&limit=50">API: List webhooks (GET)</a></li>
+					<li>API: Requeue (POST) — <code>/api/v1/admin/webhooks/requeue</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
+					<li>API: Delete (DELETE) — <code>/api/v1/admin/webhooks</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
+				</ul>
+				<p class="small">Note: the UI will store the token in your browser's localStorage and send it as <code>x-admin-token</code>.</p>
+			</body>
+			</html>
+		`);
+	});
 
 	// List of scopes
 	const userScopes = [

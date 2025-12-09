@@ -29,6 +29,7 @@ const ping: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage): Promise<void> => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 

@@ -29,7 +29,7 @@ describe('EventSub integration-style backoff and resubscribe', () => {
 		class MockEventSubWsListener {
 			handlers: Record<string, any> = {};
 			started = false;
-			constructor(opts: any) { instances.push(this); }
+			constructor(opts: any) { void opts; instances.push(this); }
 			start() { this.started = true; }
 			onUserSocketDisconnect(cb: any) { this.handlers.disconnect = cb; }
 			onUserSocketConnect(cb: any) { this.handlers.connect = cb; }
@@ -46,7 +46,7 @@ describe('EventSub integration-style backoff and resubscribe', () => {
 		const { getEventSubs } = mod;
 
 		// Act: create listener and trigger a create-failure
-		const l = await getEventSubs();
+		await getEventSubs();
 		expect(instances.length).toBe(1);
 
 		// Trigger a subscription create failure which should schedule a retry

@@ -27,6 +27,7 @@ const unmod: Command = {
 	 * and sends a message confirming the action. Sends an error message if the user lacks the necessary permissions.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const display = msg.userInfo.displayName;

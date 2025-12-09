@@ -8,7 +8,6 @@ import { broadcasterInfo, commandUsageWebhookID, CommandUsageWebhookTOKEN } from
 import logger from '../../util/logger';
 import { enqueueWebhook } from '../../Discord/webhookQueue';
 import { EmbedBuilder } from 'discord.js';
-import command from './help';
 
 // TODO: add the channel the bot was added from and who from that channel added the bot
 // TODO: add logs to discord to show channel, user and bot name that was added to the database ex: modvlog(user) added drapsnatt(bot) from modvlog(channel)
@@ -18,6 +17,7 @@ const bots: Command = {
 	description: 'All known Bot names on Twitch(Known by me)',
 	usage: '!bots [add|info|remove|list]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);

@@ -24,6 +24,7 @@ const bug: Command = {
 	 * @param msg - The message object from twurple
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		try {
 			const chatClient = await getChatClient();
 			const userApiClient = await getUserApi();
@@ -41,6 +42,7 @@ const bug: Command = {
 			const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
 			const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
 			const isStaff = isModerator || isBroadcaster;
+			void isStaff;
 			const bugReportUser = await userApiClient.users.getUserById(msg.userInfo.userId as UserIdResolvable);
 
 			const commandtitle = args[0];

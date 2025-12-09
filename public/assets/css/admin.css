@@ -1,0 +1,6 @@
+/* Minimal admin styles (overrideable) */
+body { background:#fff; color:#111 }
+table tr:hover { background:#fafafa }
+button { padding:6px 8px; border:1px solid #bbb; background:#f7f7f7; cursor:pointer }
+button:hover { background:#eee }
+.small { font-size:0.9em }

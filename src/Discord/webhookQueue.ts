@@ -77,7 +77,7 @@ async function processPendingFromDB() {
 			// convert payload to the shape discord.js expects (it's already plain JSON)
 			const q = queues.get(key)!;
 			// create a placeholder promise resolver that will update the DB entry when processed
-			const promiseWrapper = new Promise((resolve, reject) => {
+			new Promise((resolve, reject) => {
 				q.push({
 					payload: doc.payload as unknown as WebhookMessageCreateOptions | string,
 					resolve: async (res?: unknown) => {

@@ -25,6 +25,7 @@ const createcounter: Command = {
 	 * Provides usage instructions if the command or arguments are invalid, and handles errors during execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text; void msg;
 		// logger.info('we hit the counter command');
 		const chatClient = await getChatClient();
 

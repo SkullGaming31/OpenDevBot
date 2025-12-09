@@ -12,6 +12,7 @@ const followage: Command = {
 	description: 'shows how long you have been following the streamer',
 	usage: '!followage',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 

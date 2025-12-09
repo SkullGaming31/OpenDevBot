@@ -29,6 +29,7 @@ const setcategory: Command = {
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		const userApiClient = await getUserApi();
+		void user; void text;
 		const chatClient = await getChatClient();
 		const commandUsageWebhook = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });
 

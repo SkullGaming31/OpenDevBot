@@ -7,7 +7,7 @@ describe('logger branches and fallbacks', () => {
 	});
 
 	test('error handles circular objects and writes a fallback string to file', async () => {
-		jest.doMock('../util/env', () => ({ ENVIRONMENT: 'dev' }));
+		(process.env as any).ENVIRONMENT = 'dev';
 		const fs = await import('fs');
 		const appendMock = jest.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined);
 		const consoleErr = jest.spyOn(console, 'error').mockImplementation(() => { /* noop */ });
@@ -36,7 +36,7 @@ describe('logger branches and fallbacks', () => {
 	});
 
 	test('error appendFile rejection logs fallback to console.error', async () => {
-		jest.doMock('../util/env', () => ({ ENVIRONMENT: 'dev' }));
+		(process.env as any).ENVIRONMENT = 'dev';
 		const fs = await import('fs');
 		const err = new Error('disk full');
 		const appendMock = jest.spyOn(fs.promises, 'appendFile').mockRejectedValue(err);
@@ -58,7 +58,7 @@ describe('logger branches and fallbacks', () => {
 	});
 
 	test('time/timeEnd fallback when hrtime unavailable uses Date.now()', async () => {
-		jest.doMock('../util/env', () => ({ ENVIRONMENT: 'dev' }));
+		(process.env as any).ENVIRONMENT = 'dev';
 		// make hrtime.bigint throw to force fallback
 		const originalHrtime = (process as any).hrtime;
 		(process as any).hrtime = { bigint: () => { throw new Error('no hr'); } };
@@ -91,7 +91,7 @@ describe('logger branches and fallbacks', () => {
 	});
 
 	test('timeEnd unknown label warns', async () => {
-		jest.doMock('../util/env', () => ({ ENVIRONMENT: 'dev' }));
+		(process.env as any).ENVIRONMENT = 'dev';
 		const consoleWarn = jest.spyOn(console, 'warn').mockImplementation(() => { /* noop */ });
 		// Ensure we import the real logger implementation, not a manual mock
 		jest.unmock('../util/logger');

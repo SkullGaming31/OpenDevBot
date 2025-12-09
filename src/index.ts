@@ -1,5 +1,5 @@
 import { config } from 'dotenv';
-config();
+config({ path: '.env', encoding: 'utf8', quiet: true });
 import { initMonitoring } from './monitoring';
 import { initializeTwitchEventSub } from './EventSubEvents';
 import { startRetryWorker } from './EventSub/retryWorker';
@@ -9,9 +9,7 @@ import Database from './database';
 import createApp from './util/createApp';
 import { initializeConstants } from './util/constants';
 import fs from 'fs';
-import { InjuryModel } from './database/models/injury';
 import { deleteAllInjuries, deleteExpiredInjuries } from './services/injuryCleanup';
-import ENVIRONMENT from './util/env';
 import logger from './util/logger';
 
 /**
@@ -64,7 +62,7 @@ class OpenDevBot {
 	 * Environment variables:
 	 * - ENABLE_EVENTSUB: Determines if Twitch EventSub should be initialized.
 	 * - ENABLE_CHAT: Determines if the chat client for Twitch IRC should be initialized.
-	 * - Enviroment: Specifies the environment type (e.g., 'prod', 'dev', 'debug').
+	 * - ENVIRONMENT: Specifies the environment type (e.g., 'prod', 'dev', 'debug').
 	 * - MONGO_URI/DOCKER_URI: MongoDB connection URIs for different environments.
 	 * - PORT: Port number on which the server should listen.
 	 * 
@@ -75,7 +73,8 @@ class OpenDevBot {
 			const EventSub = process.env.ENABLE_EVENTSUB;
 			const chatIIRC = process.env.ENABLE_CHAT;
 			// Initialize database connection
-			const environment = ENVIRONMENT as string;
+			// Prefer the sanitized `ENVIRONMENT` helper to avoid literal 'undefined' strings
+			const environment = process.env.ENVIRONMENT as string;
 			let mongoURI = '';
 
 			// Determine MongoDB URI based on environment
@@ -139,7 +138,7 @@ class OpenDevBot {
 				// Schedule periodic cleanup (default once per day). Interval ms can be configured with INJURY_CLEANUP_INTERVAL_MS.
 				const cleanupInterval = process.env.INJURY_CLEANUP_INTERVAL_MS ? Number(process.env.INJURY_CLEANUP_INTERVAL_MS) : 24 * 60 * 60 * 1000;
 				// Do not start background interval during tests to avoid open handles that prevent Jest from exiting.
-				if (process.env.NODE_ENV !== 'test' && cleanupInterval > 0) {
+				if (process.env.ENVIRONMENT !== 'test' && cleanupInterval > 0) {
 					setInterval(() => { void deleteExpiredInjuries(); }, cleanupInterval);
 				}
 			}
@@ -155,10 +154,10 @@ class OpenDevBot {
 				// typically mock the Database and do not establish a real mongoose
 				// connection; calling initializeConstants() would hit TokenModel.find()
 				// and cause buffering/timeouts. Only initialize in non-test runs.
-				if (process.env.NODE_ENV === 'test') {
+				if (process.env.ENVIRONMENT === 'test') {
 					logger.info('Skipping EventSub initialization in test environment');
 				} else {
-					const message = ENVIRONMENT === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
+					const message = process.env.ENVIRONMENT === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
 					logger.time(message);
 					// Ensure constants (broadcasterInfo, moderatorIDs) are initialized from DB
 					await initializeConstants();
@@ -171,10 +170,10 @@ class OpenDevBot {
 
 			// Initialize chat client for Twitch IRC
 			if (chatIIRC) {
-				if (process.env.NODE_ENV === 'test') {
+				if (process.env.ENVIRONMENT === 'test') {
 					logger.info('Skipping Chat initialization in test environment');
 				} else {
-					const message = ENVIRONMENT === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
+					const message = process.env.ENVIRONMENT === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
 					logger.time(message);
 					// Ensure broadcaster info is loaded for chat operations
 					await initializeConstants();
@@ -216,7 +215,6 @@ class OpenDevBot {
 	}
 }
 
-config();
 const client = new OpenDevBot();
 
 // Initialize monitoring (Sentry/LogDNA) if configured

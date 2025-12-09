@@ -20,6 +20,7 @@ const socials: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 
 		const socialURLs: Record<string, string> = {

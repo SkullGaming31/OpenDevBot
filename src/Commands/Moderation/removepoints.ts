@@ -26,6 +26,7 @@ const removepoints: Command = {
 	 * @param msg - The chat message object containing metadata and user information.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });

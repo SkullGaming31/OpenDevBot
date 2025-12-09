@@ -168,14 +168,14 @@ This is an example of how to list things you need to use the software and how to
 
 ### Today (2025-10-13)
 
-- Added comprehensive unit tests covering:
-  - `authProvider` token preloading and chat-provider registration fallbacks.
-  - OAuth callback token exchange and persistence (`/api/v1/auth/twitch/callback`).
-  - Chat helper `getUsernamesFromDatabase()` behavior for success and failure.
-- Improved OAuth callback logging and normalization of returned scopes (code path exercised by tests).
-- Implemented a dedicated chat auth provider and fallbacks to ensure the bot account is registered for the `chat` intent (dev-only forced mapping remains as a temporary workaround).
-- Added debug logging around chat message parsing and command handling to aid diagnosis of why commands may not run.
-- Started refactor to defer EventSub subscription registration until the websocket session is ready and added scaffolding for restart/retry logic (work in progress).
+* Added comprehensive unit tests covering:
+  * `authProvider` token preloading and chat-provider registration fallbacks.
+  * OAuth callback token exchange and persistence (`/api/v1/auth/twitch/callback`).
+  * Chat helper `getUsernamesFromDatabase()` behavior for success and failure.
+* Improved OAuth callback logging and normalization of returned scopes (code path exercised by tests).
+* Implemented a dedicated chat auth provider and fallbacks to ensure the bot account is registered for the `chat` intent (dev-only forced mapping remains as a temporary workaround).
+* Added debug logging around chat message parsing and command handling to aid diagnosis of why commands may not run.
+* Started refactor to defer EventSub subscription registration until the websocket session is ready and added scaffolding for restart/retry logic (work in progress).
 
 Notes: these changes include tests and mocks so the project can run unit tests without external Twitch or MongoDB services. See `CHANGELOG.md` for a detailed list of edits made on this date.
 
@@ -222,10 +222,37 @@ Other Projects: [Projects](https://github.com/SkullGaming31?tab=repositories)
 ## Acknowledgments
 
 * [Twurple](https://twurple.js.org/) Twitch Library
-* []()
-* []()
 
 <p align="right">(<a href="#top">back to top</a>)</p>
+
+## Running in Docker (Production)
+
+Follow these steps to run OpenDevBot in production inside Docker. The compose file will start a MongoDB service and build the bot image from the repository.
+
+1. Copy the example env file and fill in secrets:
+
+```powershell
+cp .env.prod.example .env.prod
+# Edit .env.prod and fill in values (TWITCH_CLIENT_ID, etc.)
+```
+
+2- Build and start the services:
+
+```powershell
+docker compose up --build -d
+```
+
+3- Logs:
+
+```powershell
+docker compose logs -f opendevbot
+```
+
+Notes:
+
+* The compose file sets `MONGO_URI` to `mongodb://mongo:27017/opendevbot` for the bot container.
+* Make sure to provide `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and the bot OAuth token in `.env.prod`.
+* For a managed deployment, consider using secrets, a Docker registry for the built image, and external MongoDB.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->

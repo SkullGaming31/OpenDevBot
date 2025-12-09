@@ -30,10 +30,13 @@ const gamble: Command = {
 	 * amount lost. The function also saves the updated user information back to the database.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 
 		const username = user.toLowerCase();
+		void username;
 		const channelId = msg.channelId;
+		void channelId;
 		const userKey = msg.userInfo.userId ?? msg.userInfo.userName;
 		try {
 			// Retrieve or create the bank account for this user via the balance adapter

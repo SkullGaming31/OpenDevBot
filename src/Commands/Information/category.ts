@@ -10,6 +10,7 @@ const category: Command = {
 	description: 'Shows the streamer\'s current streaming category',
 	usage: '!category',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 

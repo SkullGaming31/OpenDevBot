@@ -16,6 +16,7 @@ const counter: Command = {
 	 * @param msg The Twitch Chat message object
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text; void msg;
 		const chatClient = await getChatClient();
 
 		if (args.length < 2 || !['set', 'inc', 'reset'].includes(args[0])) return chatClient.say(channel, `Usage: ${counter.usage}`);

@@ -3,9 +3,6 @@ import { randomInt } from 'crypto';
 import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
-import { getUserApi } from '../../api/userApiClient';
-import { broadcasterInfo } from '../../util/constants';
-import type { UserIdResolvable } from '@twurple/api';
 import { UserModel } from '../../database/models/userModel';
 
 const beg: Command = {
@@ -26,8 +23,8 @@ const beg: Command = {
 	 * @param msg - The message object from TwitchIO
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void args; void text; void msg;
 		const chatClient = await getChatClient();
-		const userApiClient = await getUserApi();
 		const username = user.toLowerCase();
 		const userDoc = await UserModel.findOne({ username });
 		const channelId = msg.channelId;

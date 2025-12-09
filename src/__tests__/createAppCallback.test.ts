@@ -34,7 +34,7 @@ describe('createApp callback', () => {
 				Object.assign(this, obj);
 			}
 			save() { return Promise.resolve(this); }
-			static findOne(query: any) { return Promise.resolve(null); }
+			static findOne(query: any) { void query; return Promise.resolve(null); }
 		}
 		// ensure findOne is a vi mock so tests can assert later if desired
 		(MockTokenModel as any).findOne = jest.fn().mockResolvedValue(null);

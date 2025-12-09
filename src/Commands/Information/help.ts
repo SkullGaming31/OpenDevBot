@@ -7,6 +7,7 @@ const command: Command = {
 	description: 'displays a list of commands in the chat',
 	usage: '!help',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
 		const commandsList = Array.from(commands.values()).join(', ');
 

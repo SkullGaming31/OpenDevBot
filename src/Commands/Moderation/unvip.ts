@@ -12,6 +12,7 @@ const unvip: Command = {
 	description: 'remove the vip role from someone on twitch',
 	usage: '!unvip [@name]',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 

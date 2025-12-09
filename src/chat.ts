@@ -3,7 +3,7 @@ import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
 import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple/api/lib';
-import fs, { existsSync } from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
 import { getChatAuthProvider } from './auth/authProvider';
@@ -15,9 +15,9 @@ import { sleep } from './util/util';
 import logger from './util/logger';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
-import { IUser, UserModel } from './database/models/userModel';
+import { UserModel } from './database/models/userModel';
 import { creditWallet } from './services/balanceAdapter';
-import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from './util/commandHelpers';
+import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
 import { getUsernamesFromDatabase } from './database/tokenStore';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
@@ -27,7 +27,7 @@ let periodicSocialTimerStarted = false;
 // Define your constants
 let PERIODIC_SAVE_INTERVAL: number;
 
-if (process.env.Enviroment === 'prod') {
+if (process.env.ENVIRONMENT === 'prod') {
 	PERIODIC_SAVE_INTERVAL = 60000; // 1 minute in production
 } else {
 	PERIODIC_SAVE_INTERVAL = 30000; // 30 seconds in development or debug mode
@@ -66,17 +66,13 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		registerCommand(command, name);
 	}
 }
-function isAllowedFileExtension(module: string): boolean { return process.env.Enviroment === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
+function isAllowedFileExtension(module: string): boolean { return process.env.ENVIRONMENT === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
 
-function isDevelopment(): boolean { return process.env.Enviroment !== 'prod'; }
+function isDevelopment(): boolean { return process.env.ENVIRONMENT !== 'prod'; }
 
 function isIndexFile(module: string): boolean { return module === 'index.ts' || module === 'index.js'; }
 
-interface ViewerWatchTime {
-	joinedAt: number;
-	watchTime: number;
-	intervalId: NodeJS.Timeout;
-}
+// ViewerWatchTime interface intentionally removed; inline type is used above
 
 /**
  * Initializes the Twitch chat client and sets up event listeners for commands.
@@ -102,7 +98,7 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
-		const Enviroment = process.env.Enviroment as string;
+		// environment string is available via process.env when needed
 		// (dev) verbose logging removed; errors are still logged
 
 		try {
@@ -116,7 +112,7 @@ export async function initializeChat(): Promise<void> {
 				const msgStr = err instanceof Error ? err.message : String(err);
 				if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
 					logger.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
-					if (process.env.Enviroment === 'debug') {
+					if (process.env.ENVIRONMENT === 'debug') {
 						await chatClient.say(channel, 'Chatters list unavailable - bot needs \'moderator:read:chatters\' scope. Skipping chatter processing.');
 					}
 					chatters = [];
@@ -156,7 +152,6 @@ export async function initializeChat(): Promise<void> {
 						const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
 
 						if (isBot || !isIgnoredUser) {
-							const roles = isBot ? 'Bot' : 'User';
 							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
 							// logger.debug('existingUser:', existingUser);
 
@@ -170,7 +165,7 @@ export async function initializeChat(): Promise<void> {
 							} else {
 								// Create the legacy user document but do not store canonical balance on UserModel
 								try {
-									const result = await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
+									await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
 									// New user created; no bank balance stored on UserModel
 									// Seed the legacy wallet for the new user
 									try {
@@ -231,7 +226,7 @@ export async function initializeChat(): Promise<void> {
 				}
 			};
 
-			const interval = setInterval(async () => {
+			void setInterval(async () => {
 				if (isIntervalRunning) {
 					await intervalHandler();
 				}
@@ -305,7 +300,7 @@ export async function initializeChat(): Promise<void> {
 		}
 		if (text.startsWith('!')) {
 			// log the raw command parsing for debugging
-			const preview = text.length > 200 ? text.slice(0, 200) + '...' : text;
+			text.length > 200 ? text.slice(0, 200) + '...' : text;
 			// logger.debug(`[chat:command] Raw: ${preview}`);
 			const { args, commandName } = parseCommandText(text);
 			if (commandName === undefined) return;
@@ -319,10 +314,10 @@ export async function initializeChat(): Promise<void> {
 			const channelEditor = await userApiClient.channels.getChannelEditors(broadcasterInfo[0].id as UserIdResolvable);
 			// getChannelEditors returns an array of editor objects; use `some` to compute a boolean
 			const isEditor = Array.isArray(channelEditor) ? channelEditor.some(editor => editor.userId === msg.userInfo.userId) : false;
-			const isStaff = isModerator || isBroadcaster || isEditor;
+			// staff check not currently used here
 
 			if (command) {
-				if (process.env.Enviroment === 'debug') { logger.info(command); }
+				if (process.env.ENVIRONMENT === 'debug') { logger.info(command); }
 				try {
 					const currentTimestamp = Date.now();
 
@@ -342,7 +337,7 @@ export async function initializeChat(): Promise<void> {
 
 					// Permission checks
 					const editorFlag = isEditor; // computed earlier
-					const isStaffNow = isModerator || isBroadcaster || editorFlag;
+					// temporary staff check removed to avoid unused variable
 					const permission = checkCommandPermission(command, isModerator, isBroadcaster, editorFlag, msg.channelId);
 					if (!permission.allowed) {
 						if (permission.reason === 'devOnly') {
@@ -364,7 +359,7 @@ export async function initializeChat(): Promise<void> {
 				}
 			} else {
 				if (text.includes('!join') || text.includes('!pokecatch') || text.includes('!pokestart')) return;
-				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+				if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 					await chatClient.say(channel, 'Command not recognized, please try again');
 				}
 			}
@@ -404,13 +399,13 @@ export async function initializeChat(): Promise<void> {
 function registerCommand(newCommand: Command, name: string) {
 	// Register the command with the provided name
 	commands.add(name);
-	if (process.env.Enviroment === 'debug') {
+	if (process.env.ENVIRONMENT === 'debug') {
 		logger.debug(`Registered command: ${name}`);
 	}
 	if (newCommand.aliases) {
 		newCommand.aliases.forEach((alias) => {
 			commands.add(alias);
-			if (process.env.Enviroment === 'debug') {
+			if (process.env.ENVIRONMENT === 'debug') {
 				logger.debug(`Registered alias for ${name}: ${alias}`);
 			}
 		});
@@ -420,7 +415,7 @@ function registerCommand(newCommand: Command, name: string) {
 // command helpers have been moved to `src/util/commandHelpers.ts`
 
 // holds the ChatClient
-let chatClientInstance: ChatClient;
+let chatClientInstance: ChatClient | undefined;
 // IDs for timers started by this module so they can be cleared on shutdown
 let periodicSaveIntervalId: NodeJS.Timeout | null = null;
 let socialTimeoutId: NodeJS.Timeout | null = null;
@@ -490,7 +485,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (!channelInfo || channelInfo.id === undefined) return;
 
 				const channelId = channelInfo.id as string;
-				if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+				if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 					logger.info(`User ${user} joined channel ${channel} (${channelId})`);
 				}
 
@@ -509,14 +504,14 @@ export async function getChatClient(): Promise<ChatClient> {
 							const update = { $set: { watchTime: totalWatchTime } };
 							const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
-							const updatedUser = await UserModel.findOneAndUpdate(filter, update, options);
+							await UserModel.findOneAndUpdate(filter, update, options);
 
 							// if (updatedUser) {
-							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+							// 	if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 							// 		logger.debug(`Updated watch time for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
 							// 	}
 							// } else {
-							// 	if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+							// 	if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 							// 		logger.debug(`New user record created for user ${user} on channel ${channelId}: Watchtime: ${totalWatchTime}`);
 							// 	}
 							// }
@@ -538,7 +533,7 @@ export async function getChatClient(): Promise<ChatClient> {
 				if (stream === null) clearInterval(intervalId);
 
 				// Ensure bot is a moderator in the channel if required
-				if (chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
+				if (chatClientInstance && chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
 					const isMod = await userApiClient.moderation.checkUserMod(broadcasterInfo[0].id as UserIdResolvable, openDevBotID as UserIdResolvable);
 					if (!isMod) {
 						await chatClientInstance.say(channel, 'Hello, I\'m now connected to your chat, don\'t forget to make me a mod', {}, { limitReachedBehavior: 'enqueue' });
@@ -601,19 +596,24 @@ export async function getChatClient(): Promise<ChatClient> {
 		// Connect the chat client
 		chatClientInstance.connect();
 
+		// capture a stable reference for use in timers/closures so TypeScript
+		// can narrow the value and we avoid "possibly undefined" errors
+		const clientRef = chatClientInstance;
+
 		for (const username of usernames) {
 			if (username.toLowerCase() === 'opendevbot') {
 				continue;
 			}
 			setTimeout(() => {
-				chatClientInstance.join(username);
+				if (!clientRef) return;
+				void (clientRef.join(username) as Promise<unknown>).catch(() => { /* ignore */ });
 				// update in-memory joinedChannels cache (best-effort)
 				try { joinedChannels.add(username); } catch { /* ignore */ }
-				if (process.env.Enviroment === 'dev') {
+				if (process.env.ENVIRONMENT === 'dev') {
 					logger.info(`Joined channel: ${username}`);
 				} else { return; }
 			}, 2000);
-			chatClientInstance.reconnect();
+			if (clientRef && typeof (clientRef as any).reconnect === 'function') (clientRef as any).reconnect();
 		}
 		logger.info('ChatClient instance initialized and connected.');
 	}
@@ -665,6 +665,27 @@ export async function getChatClient(): Promise<ChatClient> {
 	}, PERIODIC_SAVE_INTERVAL);
 
 	return chatClientInstance;
+}
+
+/**
+ * Restart the chat subsystem: shutdown the existing client (if any), clear
+ * module-level state, and recreate a fresh client. Useful for picking up
+ * new tokens or updated channel list without restarting the process.
+ */
+export async function restartChat(): Promise<void> {
+	try {
+		await shutdownChat();
+		// clear instance so getChatClient will create a new one
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore - assign undefined to allow recreation
+		chatClientInstance = undefined;
+		// warm up a new client
+		await getChatClient();
+		logger.info('Chat subsystem restarted');
+	} catch (e) {
+		logger.error('Failed to restart chat subsystem', e as Error);
+		throw e;
+	}
 }
 /**
  * Gracefully shutdown the chat client and clear timers started by this module.
@@ -726,7 +747,7 @@ export async function joinChannel(username: string): Promise<void> {
 		await client.join(normalized);
 		// track joined channel locally
 		try { joinedChannels.add(normalized); } catch { /* ignore */ }
-		if (process.env.Enviroment === 'dev') logger.info(`Dynamically joined channel: ${normalized}`);
+		if (process.env.ENVIRONMENT === 'dev') logger.info(`Dynamically joined channel: ${normalized}`);
 	} catch (err: unknown) {
 		if (err instanceof Error) {
 			if (err.message.includes('Already joined')) {

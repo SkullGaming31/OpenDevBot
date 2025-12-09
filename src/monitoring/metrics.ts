@@ -1,6 +1,6 @@
 import client from 'prom-client';
 import mongoose from 'mongoose';
-import { Request, Response, RequestHandler, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
 // Create a registry so we can register custom metrics without polluting global
 const register = new client.Registry();

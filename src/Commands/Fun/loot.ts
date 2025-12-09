@@ -72,6 +72,7 @@ const robber: Command = {
 	 * @param {ChatMessage} msg The message instance that triggered the command.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		const robberyTarget = args[0];
 		const chosenItems = args.slice(1, 4);
@@ -90,6 +91,7 @@ const robber: Command = {
 			case 'house':
 				// Calculate the total value of items in the house
 				const houseValue = Object.values(houseItems).reduce((total, value) => total + value, 0);
+				void houseValue;
 
 				// Randomly select 1-4 items without introducing new variables
 				stolenItems = Object.keys(houseItems)
@@ -136,6 +138,7 @@ const robber: Command = {
 
 				// Calculate the percentage to take from the bot user (random number from 1 to 15)
 				const percentageToTake = randomInt(1, 15);
+				void percentageToTake;
 
 				// Calculate the robbery amount, ensuring it doesn't exceed 15% of the bot's balance
 				const botUserBalance = randomBotUser.balance || 0;
@@ -220,6 +223,7 @@ const robber: Command = {
 					// Select random items from the store if no specific items are chosen
 					const userId = msg.userInfo.userId;
 					const user = await UserModel.findOne({ id: userId, channelId: msg.channelId });
+					void user;
 					if (chosenItems.length === 0) {
 						const itemsToSteal = Object.keys(storeItems); // Get all item names
 

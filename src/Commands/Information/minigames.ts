@@ -8,6 +8,7 @@ const minigames: Command = {
 	description: 'Show a list of all the minigames included in the bot',
 	usage: '!minigame',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		try {
 			const chatClient = await getChatClient();
 

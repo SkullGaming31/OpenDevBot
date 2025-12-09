@@ -1,3 +1,7 @@
 
 Unhandled Rejection/Catch: Cannot read properties of undefined (reading 'id')
 Unhandled Rejection/Catch: Did not receive a reply to join #canadiendragon in time; assuming that the join failed
+Unhandled Rejection/Catch: This token does not have any of the requested scopes (channel:read:editors) and can not be upgraded.
+If you need dynamically upgrading scopes, please implement the AuthProvider interface accordingly:
+
+	https://twurple.js.org/reference/auth/interfaces/AuthProvider.html

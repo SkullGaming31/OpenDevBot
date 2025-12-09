@@ -111,6 +111,7 @@ export async function transfer(from: string, to: string, amount: number, meta?: 
 		{ $inc: { balance: amount } },
 		{ upsert: true, new: true }
 	);
+	void cred;
 	await TransactionLog.create([{ type: 'transfer', from, to, amount, meta: meta ?? {} }]);
 }
 

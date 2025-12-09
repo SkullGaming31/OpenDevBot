@@ -26,6 +26,7 @@ const gta: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage): Promise<void> => {
+		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
@@ -34,7 +35,9 @@ const gta: Command = {
 
 		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
 		const moderatorsData = moderatorsResponse.data; // Access the moderator data
+		void moderatorsData;
 		const streamerChannel = await userApiClient.channels.getChannelInfoById(broadcasterID?.id as UserIdResolvable);
+		void streamerChannel;
 
 		// if (streamerChannel?.gameName !== 'Grand Theft Auto V') return chatClient.say(channel, 'You must be in GTA V to use this command.');
 

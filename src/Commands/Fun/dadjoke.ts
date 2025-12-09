@@ -23,6 +23,7 @@ const dadjoke: Command = {
 	 * @param {ChatMessage} msg The full message object that was sent
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
 		const response = await axios.get<IDadJoke>('https://icanhazdadjoke.com/', {
 			headers: {

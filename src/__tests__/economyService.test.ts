@@ -29,9 +29,9 @@ describe('economyService (non-transactional paths)', () => {
 		// mock DB models before importing service
 		const bankMock: any = {
 			findOneAndUpdate: (jest.fn() as any)
-			// first call simulate insufficient funds -> return object with lean -> resolves null
+				// first call simulate insufficient funds -> return object with lean -> resolves null
 				.mockReturnValueOnce({ lean: (jest.fn() as any).mockResolvedValueOnce(null) })
-			// second call simulate success -> .lean resolves account
+				// second call simulate success -> .lean resolves account
 				.mockReturnValueOnce({ lean: (jest.fn() as any).mockResolvedValueOnce({ userId: 'u1', balance: 20 }) }),
 		};
 		const tlMock: any = { create: (jest.fn() as any).mockResolvedValue(undefined) };
@@ -57,15 +57,16 @@ describe('economyService (non-transactional paths)', () => {
 			connection: { db: { admin: () => ({ command: async () => { throw new Error('no replset'); } }) } },
 			startSession: jest.fn(),
 		};
+		void mongooseMock;
 
 		const dec = { userId: 'from', balance: 50 };
 		const cred = { userId: 'to', balance: 30 };
 
 		const bankMock: any = {
 			findOneAndUpdate: (jest.fn() as any)
-			// first call for dec: returns dec (sufficient funds)
+				// first call for dec: returns dec (sufficient funds)
 				.mockResolvedValueOnce(dec)
-			// second call for cred: returns cred
+				// second call for cred: returns cred
 				.mockResolvedValueOnce(cred),
 		};
 		const tlMock: any = { create: (jest.fn() as any).mockResolvedValue(undefined) };
@@ -188,9 +189,9 @@ describe('economyService (non-transactional paths)', () => {
 
 		const bankMock: any = {
 			findOneAndUpdate: (jest.fn() as any)
-			// buyer debit -> succeeds
+				// buyer debit -> succeeds
 				.mockResolvedValueOnce({ userId: 'b', balance: 10 })
-			// refund / credit seller calls (we won't reach refund in success)
+				// refund / credit seller calls (we won't reach refund in success)
 				.mockResolvedValueOnce({ userId: 's1', balance: 15 }),
 		};
 		const tlMock: any = { create: (jest.fn() as any).mockResolvedValue(undefined) };
@@ -221,6 +222,7 @@ describe('economyService (non-transactional paths)', () => {
 		function BankAccount(this: any, data: any) {
 			Object.assign(this, data);
 			this.save = (jest.fn() as any).mockImplementation(async (opts: any) => {
+				void opts;
 				savedAccounts.push(this);
 				return this;
 			});
@@ -237,7 +239,7 @@ describe('economyService (non-transactional paths)', () => {
 		const { deposit } = svc as any;
 
 		const fakeSession = {};
-		const depRes = await deposit('u1', 25, fakeSession);
+		await deposit('u1', 25, fakeSession);
 		expect(findOneMock).toHaveBeenCalled();
 		expect(savedAccounts.length).toBeGreaterThanOrEqual(1);
 		expect(tlMock.create).toHaveBeenCalled();

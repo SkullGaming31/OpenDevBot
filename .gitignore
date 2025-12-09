@@ -3,6 +3,7 @@ dist/
 .env
 /node_modules
 .env
+.env.prod
 /dist
 /src/Warframe_Data.json
 /src/devlogs
@@ -10,4 +11,4 @@ dist/
 NOTES.txt
 /logs
 /coverage
-filelist-all.txt
+.tsbuildinfo

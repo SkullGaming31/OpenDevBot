@@ -10,6 +10,7 @@ const id: Command = {
 	devOnly: true,
 	usage: '!id (name)',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const userApiClient = await getUserApi();
 		const chatClient = await getChatClient();
 

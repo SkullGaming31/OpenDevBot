@@ -1,7 +1,7 @@
 import retryManager from './retryManager';
 import { eventSubRetries } from '../monitoring/metrics';
 import { createSubscriptionsForAuthUser } from '../EventSubEvents';
-import { RetryModel, IRetryRecord } from './retryModel';
+import type { IRetryRecord } from './retryModel';
 import { SubscriptionModel } from '../database/models/eventSubscriptions';
 import { TokenModel } from '../database/models/tokenModel';
 import { sleep } from '../util/util';

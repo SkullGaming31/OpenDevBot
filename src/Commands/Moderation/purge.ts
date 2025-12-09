@@ -30,6 +30,7 @@ const purge: Command = {
 	 * @param msg - The {@link ChatMessage} object that triggered the command.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const display = msg.userInfo.displayName;
 
 		const chatClient = await getChatClient();

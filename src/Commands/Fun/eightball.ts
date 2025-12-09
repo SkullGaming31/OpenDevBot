@@ -20,9 +20,10 @@ const eightball: Command = {
 	 * @returns {Promise<void>} The result of the command execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text; void msg;
 		logger.debug('hit 8ball');
 		const chatClient = await getChatClient();
-		const userApiClient = await getUserApi();
+		await getUserApi();
 		// Check if the user provided a question
 		if (args.length < 1) return chatClient.say(channel, 'Please ask a yes or no question.');
 

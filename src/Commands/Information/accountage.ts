@@ -9,6 +9,7 @@ const accountage: Command = {
 	description: 'Show how long ago you created your twitch account',
 	usage: '!accountage',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		try {
 			const userApiClient = await getUserApi();
 			const chatClient = await getChatClient();

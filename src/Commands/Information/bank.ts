@@ -10,6 +10,7 @@ const bank: Command = {
 	usage: '!bank <balance|deposit|withdraw|transfer> [args] ',
 	cooldown: 2,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		const username = user.toLowerCase();
 		const channelId = msg.channelId;

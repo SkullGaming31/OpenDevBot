@@ -1,4 +1,4 @@
-declare type Enviroment = 'dev' | 'prod' | 'debug';
+declare type ENVIRONMENT = 'dev' | 'prod' | 'debug' | 'test';
 
 declare global {
 	namespace NodeJS {
@@ -35,11 +35,9 @@ declare global {
 			DOCKER_URI: string;
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;
-			NITRADO_LONGLIFE_TOKEN: string;
-			Enviroment: Enviroment;
+			ENVIRONMENT: ENVIRONMENT;
 			ENABLE_CHAT: boolean;
 			ENABLE_EVENTSUB: boolean;
-			GUILDED_TOKEN: string;
 		}
 	}
 }

@@ -11,6 +11,7 @@ const lurk: Command = {
 	description: 'Display a Lurk message and send it to anyone that tages you in chat',
 	usage: '!lurk [on|off] (lurkMessage)',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		try {
 			if (channel !== '#skullgaminghq') return;

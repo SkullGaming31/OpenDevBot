@@ -1,9 +1,8 @@
 // export default ErrorHandler;
 import { config } from 'dotenv';
-config();
+config({ path: '.env', encoding: 'utf8', quiet: true });
 import fs from 'fs';
 import path from 'path';
-import ENVIRONMENT from '../util/env';
 import logger from '../util/logger';
 
 class ErrorHandler {
@@ -20,7 +19,7 @@ class ErrorHandler {
 	 * If the log file path is not defined, it will throw an Error.
 	 */
 	constructor() {
-		const logFilePath = ENVIRONMENT === 'prod' ? process.env.PROD_LOG_FILE as string : process.env.DEV_LOG_FILE as string;
+		const logFilePath = process.env.ENVIRONMENT === 'prod' ? process.env.PROD_LOG_FILE as string : process.env.DEV_LOG_FILE as string;
 
 		if (!logFilePath) {
 			throw new Error('Log file path is not defined.');
@@ -38,7 +37,7 @@ class ErrorHandler {
 	 * @private
 	 */
 	private async writeError(error: Error | string, title: string): Promise<void> {
-		const logLevel = ENVIRONMENT;
+		const logLevel = process.env.ENVIRONMENT as string;
 
 		if (logLevel === 'debug' || logLevel === 'dev') {
 			const description = error instanceof Error ? error.message : error;

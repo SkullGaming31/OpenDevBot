@@ -28,10 +28,10 @@ const mockQuit = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('@twurple/chat', () => ({
 	ChatClient: jest.fn().mockImplementation(() => ({
-		onJoin: (fn: any) => { /* store if needed */ },
-		onPart: (fn: any) => { /* store if needed */ },
-		onMessage: (fn: any) => { /* store if needed */ },
-		onAuthenticationFailure: (fn: any) => { /* store if needed */ },
+		onJoin: (fn: any) => { void fn; /* store if needed */ },
+		onPart: (fn: any) => { void fn; /* store if needed */ },
+		onMessage: (fn: any) => { void fn; /* store if needed */ },
+		onAuthenticationFailure: (fn: any) => { void fn; /* store if needed */ },
 		connect: mockConnect,
 		join: mockJoin,
 		reconnect: mockReconnect,

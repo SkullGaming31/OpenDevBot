@@ -1,5 +1,4 @@
 /* Minimal logger wrapper that supports levels, respects ENVIRONMENT, and writes errors to a file */
-import { ENVIRONMENT } from './env';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,7 +9,7 @@ type TimeLabel = string | number | symbol;
 // store high-resolution timers
 const timers = new Map<TimeLabel, bigint>();
 
-const isDev = ENVIRONMENT === 'dev' || ENVIRONMENT === 'development' || ENVIRONMENT === 'debug';
+const isDev = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
 
 const errorLogFile = process.env.ERROR_LOG_FILE || path.join(process.cwd(), 'logs', 'errors.log');
 

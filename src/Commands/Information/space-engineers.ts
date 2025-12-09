@@ -20,6 +20,7 @@ const spaceengineers: Command = {
 	 * @param {ChatMessage} msg - The message object
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
 		if (channel !== 'skullgaminghq') return;
 

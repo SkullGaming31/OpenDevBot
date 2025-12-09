@@ -1,20 +1,17 @@
 {
   "name": "opendevbot",
-  "version": "0.8.4",
-  "description": "",
+  "version": "0.8.5",
+  "description": "a twitch chatbot for multiple channels using twurple",
   "main": "./dist/index.js",
   "author": "SkullGaming31",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node ./src/index.ts",
+    "start": "node ./dist/index.js",
     "dev": "nodemon ./src/index.ts",
     "prod": "tsc && node ./dist/index.js",
     "build": "tsc",
     "test": "jest --coverage=false",
     "test:coverage": "jest --coverage",
-    "seed": "npx ts-node seedDatabase.ts",
-    "log": "npx ts-node logDatabaseData.ts",
-    "migrate:backfill-bots": "npx ts-node ./src/scripts/backfillKnownBots.ts",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
     "typecheck": "tsc --noEmit"
@@ -29,7 +26,7 @@
     "countdown": "^2.6.0",
     "discord-api-types": "^0.38.31",
     "discord.js": "^14.24.0",
-    "dotenv": "^16.4.1",
+    "dotenv": "^17.2.3",
     "express": "^4.22.1",
     "express-rate-limit": "^7.4.0",
     "jsondiffpatch": "^0.7.2",
@@ -41,6 +38,7 @@
   "devDependencies": {
     "@types/cookiejar": "^2.1.5",
     "@types/countdown": "^0.0.8",
+    "@types/dotenv": "^6.1.1",
     "@types/express": "^4.17.21",
     "@types/jest": "^30.0.0",
     "@types/ms": "^0.7.31",
@@ -56,7 +54,6 @@
     "nodemon": "^3.1.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
-    "ts-node": "^10.9.2",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
   },

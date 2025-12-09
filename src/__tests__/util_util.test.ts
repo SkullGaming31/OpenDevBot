@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+// jest globals are available by default in the test environment
 
 describe('util/util helpers', () => {
 	test('sleep resolves quickly and does not throw', async () => {

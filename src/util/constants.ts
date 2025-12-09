@@ -38,7 +38,7 @@ export async function initializeConstants() {
 
 		for (const userToken of userTokens) {
 			const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
-			// if (process.env.Enviroment === 'dev' || process.env.Enviroment === 'debug') {
+			// if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 			// 	logger.debug(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);
 			// }
 			const helixModerator: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);

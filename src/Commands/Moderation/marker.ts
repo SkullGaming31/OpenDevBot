@@ -42,6 +42,7 @@ const marker: Command = {
 	 * @throws {Error} If the command is used by a user without the required permission of Channel Broadcaster or Editor.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });

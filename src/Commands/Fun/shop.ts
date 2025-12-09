@@ -38,6 +38,7 @@ const shop: Command = {
 	 * - 'list': Lists the available items in the shop.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 
 		const action = args[0];

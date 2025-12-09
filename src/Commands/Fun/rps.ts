@@ -1,11 +1,6 @@
-import type { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
-import axios from 'axios';
-import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
-import { TokenModel } from '../../database/models/tokenModel';
 import { Command } from '../../interfaces/Command';
-import { broadcasterInfo } from '../../util/constants';
 import { UserModel } from '../../database/models/userModel';
 import logger from '../../util/logger';
 
@@ -19,6 +14,7 @@ const rockPaperScissors: Command = {
 	cooldown: 5000, // milliseconds
 
 	async execute(channelName: string, userName: string, args: string[], messageText: string, message: ChatMessage): Promise<void> {
+		void messageText; void message;
 		try {
 			const chatClient = await getChatClient();
 

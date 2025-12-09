@@ -109,6 +109,7 @@ const warframe: Command = {
 	 * @param {ChatMessage} msg The message instance that triggered the command.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 

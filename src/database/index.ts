@@ -1,5 +1,4 @@
 import mongoose, { ConnectOptions } from 'mongoose';
-import ENVIRONMENT from '../util/env';
 import logger from '../util/logger';
 import './models/userModel';
 
@@ -19,7 +18,7 @@ class Database {
 	 */
 	public async connect(): Promise<void> {
 		try {
-			if (ENVIRONMENT === 'dev' || ENVIRONMENT === 'debug') {
+			if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 				mongoose.set('debug', false);
 			} else {
 				mongoose.set('debug', false);

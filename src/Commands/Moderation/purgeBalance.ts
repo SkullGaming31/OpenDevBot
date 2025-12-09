@@ -21,8 +21,10 @@ const purgebalance: Command = {
 	 * @param msg - The chat message object containing metadata and user information.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text;
 		const chatClient = await getChatClient();
 		const channelId = msg.channelId;
+		void channelId;
 
 		try {
 			// Determine the target user(s) to purge

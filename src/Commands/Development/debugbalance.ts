@@ -11,6 +11,7 @@ const debugbalance: Command = {
 	moderator: true,
 	cooldown: 1,
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		const target = args[0] ? args[0].replace(/^@/, '').toLowerCase() : user.toLowerCase();
 		const { UserModel } = await import('../../database/models/userModel');

@@ -2,7 +2,7 @@ import type { EventSubWsListener } from '@twurple/eventsub-ws';
 import { config } from 'dotenv';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
-config();
+config({ path: '.env', encoding: 'utf8', quiet: true });
 
 import type { ApiClient, UserIdResolvable, } from '@twurple/api';
 import type { StaticAuthProvider } from '@twurple/auth';
@@ -18,7 +18,7 @@ import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
 import FollowMessage from './database/models/followMessages';
-import { warn } from 'console';
+
 
 export async function initializeTwitchEventSub(): Promise<void> {
 	const userApiClient = await getUserApi();
@@ -38,8 +38,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	//#region EventSub
 	for (const info of broadcasterInfo) {
 
-		let streamStartTime: Date | undefined;// testing for stream end message for discord when stream goes offline and shows how long the stream was live
-		const online = eventSubListener.onStreamOnline(
+		let streamStartTime: Date | undefined; // testing for stream end message for discord when stream goes offline and shows how long the stream was live
+		void streamStartTime;
+		void eventSubListener.onStreamOnline(
 			info.id as UserIdResolvable,
 			async (o) => {
 				streamStartTime = new Date();
@@ -74,7 +75,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const hypeEventStart = eventSubListener.onChannelHypeTrainBegin(
+		void eventSubListener.onChannelHypeTrainBegin(
 			info.id as UserIdResolvable,
 			async (hts) => {
 				const userInfo = await hts.getBroadcaster();
@@ -87,7 +88,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				);
 			},
 		);
-		const hypeEventEnd = eventSubListener.onChannelHypeTrainEnd(
+		void eventSubListener.onChannelHypeTrainEnd(
 			info.id as UserIdResolvable,
 			async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
 				const userInfo = await hte.getBroadcaster();
@@ -134,7 +135,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [hypeeventendEmbed] });
 			},
 		);
-		const hypeTrainProgress = eventSubListener.onChannelHypeTrainProgress(
+		void eventSubListener.onChannelHypeTrainProgress(
 			info.id as UserIdResolvable,
 			async (htp) => {
 				const userInfo = await htp.getBroadcaster();
@@ -144,7 +145,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				);
 			},
 		);
-		const giftedSubs = eventSubListener.onChannelSubscriptionGift(
+		void eventSubListener.onChannelSubscriptionGift(
 			info.id as UserIdResolvable,
 			async (gift) => {
 				// logger.info(info.name, `${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`);
@@ -191,7 +192,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [giftedSubs] });
 			},
 		);
-		const resub = eventSubListener.onChannelSubscriptionMessage(
+		void eventSubListener.onChannelSubscriptionMessage(
 			info.id as UserIdResolvable,
 			async (s) => {
 				const userInfo = await s.getUser();
@@ -227,6 +228,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						iconURL: `${userInfo.profilePictureUrl}`,
 					})
 					.setTimestamp();
+				void resubEmbed;
 				try {
 					// await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [resubEmbed] });
 					await chatClient.say(
@@ -238,7 +240,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const follow = eventSubListener.onChannelFollow(
+		void eventSubListener.onChannelFollow(
 			info.id as UserIdResolvable,
 			info.id as UserIdResolvable,
 			async (e) => {
@@ -331,7 +333,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const subs = eventSubListener.onChannelSubscription(
+		void eventSubListener.onChannelSubscription(
 			info.id as UserIdResolvable,
 			async (s) => {
 				const userInfo = await s.getUser();
@@ -352,6 +354,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						subTier = 'Unknown';
 						break;
 				}
+				void subTier;
 				const subEmbed = new EmbedBuilder()
 					.setTitle('Twitch Event[NEW SUB]')
 					.setAuthor({
@@ -364,6 +367,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					])
 					.setURL(`https://twitch.tv/${userInfo.name.toLowerCase()}`)
 					.setTimestamp();
+				void subEmbed;
 				try {
 					await chatClient.say(
 						info.id,
@@ -375,7 +379,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const cheer = eventSubListener.onChannelCheer(
+		void eventSubListener.onChannelCheer(
 			info.id as UserIdResolvable,
 			async (cheer) => {
 				const userInfo = await cheer.getUser();
@@ -424,7 +428,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const raidToListener = eventSubListener.onChannelRaidTo(
+		void eventSubListener.onChannelRaidTo(
 			info.id as UserIdResolvable,
 			async (raidToEvent) => { // raided by another streamer
 				try {
@@ -472,7 +476,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const raidFromListener = eventSubListener.onChannelRaidFrom(
+		void eventSubListener.onChannelRaidFrom(
 			info.id as UserIdResolvable,
 			async (raidEvent) => { // raiding another streamer
 				try {
@@ -508,7 +512,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const goalBeginning = eventSubListener.onChannelGoalBegin(
+		void eventSubListener.onChannelGoalBegin(
 			info.id as UserIdResolvable,
 			async (gb) => {
 				const userInfo = await gb.getBroadcaster();
@@ -571,7 +575,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const goalProgress = eventSubListener.onChannelGoalProgress(
+		void eventSubListener.onChannelGoalProgress(
 			info.id as UserIdResolvable,
 			async (gp) => {
 				const userInfo = await gp.getBroadcaster();
@@ -586,7 +590,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				);
 			},
 		);
-		const goalEnded = eventSubListener.onChannelGoalEnd(
+		void eventSubListener.onChannelGoalEnd(
 			info.id as UserIdResolvable,
 			async (ge) => {
 				const userInfo = await ge.getBroadcaster();
@@ -601,7 +605,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				}
 			},
 		);
-		const ChannelWarning = eventSubListener.onChannelWarningSend(info.id as UserIdResolvable, info.id as UserIdResolvable, async (warning) => {
+		void eventSubListener.onChannelWarningSend(info.id as UserIdResolvable, info.id as UserIdResolvable, async (warning) => {
 			const userInfo = await warning.getBroadcaster();
 			// Narrow the warning to a record so we can read fields without `any`.
 			const warningRecord = warning as unknown as Record<string, unknown>;
@@ -643,8 +647,9 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			logger.info('Warning Event for %s: Warning Reason: %s', userDisplayName, reasonDisplay);
 			await chatClient.say(userInfo.name, `Warning Event for ${userDisplayName}, Warning Reason: ${reasonDisplay}`);
 		});
-		const ChanWarningAcknowledge = eventSubListener.onChannelWarningAcknowledge(broadcasterInfo[0].id as UserIdResolvable, broadcasterInfo[0].id as UserIdResolvable, async (ack) => {
+		void eventSubListener.onChannelWarningAcknowledge(broadcasterInfo[0].id as UserIdResolvable, broadcasterInfo[0].id as UserIdResolvable, async (ack) => {
 			const userInfo = await ack.getBroadcaster();
+			void userInfo;
 			logger.info(`Warning Acknowledged Event for ${ack.userDisplayName}`);
 			await userApiClient.whispers.sendWhisper(openDevBotID, '1155035316' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
 		});
@@ -707,7 +712,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		let previousTitle: string = '';
 		let previousCategory: string = '';
 
-		const channelUpdates = eventSubListener.onChannelUpdate(
+		void eventSubListener.onChannelUpdate(
 			info.id as UserIdResolvable,
 			async (event) => {
 				const { streamTitle, categoryName } = event;
@@ -803,10 +808,10 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		logger.info(`Socket connected for user ${userId}`);
 	});
 	eventSubListener.onSubscriptionCreateSuccess(async (subscription) => {
-		const Enviroment = process.env.Enviroment as string;
+		const ENVIRONMENT = process.env.ENVIRONMENT as string;
 
 		try {
-			if (Enviroment === 'debug') {
+			if (ENVIRONMENT === 'debug') {
 				logger.debug(
 					`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
@@ -820,7 +825,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 			});
 
 			if (existingSubscription) {
-				if (process.env.Enviroment === 'debug') {
+				if (process.env.ENVIRONMENT === 'debug') {
 					logger.debug(
 						`Subscription already exists in database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 					);
@@ -847,8 +852,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		}
 	});
 	eventSubListener.onSubscriptionCreateFailure(async (subscription, error) => {
-		const Enviroment = process.env.Enviroment as string;
-		if (Enviroment === 'debug') {
+		const ENVIRONMENT = process.env.ENVIRONMENT as string;
+		if (ENVIRONMENT === 'debug') {
 			logger.error(
 				`(SCF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				error,
@@ -857,6 +862,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 		}
 		if (error instanceof Error && error.message.includes('409')) {
 			const retry = 3;
+			void retry;
 			logger.info('Handling duplicate subscription conflict.');
 			await SubscriptionModel.findOneAndDelete({
 				subscriptionId: subscription.id,
@@ -874,8 +880,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	});
 	eventSubListener.onSubscriptionDeleteSuccess(async (subscription) => {
 		try {
-			const Enviroment = process.env.Enviroment as string;
-			if (Enviroment === 'debug') {
+			const ENVIRONMENT = process.env.ENVIRONMENT as string;
+			if (ENVIRONMENT === 'debug') {
 				logger.debug(
 					`(SDS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
@@ -914,8 +920,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	});
 	eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
 		try {
-			const Enviroment = process.env.Enviroment as string;
-			if (Enviroment === 'debug') {
+			const ENVIRONMENT = process.env.ENVIRONMENT as string;
+			if (ENVIRONMENT === 'debug') {
 				logger.error(
 					`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 					error,

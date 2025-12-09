@@ -1,8 +1,8 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
-import QuoteModel, { IQuote } from '../../database/models/Quote';
+import QuoteModel from '../../database/models/Quote';
 import { Command } from '../../interfaces/Command';
-import { MongooseError } from 'mongoose';
+
 import logger from '../../util/logger';
 
 const quoteCommand: Command = {
@@ -19,6 +19,7 @@ const quoteCommand: Command = {
 	 * @param msg The chat message object containing metadata and user information.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void user; void text; void msg;
 		const chatClient = await getChatClient();
 		try {
 			if (channel !== '#skullgaminghq') return;

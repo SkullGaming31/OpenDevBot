@@ -37,9 +37,11 @@ const duel: Command = {
 	 * @returns {Promise<void>} The result of the duel execution.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 
 		const username = user.toLowerCase();
+		void username;
 		const channelId = msg.channelId;
 
 		// Parse the challenged user and the duel amount from the arguments

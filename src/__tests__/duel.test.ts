@@ -15,6 +15,7 @@ describe('duel command (unit)', () => {
 		// Mock sleep to auto-accept the duel by calling acceptDuel on the module when sleep is awaited
 		jest.doMock('../util/util', () => ({
 			sleep: async (ms: number) => {
+				void ms;
 				// require the duel module and accept the pending duel for '@opponent' (the implementation keeps the @)
 				// eslint-disable-next-line @typescript-eslint/no-var-requires
 				const duelMod = require('../Commands/Fun/duel');

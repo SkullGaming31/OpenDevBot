@@ -26,6 +26,7 @@ const clipCommand: Command = {
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		logger.info('Clip command executed.');
+		void user; void args; void text;
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 		const commandUsage = new WebhookClient({ id: commandUsageWebhookID, token: CommandUsageWebhookTOKEN });

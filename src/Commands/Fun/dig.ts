@@ -1,7 +1,7 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { IUser, UserModel } from '../../database/models/userModel';
+import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 const dig: Command = {
@@ -17,6 +17,7 @@ const dig: Command = {
 	 * Updates the user's balance accordingly and sends a message to the chat with the result.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 
 		const username = user.toLowerCase();
@@ -31,7 +32,6 @@ const dig: Command = {
 		if (digAmount < 100 || digAmount > 5000) return chatClient.say(channel, 'Minimum/maximum bet amount is 100-5000');
 
 		// Use legacy wallet for betting: check UserModel balance
-		const actorId = msg.userInfo?.userId || username;
 		const userDoc = msg.userInfo?.userId ? await UserModel.findOne({ id: msg.userInfo.userId }) : await UserModel.findOne({ username, channelId });
 		const currentBalance = userDoc?.balance ?? 0;
 		if (currentBalance < digAmount) return chatClient.say(channel, 'You don\'t have enough balance to dig.');

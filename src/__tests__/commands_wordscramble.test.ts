@@ -19,7 +19,7 @@ describe('wordScramble command', () => {
 
 		const msg: any = { channelId: 'chan1', userInfo: { userId: 'u1', userName: 'tester', isMod: true } };
 		const chat = await import('../chat');
-		const client = await (chat as any).getChatClient();
+		await (chat as any).getChatClient();
 
 		// Start the scramble
 		await cmd.default.execute('chan', 'tester', [], '', msg);

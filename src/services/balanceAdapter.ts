@@ -1,5 +1,4 @@
 import { IBankAccount } from '../database/models/bankAccount';
-import BankAccount from '../database/models/bankAccount';
 import { UserModel } from '../database/models/userModel';
 import logger from '../util/logger';
 import * as economyService from './economyService';

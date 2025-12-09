@@ -53,6 +53,7 @@ describe('economyService', () => {
 		// Setup non-transactional path (no replset support)
 		const dec = (jest.fn() as any).mockResolvedValue({ userId: 'from', balance: 50 });
 		const cred = (jest.fn() as any).mockResolvedValue({ userId: 'to', balance: 60 });
+		void dec; void cred;
 		const create = (jest.fn() as any).mockResolvedValue([]);
 
 		jest.doMock('../database/models/bankAccount', () => ({ findOneAndUpdate: jest.fn() }

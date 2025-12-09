@@ -8,7 +8,7 @@ describe('logger', () => {
 
 	test('info, warn and error write to console and error appends to file', async () => {
 		// ensure dev env so debug/info behave predictably
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 
 		// spy console methods
 		const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -45,7 +45,7 @@ describe('logger', () => {
 	});
 
 	test('debug only logs when environment is dev', async () => {
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		jest.resetModules();
 		const debugSpyDev = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
 		jest.unmock('../util/logger');
@@ -55,7 +55,7 @@ describe('logger', () => {
 		debugSpyDev.mockRestore();
 
 		// in prod debug should be silent
-		process.env.Enviroment = 'prod';
+		process.env.ENVIRONMENT = 'prod';
 		jest.resetModules();
 		const debugSpyProd = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
 		jest.unmock('../util/logger');
@@ -66,7 +66,7 @@ describe('logger', () => {
 	});
 
 	test('time and timeEnd record and log elapsed time', async () => {
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		jest.resetModules();
 		const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
 		jest.unmock('../util/logger');
@@ -85,7 +85,7 @@ describe('logger', () => {
 	});
 
 	test('time/timeEnd falls back when hrtime.bigint is unavailable', async () => {
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		jest.resetModules();
 
 		// temporarily make hrtime.bigint throw to exercise the fallback path
@@ -112,7 +112,7 @@ describe('logger', () => {
 	});
 
 	test('timeEnd warns for unknown label', async () => {
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		jest.resetModules();
 		const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 		jest.unmock('../util/logger');
@@ -125,7 +125,7 @@ describe('logger', () => {
 	});
 
 	test('error handles appendFile rejection and falls back for circular objects', async () => {
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		jest.resetModules();
 
 		const fs = await import('fs');

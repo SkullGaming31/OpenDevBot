@@ -5,10 +5,11 @@ const config = {
 	testMatch: ['**/__tests__/**/*.test.ts'],
 	setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 	transform: {
-		'^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+		'^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
 	},
 	moduleNameMapper: {
-		'^\.\./src/(.*)$': '<rootDir>/src/$1',
+		'^\\.\\./src/(.*)$': '<rootDir>/src/$1',
+		'^/src/(.*)$': '<rootDir>/src/$1',
 		'^src/(.*)$': '<rootDir>/src/$1',
 		'^@twurple/chat$': '<rootDir>/src/__mocks__/@twurple_chat.ts',
 		'^@twurple/chat/lib$': '<rootDir>/src/__mocks__/@twurple_chat.ts',

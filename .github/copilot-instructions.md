@@ -12,7 +12,7 @@ This repo is a Twitch chatbot built on Twurple with Discord webhook notification
 **Key conventions (project-specific)**
 - Commands are modules under `src/Commands/**`. Each default-exported object must include `execute(channel, user, args, text, msg)`. Optional keys: `aliases`, `cooldown`, `moderator`, `devOnly`.
 - Loader chooses `.ts` in dev and `.js` in prod — do not rename or move files without adjusting loader logic.
-- Environment flag misspelling: `Enviroment` (and sometimes `Env`) controls prod/dev behavior. Also use `ENABLE_CHAT` and `ENABLE_EVENTSUB` toggles.
+- Environment flag misspelling: `ENVIRONMENT` (and sometimes `Env`) controls prod/dev behavior. Also use `ENABLE_CHAT` and `ENABLE_EVENTSUB` toggles.
 - Tokens: Twitch tokens stored in Mongo; `authProvider` refreshes tokens and updates the DB via `onRefresh`.
 
 **Dev / run workflows**
@@ -31,7 +31,7 @@ This repo is a Twitch chatbot built on Twurple with Discord webhook notification
 **Gotchas & rules to preserve**
 - Do not remove the startup side-effect in `src/index.ts` that clears the `injuries` collection without discussing with maintainers.
 - Preserve dynamic `import()` behavior for commands (mix of sync and dynamic imports exists).
-- Respect the `Enviroment` misspelling and search the repo before renaming env vars.
+- Respect the `ENVIRONMENT` misspelling and search the repo before renaming env vars.
 - Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `1155035316`).
 
 **How to add or edit a command (example)**
@@ -51,7 +51,7 @@ export default {
 ```
 
 **Testing & debugging tips**
-- If commands fail to load, confirm `process.env.Enviroment` value and file extension expectations.
+- If commands fail to load, confirm `process.env.ENVIRONMENT` value and file extension expectations.
 - If Twitch API calls fail, check that tokens are present in the `tokenModel` collection and `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` are set.
 - For EventSub problems, ensure `ENABLE_EVENTSUB` is set and DB token entries map to broadcasters.
 

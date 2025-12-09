@@ -9,10 +9,8 @@ import BankAccount from '../../database/models/bankAccount';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 import logger from '../../util/logger';
-import { ParticipantModel } from '../../database/models/Participant';
+// ParticipantModel was previously imported but is unused; avoid unused import
 import { InjuryModel } from '../../database/models/injury';
-
-import ENVIRONMENT from '../../util/env';
 
 type LootValue = {
 	[itemName: string]: number | Gems | Antique | Artwork | Cash;
@@ -152,6 +150,7 @@ const heist: Command = {
 	 * @param {ChatMessage} msg The message object.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
+		void text;
 		const chatClient = await getChatClient();
 		// Extract the amount from the command arguments
 		const amount = parseInt(args[0]);
@@ -287,9 +286,8 @@ const heist: Command = {
 
 
 		// Wait for the heist to start (e.g., 60 seconds)
-		const ENVIROMENT = ENVIRONMENT as string;
 		let delay = 0;
-		if (ENVIROMENT !== 'dev' && ENVIROMENT !== 'debug') {
+		if (process.env.ENVIRONMENT !== 'dev' && process.env.ENVIRONMENT !== 'debug') {
 			delay = 60000;
 		} else {
 			delay = 10000;
@@ -763,6 +761,7 @@ function calculateSuccessRate(zoneDifficulty: string, participants: string[]) {
  * @returns An object containing the total loot amount, the items obtained, and a message to be displayed to the player.
  */
 function calculateLoot(amount: number, zoneDifficulty: string, playerInjury?: Injury): LootResult {
+	void amount;
 	const lootItems = Object.entries(lootValues);
 	const numItems = randomInt(1, 9);
 	let totalLootAmount = 0;

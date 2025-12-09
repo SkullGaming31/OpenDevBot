@@ -16,7 +16,7 @@ describe('hangman command', () => {
 
 		const cmd: any = await import('../Commands/Fun/hangman');
 		const chat = await import('../chat');
-		const client = await (chat as any).getChatClient();
+		await (chat as any).getChatClient();
 
 		const msg: any = { channelId: 'chan1', userInfo: { userId: 'u1', userName: 'tester' } };
 

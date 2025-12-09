@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
+import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
 
 jest.mock('mongoose', () => ({
 	connection: { readyState: 1 }

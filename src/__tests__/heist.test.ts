@@ -91,7 +91,7 @@ describe('heist command', () => {
 		const chat = await import('../chat');
 		const chatClient = await (chat as any).getChatClient();
 		// require the module which contains an IIFE that registers onMessage
-		const heist: any = await import('../Commands/Fun/heist');
+		await import('../Commands/Fun/heist');
 		expect(chatClient.onMessage).toHaveBeenCalled();
 	});
 });

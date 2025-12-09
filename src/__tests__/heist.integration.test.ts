@@ -13,7 +13,7 @@
 import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import logger from '../util/logger';
-jest.setTimeout(45000); // allow up to 45s for replica-set startup and test (we set Enviroment=dev to shorten delays)
+jest.setTimeout(45000); // allow up to 45s for replica-set startup and test (we set ENVIRONMENT=dev to shorten delays)
 
 describe('heist integration (replica-set transactions)', () => {
 	let replSet: MongoMemoryReplSet;
@@ -71,10 +71,11 @@ describe('heist integration (replica-set transactions)', () => {
 		jest.doMock('../chat', () => ({ getChatClient: jest.fn().mockResolvedValue(chatClient) }));
 
 		// Force shorter heist delay in the module
-		process.env.Enviroment = 'dev';
+		process.env.ENVIRONMENT = 'dev';
 		// Force deterministic randomInt: always return the lower bound so calls like randomInt(min, max) -> min
 		jest.doMock('crypto', () => ({
 			randomInt: (min: number, max?: number) => {
+				void max;
 				// mimic node crypto.randomInt signature (min, max?) -> return integer in [min, max)
 				return min;
 			}

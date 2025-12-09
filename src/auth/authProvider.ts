@@ -3,7 +3,7 @@ import type { AccessToken, RefreshingAuthProvider, StaticAuthProvider } from '@t
 import { config } from 'dotenv';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import logger from '../util/logger';
-config();
+config({ path: '.env', encoding: 'utf8', quiet: true });
 
 const clientId = process.env.TWITCH_CLIENT_ID as string;
 const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;

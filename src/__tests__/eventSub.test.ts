@@ -37,9 +37,7 @@ describe('EventSub reconnection logic', () => {
 		class MockEventSubWsListener {
 			handlers: Record<string, any> = {};
 			started = false;
-			constructor(opts: any) {
-				instances.push(this);
-			}
+			constructor(opts: any) { void opts; instances.push(this); }
 			start() { this.started = true; }
 			onUserSocketDisconnect(cb: any) { this.handlers.disconnect = cb; }
 			onUserSocketConnect(cb: any) { this.handlers.connect = cb; }
@@ -98,7 +96,7 @@ describe('EventSub reconnection logic', () => {
 		class MockEventSubWsListener {
 			handlers: Record<string, any> = {};
 			started = false;
-			constructor(opts: any) { instances.push(this); }
+			constructor(opts: any) { void opts; instances.push(this); }
 			start() { this.started = true; }
 			onUserSocketDisconnect(cb: any) { this.handlers.disconnect = cb; }
 			onUserSocketConnect(cb: any) { this.handlers.connect = cb; }

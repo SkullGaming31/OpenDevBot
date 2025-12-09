@@ -1,4 +1,3 @@
-import ENVIRONMENT from '../util/env';
 import logger from '../util/logger';
 
 export function initMonitoring(): void {
@@ -9,11 +8,12 @@ export function initMonitoring(): void {
 		// Lazy require so tests and environments without Sentry installed don't fail
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
 		const Sentry = require('@sentry/node');
-		const Tracing = require('@sentry/tracing');
+		// require tracing package when available; no binding needed here
+		try { require('@sentry/tracing'); } catch (e) { /* optional */ }
 		Sentry.init({
 			dsn,
 			tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? Number(process.env.SENTRY_TRACES_SAMPLE_RATE) : 0.1,
-			environment: ENVIRONMENT,
+			environment: process.env.ENVIRONMENT as string,
 		});
 		logger.info('Monitoring initialized');
 	} catch (err) {
