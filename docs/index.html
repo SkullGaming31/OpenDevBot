@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OpenDevBot — Setup</title>
+  <style>
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      max-width: 900px;
+      margin: 36px auto;
+      color: #111
+    }
+
+    pre {
+      background: #f7f7f7;
+      padding: 12px;
+      border-radius: 6px;
+      overflow: auto
+    }
+
+    a.button {
+      display: inline-block;
+      margin: 8px 0;
+      padding: 8px 12px;
+      background: #0366d6;
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none
+    }
+  </style>
+</head>
+
+<body>
+  <h1>OpenDevBot — Quick setup</h1>
+
+  <div style="background:#fff3f0;border-left:4px solid #d9534f;padding:12px;margin:12px 0;border-radius:6px">
+    <strong>Development only:</strong> This documentation and the local OAuth endpoints are for development and testing
+    purposes only. The production-ready deployment is not available — do not use these instructions to run a
+    public/production instance without additional hardening, configuration, and review.
+  </div>
+
+  <h2>1. Prerequisites</h2>
+  <ul>
+    <li>Node.js (16+)</li>
+    <li>npm</li>
+    <li>MongoDB (docker/local or mongodb atlas)</li>
+  </ul>
+
+  <h2>2. Install</h2>
+  <pre><code>git clone https://github.com/SkullGaming31/OpenDevBot.git
+cd OpenDevBot
+npm install</code></pre>
+
+  <h2>3. Configure</h2>
+  <p>Create a <code>.env</code> file (use <code>.env.example</code> as a guide) and set the required values, at minimum:
+  </p>
+  <pre><code>TWITCH_CLIENT_ID=your_twitch_client_id
+TWITCH_CLIENT_SECRET=your_twitch_client_secret
+MONGO_URI=mongodb://localhost:27017/opendevbot
+ENABLE_CHAT=true
+ENABLE_EVENTSUB=false
+PORT=8000</code></pre>
+
+  <h2>4. Start the bot (development)</h2>
+  <pre><code>npm run start</code></pre>
+
+  <h2>5. Add your Twitch token to the database</h2>
+  <p>OpenDevBot provides an OAuth route that will exchange a Twitch authorization code and persist the token in the
+    database. While the bot is running locally, visit the following URL (replace <code>&lt;CLIENT_ID&gt;</code> and
+    <code>&lt;REDIRECT_URI&gt;</code> with your app values):</p>
+  <pre><code>https://id.twitch.tv/oauth2/authorize?response_type=code&amp;client_id=&lt;CLIENT_ID&gt;&amp;redirect_uri=&lt;REDIRECT_URI&gt;&amp;scope=user:read:email+chat:read+chat:edit</code></pre>
+  <p>By default the project expects the OAuth callback at <code>/auth/twitch/callback</code> (see your configured
+    redirect URI). After completing the OAuth flow the bot will persist the token into MongoDB and, if configured,
+    automatically join the broadcaster channel.</p>
+
+  <p>If you host the web app and want to add the token through the project's UI, use one of the links below depending on
+    the token type:</p>
+  <p><a class="button" href="http://localhost:3001/api/v1/twitch?type=bot">Authorize (bot) — add bot token</a></p>
+  <p><a class="button" href="http://localhost:3001/api/v1/twitch?type=user">Authorize (user) — add user token</a></p>
+
+  <h2>6. Troubleshooting & notes</h2>
+  <ul>
+    <li>Ensure the email/username used in Git commits is associated with your GitHub account.</li>
+    <li>If you run into EventSub issues, set <code>ENABLE_EVENTSUB=false</code> until EventSub is configured.</li>
+  </ul>
+
+  <hr>
+  <p>Questions or help? Open an issue on the repository.</p>
+</body>
+
+</html>
