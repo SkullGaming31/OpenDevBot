@@ -64,7 +64,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
 						await sleep(2000);
-						if (info.name === 'skullgaminghq') {
+						if (info.name === 'canadiendragon') {
 							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
 						}
 					}
@@ -718,7 +718,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				const { streamTitle, categoryName } = event;
 				const chatClient = await getChatClient();
 
-				if (info.name === 'skullgaminghq') {
+				if (info.name === 'canadiendragon') {
 					// Check if both title and category have changed
 					if (
 						streamTitle !== previousTitle && categoryName !== previousCategory

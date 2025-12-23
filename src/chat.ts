@@ -238,17 +238,17 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 
-		if (text.includes('overlay expert') && channel === '#skullgaminghq') {
+		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
 		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
 		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
 			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
 		}
-		if (text.includes('overlay designer') && channel === '#skullgaminghq') {
+		if (text.includes('overlay designer') && channel === '#canadiendragon') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
 		}
-		if (text.includes('wl') && channel === '#skullgaminghq') {
+		if (text.includes('wl') && channel === '#canadiendragon') {
 			const amazon = 'https://www.amazon.ca/hz/wishlist/ls/354MPD0EKWXZN?ref_=wl_share';
 			setTimeout(async () => { await chatClient.say(channel, `check out the Wish List here if you would like to help out the stream ${amazon}`); }, 1800000);
 		}
@@ -341,7 +341,7 @@ export async function initializeChat(): Promise<void> {
 					const permission = checkCommandPermission(command, isModerator, isBroadcaster, editorFlag, msg.channelId);
 					if (!permission.allowed) {
 						if (permission.reason === 'devOnly') {
-							return chatClient.say(channel, 'This command is a devOnly command and can only be used in skullgaminghq\'s Channel, https://twitch.tv/skullgaminghq');
+							return chatClient.say(channel, 'This command is a devOnly command and can only be used in canadiendragon\'s Channel, https://twitch.tv/canadiendragon');
 						}
 						// default to moderator-only messaging
 						return chatClient.say(channel, `@${user}, you do not have permission to use this command.`);
@@ -369,7 +369,7 @@ export async function initializeChat(): Promise<void> {
 		if (!periodicSocialTimerStarted) {
 			periodicSocialTimerStarted = true;
 			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-			const socialChannel = 'skullgaminghq';
+			const socialChannel = 'canadiendragon';
 			const sendSocial = async () => {
 				try {
 					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');

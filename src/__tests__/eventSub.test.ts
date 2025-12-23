@@ -11,7 +11,7 @@ describe('EventSub reconnection logic', () => {
 	test('recreates listener on disconnect', async () => {
 		// Mock util/constants to avoid Twurple initialization at import
 		jest.doMock('../util/constants', () => ({
-			broadcasterInfo: [{ id: '1155035316', name: 'skullgaminghq', gameName: 'TestGame' }],
+			broadcasterInfo: [{ id: '1155035316', name: 'canadiendragon', gameName: 'TestGame' }],
 			moderatorIDs: [],
 			PromoteWebhookID: '1',
 			PromoteWebhookToken: 't',
@@ -80,7 +80,7 @@ describe('EventSub reconnection logic', () => {
 		jest.resetModules();
 
 		jest.doMock('../util/constants', () => ({
-			broadcasterInfo: [{ id: '1155035316', name: 'skullgaminghq', gameName: 'TestGame' }],
+			broadcasterInfo: [{ id: '1155035316', name: 'canadiendragon', gameName: 'TestGame' }],
 			moderatorIDs: [],
 			PromoteWebhookID: '1',
 			PromoteWebhookToken: 't',

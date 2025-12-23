@@ -22,7 +22,7 @@ const quoteCommand: Command = {
 		void user; void text; void msg;
 		const chatClient = await getChatClient();
 		try {
-			if (channel !== '#skullgaminghq') return;
+			if (channel !== '#canadiendragon') return;
 			switch (args[0]) {
 				case 'add':
 					if (!args[1]) return chatClient.say(channel, '!quote add [quote]');

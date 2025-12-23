@@ -131,7 +131,7 @@ const warframe: Command = {
 		const GLOBAL_MAX_REQUESTS = process.env.WARFRAME_GLOBAL_MAX ? Number(process.env.WARFRAME_GLOBAL_MAX) : 30; // 30 requests per window
 
 
-		if (channel !== '#skullgaminghq') return;
+		if (channel !== '#canadiendragon') return;
 
 		const display = msg.userInfo.displayName;
 		switch (args[0]) {
@@ -143,10 +143,8 @@ const warframe: Command = {
 				await chatClient.say(channel, `In Warframe, players control members of the Tenno, a race of ancient warriors who have awoken from centuries of suspended animation far into Earth's future to find themselves at war in the planetary system with different factions. The Tenno use their powered Warframes along with a variety of weapons and abilities to complete missions. ${warframeURL}`);
 				break;
 			case 'mr':
-				const xblWFRank = 12;
-				const ps4WFRank = 17;
-				const pcWFRank = 1;
-				await chatClient.say(channel, `Mastery Rank: XBOX: ${xblWFRank}, PS4: ${ps4WFRank}, PC: ${pcWFRank}`);
+				const pcWFRank = 21;
+				await chatClient.say(channel, `Mastery Rank: PC: ${pcWFRank}`);
 				break;
 			case 'frames':
 				if (args.length < 2) {
