@@ -12,7 +12,7 @@ describe('EventSub integration-style backoff and resubscribe', () => {
 	test('schedules a retry after subscription create failure and eventually succeeds', async () => {
 		// Arrange: basic constants and mocks
 		jest.doMock('../util/constants', () => ({
-			broadcasterInfo: [{ id: '1155035316', name: 'skullgaminghq', gameName: 'TestGame' }],
+			broadcasterInfo: [{ id: '1155035316', name: 'canadiendragon', gameName: 'TestGame' }],
 			moderatorIDs: [],
 			PromoteWebhookID: '1',
 			PromoteWebhookToken: 't',

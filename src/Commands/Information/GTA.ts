@@ -43,7 +43,7 @@ const gta: Command = {
 
 		try {
 			switch (channel) {
-				case 'skullgaminghq':
+				case 'canadiendragon':
 					await chatClient.say(channel, `Jimmy Jackson (32) grew up in Newfoundland, Canada. After losing his mother and witnessing his father’s death by police, 
 													Jimmy turned to crime and street racing. Hunted by police, he fled to Los Santos to start fresh and dominate the racing 
 													scene.`);

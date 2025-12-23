@@ -20,7 +20,7 @@ describe('quote command', () => {
 		(QuoteMod.default as any).findOne = (jest.fn() as any).mockReturnValue({ skip: (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) }) });
 
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
-		await cmd.default.execute('#skullgaminghq', 'User', ['add', 'hello', 'world'], 'text', msg);
+		await cmd.default.execute('#canadiendragon', 'User', ['add', 'hello', 'world'], 'text', msg);
 
 		expect(say).toHaveBeenCalled();
 		expect(say.mock.calls[0][1]).toContain('Quote Added to database');
@@ -35,7 +35,7 @@ describe('quote command', () => {
 		(QuoteMod.default as any).findByIdAndDelete = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
-		await cmd.default.execute('#skullgaminghq', 'User', ['remove', 'abc123'], 'text', msg);
+		await cmd.default.execute('#canadiendragon', 'User', ['remove', 'abc123'], 'text', msg);
 
 		expect(say).toHaveBeenCalled();
 		expect(say.mock.calls[0][1]).toContain('not found');
@@ -51,7 +51,7 @@ describe('quote command', () => {
 		(QuoteMod.default as any).findOne = (jest.fn() as any).mockReturnValue({ skip: (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) }) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
-		await cmd.default.execute('#skullgaminghq', 'User', ['list'], 'text', msg);
+		await cmd.default.execute('#canadiendragon', 'User', ['list'], 'text', msg);
 
 		expect(say).toHaveBeenCalled();
 		expect(say.mock.calls[0][1]).toContain('No quotes found');
@@ -67,7 +67,7 @@ describe('quote command', () => {
 		(QuoteMod.default as any).findOne = (jest.fn() as any).mockReturnValue({ skip: (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue({ _id: '5', content: 'a quote' }) }) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
-		await cmd.default.execute('#skullgaminghq', 'User', ['list'], 'text', msg);
+		await cmd.default.execute('#canadiendragon', 'User', ['list'], 'text', msg);
 
 		expect(say).toHaveBeenCalled();
 		const called = say.mock.calls.find((c: any[]) => /QuoteID:5/.test(String(c[1])) || /a quote/.test(String(c[1])));

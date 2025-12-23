@@ -14,7 +14,7 @@ const lurk: Command = {
 		void text;
 		const chatClient = await getChatClient();
 		try {
-			if (channel !== '#skullgaminghq') return;
+			if (channel !== '#canadiendragon') return;
 			const toggle = args.shift();
 			const message = args.join(' ');
 			const savedLurkMessage = await LurkMessageModel.findOne({ id: msg.userInfo.userId });

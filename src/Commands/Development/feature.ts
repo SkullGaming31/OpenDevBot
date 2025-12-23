@@ -22,7 +22,7 @@ const feature: Command = {
 	 * Sends a feature request to a Discord channel via webhook if the command is invoked in the specified channel.
 	 * The feature request includes the feature name, description, and the user's Twitch profile information.
 	 * 
-	 * Note: This command is restricted to the 'skullgaminghq' channel.
+	 * Note: This command is restricted to the 'canadiendragon' channel.
 	 */
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		void user; void text;
@@ -35,7 +35,7 @@ const feature: Command = {
 			const featureWebhook = new WebhookClient({ id: FEATURE_REQUEST_ID, token: FEATURE_REQUEST_TOKEN });
 
 			const usersSearch = await userApiClient.users.getUserById(msg.userInfo.userId);
-			if (channel !== 'skullgaminghq') return chatClient.say(channel, 'This command is for skullgaminghqs Channel Only');
+			if (channel !== 'canadiendragon') return chatClient.say(channel, 'This command is for canadiendragons Channel Only');
 
 			const name: string = args[0];
 			const description: string = args.slice(1).join(' ');

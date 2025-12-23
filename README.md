@@ -211,7 +211,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <h3>📫 How to reach me:</h3>
 
-[skullgaminghq](https://twitter.com/skullgaminghq1)<br />
+[canadiendragon](https://twitter.com/canadiendragon1)<br />
 [Email](skullgamingg31@gmail.com)
 
 Other Projects: [Projects](https://github.com/SkullGaming31?tab=repositories)

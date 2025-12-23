@@ -56,7 +56,7 @@ const bug: Command = {
 				.setAuthor({ name: `${bugReportUser?.displayName}`, iconURL: `${bugReportUser?.profilePictureUrl}` })
 				.setDescription(bugDescription)
 				.setColor('Red')
-				.setFooter({ text: 'Provided by skullgaminghq' })
+				.setFooter({ text: 'Provided by canadiendragon' })
 				.setTimestamp();
 
 			if (bugDescription) {

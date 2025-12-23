@@ -24,19 +24,16 @@ const socials: Command = {
 		const chatClient = await getChatClient();
 
 		const socialURLs: Record<string, string> = {
-			twitter: 'https://twitter.com/skullgaminghq',
-			instagram: 'https://instagram.com/skullgaminghq',
-			tiktok: 'https://tiktok.com/@skullgaminghq',
+			tiktok: 'https://tiktok.com/@canadiendragon',
 			discord: 'https://discord.com/invite/6TGV75sDjW',
-			// facebook: 'https://facebook.com/skullgaminghq',
-			youtube: 'https://www.youtube.com/@SkullGamingHQ',
-			tip: 'https://overlay.expert/celebrate/skullgaminghq',
+			youtube: 'https://www.youtube.com/@canadiendragon',
+			tip: 'https://overlay.expert/celebrate/canadiendragon',
 			github: 'https://github.com/skullgaming31/opendevbot',
 		};
 
 		// const social = args[0]?.toLowerCase();
 
-		if (channel !== 'skullgaminghq') return;
+		if (channel !== 'canadiendragon') return;
 
 		try {
 			const social = args[0]?.toLowerCase();

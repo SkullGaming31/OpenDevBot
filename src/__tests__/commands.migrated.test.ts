@@ -2,7 +2,7 @@
 jest.doMock('../auth/authProvider', () => ({ getChatAuthProvider: jest.fn() }));
 jest.doMock('../database/models/tokenModel', () => ({ TokenModel: {} }));
 jest.doMock('../api/userApiClient', () => ({ getUserApi: jest.fn().mockResolvedValue({}) }));
-jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: '1', name: 'skullgaminghq' }], moderatorIDs: [], PromoteWebhookID: '', PromoteWebhookToken: '', TwitchActivityWebhookID: '', TwitchActivityWebhookToken: '' }));
+jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: '1', name: 'canadiendragon' }], moderatorIDs: [], PromoteWebhookID: '', PromoteWebhookToken: '', TwitchActivityWebhookID: '', TwitchActivityWebhookToken: '' }));
 
 describe('migrated command unit tests (beg, dig, roulette)', () => {
 

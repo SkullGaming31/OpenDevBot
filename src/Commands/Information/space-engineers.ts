@@ -22,7 +22,7 @@ const spaceengineers: Command = {
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		void user; void args; void text; void msg;
 		const chatClient = await getChatClient();
-		if (channel !== 'skullgaminghq') return;
+		if (channel !== '#canadiendragon') return;
 
 		await chatClient.say(channel, spaceEngineersDescription);
 	}
