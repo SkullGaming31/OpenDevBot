@@ -14,7 +14,7 @@ const ping: Command = {
 	name: 'ping',
 	description: 'Displays Pong in chat',
 	usage: '!ping [gamename]',
-	moderator: true,
+	moderator: false,
 	devOnly: true,
 	cooldown: 30000,
 	/**
@@ -44,26 +44,51 @@ const ping: Command = {
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
-			if (channel !== '#canadiendragon') return;
+			if (channel !== 'canadiendragon') return;
 
 			if (!isStaff) {
 				return chatClient.say(channel, 'You do not have the required permission to use this command: Permission - {Broadcaster or Moderator}');
 			}
-			if (args.length > 0) {
-				const gameName = args.join(' '); // Join the args array into a string with a space separator
-				const game = await userApiClient.games.getGameByName(gameName);
+			const mode = args.length > 0 ? args[0].toLowerCase() : 'noargs';
 
-				if (game) {
-					await chatClient.say(channel, `${game.name} ID is ${game.id}`);
-					// logger.debug(`${game.name} ID is ${game.id}`);
-				} else {
-					await chatClient.say(channel, `Game "${gameName}" not found.`);
+			switch (mode) {
+				case 'status':
+					try {
+						const [twitchMs, discordMs, mongoMs] = await Promise.all([
+							checkTwitchApiPing().catch(() => -1),
+							checkDiscordApiPing().catch(() => -1),
+							checkMongo().catch(() => -1),
+						]);
+						const twitchStr = twitchMs >= 0 ? `${twitchMs}ms` : 'UNREACHABLE';
+						const discordStr = discordMs >= 0 ? `${discordMs}ms` : 'UNREACHABLE';
+						const mongoStr = mongoMs >= 0 ? `${mongoMs}ms` : 'UNREACHABLE';
+						await chatClient.say(channel, `Status — Twitch API: ${twitchStr}; Discord: ${discordStr}; MongoDB: ${mongoStr}`);
+					} catch (e) {
+						logger.error('Error running status checks', e as Error);
+						await chatClient.say(channel, 'Error running status checks');
+					}
+					break;
+				case 'game': {
+					// treat remaining input as a game name (args[1..])
+					const gameName = args.slice(1).join(' ').trim();
+					if (!gameName) {
+						await chatClient.say(channel, 'Usage: !ping game <gamename>');
+						break;
+					}
+					const game = await userApiClient.games.getGameByName(gameName);
+
+					if (game) {
+						await chatClient.say(channel, `${game.name} ID is ${game.id}`);
+					} else {
+						await chatClient.say(channel, `Game "${gameName}" not found.`);
+					}
+					break;
 				}
-				return; // Exit after processing game info
-			} else {
-				const pingValue = await checkTwitchApiPing();
-				const uptime = getBotUptime(); // Get the bot uptime
-				await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
+				default:
+					const pingValue = await checkTwitchApiPing();
+					const uptime = getBotUptime();
+					await chatClient.say(channel, `I'm online and working correctly. Bot Uptime: ${uptime}. Twitch API Ping: ${pingValue}ms`);
+					break;
 			}
 		} catch (error) {
 			logger.error('Error executing ping command', error as Error);
@@ -76,7 +101,7 @@ async function checkTwitchApiPing(): Promise<number> {
 	const start = Date.now();
 
 	try {
-		const tbd = await TokenModel.findOne({ user_id: '1155035316' });
+		const tbd = await TokenModel.findOne({ user_id: '31124455' });
 		await axios.get(apiEndpoint, {
 			headers: {
 				Authorization: `Bearer ${tbd?.access_token}`,
@@ -90,6 +115,33 @@ async function checkTwitchApiPing(): Promise<number> {
 		return ping;
 	} catch (error) {
 		logger.error('Error checking Twitch API ping', error as Error);
+		throw error;
+	}
+}
+
+
+async function checkDiscordApiPing(): Promise<number> {
+	const start = Date.now();
+	try {
+		// Simple reachability check to Discord (no auth)
+		await axios.get('https://discord.com', { timeout: 5000 });
+		const end = Date.now();
+		return end - start;
+	} catch (error) {
+		logger.error('Error checking Discord API reachability', error as Error);
+		throw error;
+	}
+}
+
+async function checkMongo(): Promise<number> {
+	const start = Date.now();
+	try {
+		// perform a lightweight query to ensure DB connectivity
+		await TokenModel.findOne({}).lean().exec();
+		const end = Date.now();
+		return end - start;
+	} catch (error) {
+		logger.error('Error checking MongoDB connectivity', error as Error);
 		throw error;
 	}
 }

@@ -5,6 +5,9 @@
 - Chore: Replace all mentions of `skullgaminghq` with `canadiendragon` (2025-12-23)
 - Note: this includes code, tests, and Discord/webhook messages where the old name appeared.
 
+- Fix: `!ping game <name>` now returns the correct Twitch game ID; `!ping` still reports bot uptime and Twitch API ping (2025-12-25)
+
+
 - Fix: Improve EventSub compatibility and logging
   - Use runtime/dynamic imports for Twurple EventSub/API packages to avoid ESM/CJS import errors (partial conversion on the `chore/deps-update-2025-11-27` branch).
   - Fix: `chatRulesCited` handling in `src/EventSubEvents.ts` — treat empty `string[]` as "none/custom" and prefer cited rule text when `reason` is null.
