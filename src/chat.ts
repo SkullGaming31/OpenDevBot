@@ -23,7 +23,7 @@ import { getUsernamesFromDatabase } from './database/tokenStore';
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
 // Ensure we only start the periodic social message once per process
-let periodicSocialTimerStarted = false;
+// let periodicSocialTimerStarted = false;
 // Define your constants
 let PERIODIC_SAVE_INTERVAL: number;
 
@@ -348,7 +348,7 @@ export async function initializeChat(): Promise<void> {
 					}
 
 					// Execute the command (await in case command returns a promise)
-					await command.execute(channel, user, args, text, msg);
+					command.execute(channel, user, args, text, msg);
 
 					// Update the last executed timestamp of the command
 					userCooldowns.set(commandName, currentTimestamp);
@@ -366,25 +366,25 @@ export async function initializeChat(): Promise<void> {
 		}
 		// this should run every 10 minutes but runs once right away then once every 1 minute
 		// Schedule a single periodic social message runner (starts once per process)
-		if (!periodicSocialTimerStarted) {
-			periodicSocialTimerStarted = true;
-			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-			const socialChannel = 'canadiendragon';
-			const sendSocial = async () => {
-				try {
-					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
-				} catch (err) {
-					logger.error('Periodic social message failed', err as Error);
-				}
-			};
+		// if (!periodicSocialTimerStarted) {
+		// 	periodicSocialTimerStarted = true;
+		// 	const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+		// 	const socialChannel = 'canadiendragon';
+		// 	const sendSocial = async () => {
+		// 		try {
+		// 			await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+		// 		} catch (err) {
+		// 			logger.error('Periodic social message failed', err as Error);
+		// 		}
+		// 	};
 
-			// Start after an initial delay to avoid spamming on startup
-			socialTimeoutId = setTimeout(() => {
-				// send immediately once after delay, then every interval
-				sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); });
-				socialIntervalId = setInterval(() => sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); }), SOCIAL_INTERVAL_MS);
-			}, SOCIAL_INTERVAL_MS);
-		}
+		// 	// Start after an initial delay to avoid spamming on startup
+		// 	socialTimeoutId = setTimeout(() => {
+		// 		// send immediately once after delay, then every interval
+		// 		sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); });
+		// 		socialIntervalId = setInterval(() => sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); }), SOCIAL_INTERVAL_MS);
+		// 	}, SOCIAL_INTERVAL_MS);
+		// }
 	};
 	chatClient.onMessage(commandHandler);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { logger.warn('Attempted to connect to a channel ', text, retryCount); });
@@ -711,7 +711,7 @@ export async function shutdownChat(): Promise<void> {
 			try { clearInterval(viewer.intervalId); } catch { /* ignore */ }
 		}
 		viewerWatchTimes.clear();
-		periodicSocialTimerStarted = false;
+		// periodicSocialTimerStarted = false;
 
 		if (chatClientInstance) {
 			// Twurple ChatClient exposes disconnect/quit depending on version — try both

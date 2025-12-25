@@ -5,7 +5,9 @@
 - Chore: Replace all mentions of `skullgaminghq` with `canadiendragon` (2025-12-23)
 - Note: this includes code, tests, and Discord/webhook messages where the old name appeared.
 
-- Fix: `!ping game <name>` now returns the correct Twitch game ID; `!ping` still reports bot uptime and Twitch API ping (2025-12-25)
+ ### 2025-12-25
+- Fix: `!ping game <name>` now returns the correct Twitch game ID; `!ping` still reports bot uptime and Twitch API ping
+- added `!ping status` to report bot status (uptime, discord connection ping, twitch ping status)
 
 
 - Fix: Improve EventSub compatibility and logging
