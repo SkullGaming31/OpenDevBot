@@ -23,7 +23,7 @@ import { getUsernamesFromDatabase } from './database/tokenStore';
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
 // Ensure we only start the periodic social message once per process
-// let periodicSocialTimerStarted = false;
+let periodicSocialTimerStarted = false;
 // Define your constants
 let PERIODIC_SAVE_INTERVAL: number;
 
@@ -364,27 +364,30 @@ export async function initializeChat(): Promise<void> {
 				}
 			}
 		}
-		// this should run every 10 minutes but runs once right away then once every 1 minute
-		// Schedule a single periodic social message runner (starts once per process)
-		// if (!periodicSocialTimerStarted) {
-		// 	periodicSocialTimerStarted = true;
-		// 	const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-		// 	const socialChannel = 'canadiendragon';
-		// 	const sendSocial = async () => {
-		// 		try {
-		// 			await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
-		// 		} catch (err) {
-		// 			logger.error('Periodic social message failed', err as Error);
-		// 		}
-		// 	};
+		// Periodic social message runner: runs once after the initial delay,
+		// then repeats every `SOCIAL_INTERVAL_MS` (10 minutes). Guarded so it
+		// cannot be started multiple times in the same process.
+		if (!periodicSocialTimerStarted) {
+			periodicSocialTimerStarted = true;
+			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+			const socialChannel = 'canadiendragon';
+			const sendSocial = async () => {
+				try {
+					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+				} catch (err) {
+					logger.error('Periodic social message failed', err as Error);
+				}
+			};
 
-		// 	// Start after an initial delay to avoid spamming on startup
-		// 	socialTimeoutId = setTimeout(() => {
-		// 		// send immediately once after delay, then every interval
-		// 		sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); });
-		// 		socialIntervalId = setInterval(() => sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); }), SOCIAL_INTERVAL_MS);
-		// 	}, SOCIAL_INTERVAL_MS);
-		// }
+			// Start after an initial delay to avoid spamming on startup. We send
+			// once after the delay, then schedule a repeating interval with the
+			// same 10-minute period. This avoids an immediate send at startup.
+			socialTimeoutId = setTimeout(() => {
+				// send once after delay, then every interval
+				sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); });
+				socialIntervalId = setInterval(() => sendSocial().catch((e) => { logger.error('Error sending periodic social message', e); }), SOCIAL_INTERVAL_MS);
+			}, SOCIAL_INTERVAL_MS);
+		}
 	};
 	chatClient.onMessage(commandHandler);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { logger.warn('Attempted to connect to a channel ', text, retryCount); });
