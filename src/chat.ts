@@ -373,7 +373,7 @@ export async function initializeChat(): Promise<void> {
 			const socialChannel = 'canadiendragon';
 			const sendSocial = async () => {
 				try {
-					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing the !help');
+					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing !help');
 				} catch (err) {
 					logger.error('Periodic social message failed', err as Error);
 				}

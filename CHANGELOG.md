@@ -9,6 +9,11 @@
 - Fix: `!ping game <name>` now returns the correct Twitch game ID; `!ping` still reports bot uptime and Twitch API ping
 - added `!ping status` to report bot status (uptime, discord connection ping, twitch ping status)
 
+### 2025-12-26
+- Fix: Periodic social message runner now waits the full 10 minutes before the first send and repeats every 10 minutes to avoid 1-minute repeats (commit 29b0234)
+
+------- END OF December 25-26, 2025 Additions and fixes -------
+
 
 - Fix: Improve EventSub compatibility and logging
   - Use runtime/dynamic imports for Twurple EventSub/API packages to avoid ESM/CJS import errors (partial conversion on the `chore/deps-update-2025-11-27` branch).
