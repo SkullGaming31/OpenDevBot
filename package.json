@@ -14,7 +14,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed-db": "ts-node ./src/scripts/seedDatabase.ts"
   },
   "keywords": [],
   "dependencies": {
