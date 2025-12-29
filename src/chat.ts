@@ -19,6 +19,7 @@ import { UserModel } from './database/models/userModel';
 import { creditWallet } from './services/balanceAdapter';
 import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
 import { getUsernamesFromDatabase } from './database/tokenStore';
+import { randomInt } from 'crypto';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
@@ -238,12 +239,25 @@ export async function initializeChat(): Promise<void> {
 			}
 		}
 
-		if (text.includes('overlay expert') && channel === '#canadiendragon') {
-			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
-		}
-		const savedLurkMessage = await getSavedLurkMessage(msg.userInfo.displayName);
+		const lowerText = text.toLowerCase();
+
+		// fast exit
+		if (!lowerText.includes('@')) return;
+
+		// extract mentioned usernames
+		const mentionedUsers = lowerText
+			.split(/\s+/)
+			.filter(w => w.startsWith('@'))
+			.map(w => w.slice(1).replace(/[^a-z0-9_]/g, ''));
+
+		if (!mentionedUsers.length) return;
+
+		const savedLurkMessage = await getSavedLurkMessage(mentionedUsers[0]);// not currently working at all
 		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
 			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+		}
+		if (text.includes('overlay expert') && channel === '#canadiendragon') {
+			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);
 		}
 		if (text.includes('overlay designer') && channel === '#canadiendragon') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, do you have an eye for design and a passion for creating unique overlays? Check out https://overlay.expert/designers to learn how you can start selling your designs and making money on Overlay Expert. Don't miss this opportunity to turn your creativity into cash!`);
@@ -364,16 +378,29 @@ export async function initializeChat(): Promise<void> {
 				}
 			}
 		}
+
+		const timerMessages = [
+			'Commands available with !help',
+			'Check out all my social media by using the !social command, or check out the commands by executing !help',
+			'are you enjoying the stream? Be sure to follow to stay up to date with all my latest content!',
+			'Check out Overlay Expert to create stunning overlays for your stream without OBS needed! Visit https://overlay.expert to begin or visit https://overlay.expert/support for support! 🎨🎥',
+			'Are you an overlay designer? Start selling your designs on Overlay Expert today! Visit https://overlay.expert/designers to learn more.',
+			'Lurkers are appreciated! twitch has changed lurking to needing 1 message to be sent every 30 minutes to count as a viewer, so be sure to say hi every once in a while!',
+		];
 		// Periodic social message runner: runs once after the initial delay,
 		// then repeats every `SOCIAL_INTERVAL_MS` (10 minutes). Guarded so it
 		// cannot be started multiple times in the same process.
 		if (!periodicSocialTimerStarted) {
 			periodicSocialTimerStarted = true;
-			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+			const SOCIAL_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes in milliseconds
 			const socialChannel = 'canadiendragon';
 			const sendSocial = async () => {
 				try {
-					await chatClient.say(socialChannel, 'Check out all my social media by using the !social command, or check out the commands by executing !help');
+					const streamer = await userApiClient.streams.getStreamByUserId('31124455' as UserIdResolvable);
+					if (streamer !== null) {
+						const message = timerMessages[randomInt(timerMessages.length)];
+						await chatClient.say(socialChannel, message);
+					}
 				} catch (err) {
 					logger.error('Periodic social message failed', err as Error);
 				}

@@ -7,7 +7,7 @@ import logger from '../../util/logger';
 const socials: Command = {
 	name: 'socials',
 	description: 'A link to all my socials',
-	usage: '!socials twitter|instagram|facebook|tiktok|discord|merch|tip|youtube|github',
+	usage: '!socials twitter|instagram|facebook|tiktok|discord|tip|youtube|github',
 	/**
 	 * Executes the socials command.
 	 *

@@ -14,7 +14,8 @@ const lurk: Command = {
 		void text;
 		const chatClient = await getChatClient();
 		try {
-			if (channel !== '#canadiendragon') return;
+			if (channel !== 'canadiendragon') return;
+			logger.debug('hit this point');
 			const toggle = args.shift();
 			const message = args.join(' ');
 			const savedLurkMessage = await LurkMessageModel.findOne({ id: msg.userInfo.userId });
@@ -24,6 +25,7 @@ const lurk: Command = {
 
 			switch (toggle) {
 				case 'on':
+					logger.debug('hit on-case');
 					if (message) {
 						if (savedLurkMessage) {
 							savedLurkMessage.message = message;

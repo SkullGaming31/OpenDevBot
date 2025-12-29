@@ -1,12 +1,4 @@
 <div id="top"></div>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
-
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -164,7 +156,7 @@ This is an example of how to list things you need to use the software and how to
   * [x] dig
   * [x] Heist
   * [x] Gamble
-* [ ] Que/delay webhooks being sent to avoid being rate limited by the Discord API
+* [x] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
 ### Today (2025-10-13)
 
