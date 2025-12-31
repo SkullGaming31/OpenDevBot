@@ -138,7 +138,8 @@ const battleroyale: Command = {
 		if (brInProgress) return chat.say(channel, 'A Battle Royale is already in progress.');
 
 		brInProgress = true;
-		const joinPeriodMs = process.env.ENVIRONMENT === 'dev' ? 8000 : 60000;
+		// Allow tests to run quickly by setting TEST_FAST=1 in the environment.
+		const joinPeriodMs = process.env.TEST_FAST === '1' ? 0 : (process.env.ENVIRONMENT === 'dev' ? 8000 : 60000);
 		const participants: Record<string, PlayerState> = {};
 
 		// Initiator automatically joins
@@ -255,8 +256,8 @@ const battleroyale: Command = {
 
 		await chat.say(channel, `Battle Royale beginning with ${playerNames.length} players! Good luck.`);
 
-		// Run rounds until one left or max rounds
-		const maxRounds = 20;
+		// Run rounds until one left or max rounds. Tests can shorten this by setting TEST_FAST=1.
+		const maxRounds = process.env.TEST_FAST === '1' ? 1 : 20;
 		let round = 0;
 		while (Object.keys(participants).length > 1 && round < maxRounds) {
 			round++;
@@ -337,7 +338,7 @@ const battleroyale: Command = {
 			}
 
 			await chat.say(channel, `Round ${round} results: ${events.join(' | ')}${eliminated.length > 0 ? ' | Eliminated: ' + eliminated.join(', ') : ''}`);
-			await sleep(2000);
+			if (process.env.TEST_FAST !== '1') await sleep(2000);
 		}
 
 		const survivors = Object.keys(participants);
