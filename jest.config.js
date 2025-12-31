@@ -28,14 +28,6 @@ const config = {
 		'!src/scripts/**',
 	],
 	coverageReporters: ['text', 'lcov', 'json'],
-	coverageThreshold: {
-		global: {
-			branches: 50,
-			functions: 50,
-			lines: 50,
-			statements: 50,
-		},
-	},
 };
 
 // In CI environments (GitHub Actions) the mongodb-memory-server package

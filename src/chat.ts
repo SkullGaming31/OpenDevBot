@@ -241,20 +241,18 @@ export async function initializeChat(): Promise<void> {
 
 		const lowerText = text.toLowerCase();
 
-		// fast exit
-		if (!lowerText.includes('@')) return;
-
-		// extract mentioned usernames
+		// extract mentioned usernames (only used when message contains @)
 		const mentionedUsers = lowerText
 			.split(/\s+/)
 			.filter(w => w.startsWith('@'))
 			.map(w => w.slice(1).replace(/[^a-z0-9_]/g, ''));
 
-		if (!mentionedUsers.length) return;
-
-		const savedLurkMessage = await getSavedLurkMessage(mentionedUsers[0]);// not currently working at all
-		if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
-			await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+		// Only process saved lurk messages if the message contains a mention
+		if (mentionedUsers.length) {
+			const savedLurkMessage = await getSavedLurkMessage(mentionedUsers[0]);
+			if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
+				await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+			}
 		}
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
 			await chatClient.say(channel, `Hey ${msg.userInfo.displayName}, are you tired of spending hours configuring your stream's overlays and alerts? Check out Overlay Expert! With our platform, you can create stunning visuals for your streams without any OBS or streaming software knowledge. Don't waste time on technical details - focus on creating amazing content. Visit https://overlay.expert/support for support and start creating today! 🎨🎥, For support, see https://overlay.expert/support`);

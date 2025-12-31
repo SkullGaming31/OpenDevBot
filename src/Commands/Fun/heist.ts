@@ -1,6 +1,7 @@
 import { ChatClient, ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import fs from 'fs';
+import path from 'path';
 import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import * as economyService from '../../services/economyService';
@@ -128,14 +129,20 @@ let participants: string[] = [];
 let isHeistInProgress: boolean = false;
 let betAmount: number = 0;
 
-// Per-channel cooldown map for bank heists (channelId -> timestamp when allowed again)
-const heistCooldowns: Map<string, number> = new Map();
-const HEIST_COOLDOWN_MS = 60 * 1000; // 1 minute cooldown per channel (tunable)
+const bankCooldowns = new Map<string, number>();
+const BANK_COOLDOWN_MS = 20 * 60 * 1000; // 20 minutes
+
 const MIN_PARTICIPANTS = 1; // per your request, allow 1 for testing
 
 const participantData: { [participantName: string]: { injuries: Injury[] } } = {};
 // Define a JSON object to store the injury data
 const injuryData: { [participantName: string]: Injury[] } = {};
+
+const BET_LIMITS: Record<'low' | 'moderate' | 'high', { min: number; max: number }> = {
+	low: { min: 1, max: 1000 },
+	moderate: { min: 1000, max: 5000 },
+	high: { min: 5000, max: 10000 },
+};
 
 const heist: Command = {
 	name: 'heist',
@@ -215,9 +222,14 @@ const heist: Command = {
 		if (isNaN(betAmount)) { return chatClient.say(channel, 'Please provide a valid amount for the heist.'); }
 
 		// Check if the amount is within the allowed range
-		if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
+		// if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
 
-		const zonesFilePath = './src/zones.json';
+		const zonesFilePath = path.resolve(process.cwd(), 'data', 'zones.json');
+		if (!fs.existsSync(zonesFilePath)) {
+			logger.error('zones.json not found in data folder', { path: zonesFilePath });
+			return chatClient.say(channel, 'Configuration error: zones.json not found in data/.');
+		}
+
 		const zonesJSON = fs.readFileSync(zonesFilePath, 'utf-8');
 		const zones: Record<string, Zone> = JSON.parse(zonesJSON);
 
@@ -242,20 +254,40 @@ const heist: Command = {
 			return; // or handle the error appropriately
 		}
 
+
+
 		// Set heist in progress
 		// Check cooldown if bank zone is requested
 		if (zoneName === 'bank') {
 			const now = Date.now();
-			const cd = heistCooldowns.get(channelId ?? channel) ?? 0;
-			if (now < cd) {
-				const remaining = Math.ceil((cd - now) / 1000);
-				return chatClient.say(channel, `Bank heist is on cooldown for this channel. Try again in ${remaining}s.`);
+			const cooldownUntil = bankCooldowns.get(channelId ?? channel);
+
+			if (cooldownUntil && now < cooldownUntil) {
+				const remaining = Math.ceil((cooldownUntil - now) / 60000);
+				return chatClient.say(channel, `The bank is locked down. Try again in ${remaining} minute(s).`);
 			}
 		}
 
-		isHeistInProgress = true;
 
-		const zoneDifficulty = zonesLowercase[zoneName].difficulty;
+		const rawDifficulty = zonesLowercase[zoneName].difficulty;
+		const allowedDifficulties = ['low', 'moderate', 'high'] as const;
+		type AllowedDifficulty = (typeof allowedDifficulties)[number];
+		const defaultDifficulty: AllowedDifficulty = 'low';
+		function isAllowedDifficulty(v: unknown): v is AllowedDifficulty {
+			return typeof v === 'string' && (allowedDifficulties as readonly string[]).includes(v);
+		}
+		const zoneDifficulty: AllowedDifficulty = isAllowedDifficulty(rawDifficulty) ? rawDifficulty : defaultDifficulty;
+		if (zoneDifficulty !== rawDifficulty) {
+			logger.warn('Unknown zone difficulty, falling back to default', { zoneName, rawDifficulty, defaultDifficulty });
+		}
+		const limits = BET_LIMITS[zoneDifficulty];
+
+		if (betAmount < limits.min || betAmount > limits.max) {
+			return chatClient.say(channel, `${zoneDifficulty.toUpperCase()} heists require a bet between ${limits.min} and ${limits.max}.`);
+		}
+
+		// Mark heist as in-progress only after validation passed to avoid blocking future attempts on validation failure
+		isHeistInProgress = true;
 
 		// Add user to the participant list
 		participants.push(user);
@@ -332,6 +364,7 @@ const heist: Command = {
 			// - take up to donorMaxPercent or donorMaxAbsolute from each (capped)
 			// - attempt to perform all debits in a transaction when possible
 			// - distribute collected pool to winners' wallets
+			// - check all players in the heist and remove there bank accounts from the pool
 			if (zoneName === 'bank') {
 				// Conservative defaults
 				const donorSampleSize = 5;
@@ -463,7 +496,7 @@ const heist: Command = {
 					resultMessage += ` Donors hit: ${masked.join(', ')}.`;
 				}
 				// Set channel cooldown
-				heistCooldowns.set(channelId ?? channel, Date.now() + HEIST_COOLDOWN_MS);
+				bankCooldowns.set(channelId ?? channel, Date.now() + BANK_COOLDOWN_MS);
 			}
 		} else {
 			resultMessage += ' The heist failed. Better luck next time!';

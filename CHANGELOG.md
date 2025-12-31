@@ -82,6 +82,30 @@ All notable changes to this project are documented in this file.
   - Result: avoids OpenSSL 1.1 (`libcrypto.so.1.1`) failures in GitHub Actions while preserving local `mongodb-memory-server` behavior.
 
 ## [Unreleased]
+### 2025-12-31 — Work in progress
+
+- Fix: Heist integration test failures corrected (transaction log assertions, deterministic random mock).
+- Add: `!battleroyale` chat command (in-memory Battle Royale game):
+  - Join window, `!brjoin`, automatic initiator join, simulated bots for dev testing.
+  - Events: damage (10–40), heal (5–15), rare XP events (~8%).
+  - Features: critical hits (10% double damage), sweeping multi-target damage events, health clamping (0–100).
+  - In-memory XP and level tracking; final survivors awarded XP and coins proportional to rounds survived.
+  - `data/botNames.txt` support for custom simulated bot names (project root `data/botNames.txt`, one name per line).
+  - Batched chat messages and enqueue behavior to reduce rate-limiter warnings.
+  - Shuffled participant processing each round to avoid deterministic advantage.
+  - Generated exponential XP level thresholds (configurable growth/MAX_LEVEL in code).
+
+Other misc:
+- Type fixes and linting adjustments for `battleroyale.ts`.
+- Guarded join listener removal and best-effort unregister handling.
+
+Notes:
+- XP/levels currently tracked in-memory; persistence can be added in a follow-up PR.
+
+### Tests & Chores (2025-12-31)
+
+- Test: Added deterministic `battleroyale` tests covering critical hits, sweeping multi-target damage, and XP math; tests use `TEST_FAST=1` for deterministic and fast execution (`src/__tests__/commands_battleroyale.test.ts`).
+- Chore: Committed battleroyale implementation, tests, and related fixes to branch `battleRoyaleGame` and pushed to origin for PR review.
 
 ### 2025-11-27 — Dynamic channel joins & Copilot instructions
 

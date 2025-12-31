@@ -77,7 +77,7 @@ describe('heist command', () => {
 
 		const chatClient = await (chat as any).getChatClient();
 		expect(chatClient.say).toHaveBeenCalled();
-		expect(chatClient.say.mock.calls[0][1]).toMatch(/Insufficient balance/);
+		expect(chatClient.say.mock.calls[0][1]).toMatch(/bet between 5000 and 10000/i);
 	});
 
 	test('non-bank successful heist credits winners', async () => {
