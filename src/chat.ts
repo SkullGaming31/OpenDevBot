@@ -22,6 +22,28 @@ import { getUsernamesFromDatabase } from './database/tokenStore';
 import { randomInt } from 'crypto';
 import { lurkingUsers } from './Commands/Information/lurk';
 
+/**
+ * Handles auto-removal of a lurking user when they send a non-command message.
+ * Exported for testability.
+ */
+export async function handleAutoRemoveLurk(channel: string, user: string, text: string, msg: ChatMessage, chatClient: { say: (c: string, m: string) => Promise<unknown> }): Promise<void> {
+	const idx = lurkingUsers.indexOf(user);
+	if (!text.startsWith('!') && idx > -1) {
+		lurkingUsers.splice(idx, 1);
+		try {
+			await LurkMessageModel.deleteOne({ id: msg.userInfo.userId });
+		} catch (delErr) {
+			logger.warn('Failed to delete saved lurk message for user', { user: msg.userInfo.userId, err: delErr });
+		}
+
+		try {
+			await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
+		} catch (e) {
+			logger.warn('Failed to announce lurk removal', e);
+		}
+	}
+}
+
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
 // Ensure we only start the periodic social message once per process
@@ -254,23 +276,7 @@ export async function initializeChat(): Promise<void> {
 		const lowerText = text.toLowerCase();
 
 		// Auto-remove lurk when a lurking user sends any non-command chat message
-		if (!text.startsWith('!') && lurkingUsers.includes(user)) {
-			const idx = lurkingUsers.indexOf(user);
-			if (idx > -1) {
-				lurkingUsers.splice(idx, 1);
-				try {
-					// remove stored lurk message from DB as well
-					try {
-						await LurkMessageModel.deleteOne({ id: msg.userInfo.userId });
-					} catch (delErr) {
-						logger.warn('Failed to delete saved lurk message for user', { user: msg.userInfo.userId, err: delErr });
-					}
-					await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
-				} catch (e) {
-					logger.warn('Failed to announce lurk removal', e);
-				}
-			}
-		}
+		await handleAutoRemoveLurk(channel, user, text, msg, chatClient);
 
 		// extract mentioned usernames (only used when message contains @)
 		const mentionedUsers = lowerText
