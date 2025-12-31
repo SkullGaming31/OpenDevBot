@@ -1,6 +1,7 @@
 import { ChatClient, ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'crypto';
 import fs from 'fs';
+import path from 'path';
 import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import * as economyService from '../../services/economyService';
@@ -223,7 +224,12 @@ const heist: Command = {
 		// Check if the amount is within the allowed range
 		// if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
 
-		const zonesFilePath = './src/zones.json';
+		const zonesFilePath = path.resolve(process.cwd(), 'data', 'zones.json');
+		if (!fs.existsSync(zonesFilePath)) {
+			logger.error('zones.json not found in data folder', { path: zonesFilePath });
+			return chatClient.say(channel, 'Configuration error: zones.json not found in data/.');
+		}
+
 		const zonesJSON = fs.readFileSync(zonesFilePath, 'utf-8');
 		const zones: Record<string, Zone> = JSON.parse(zonesJSON);
 
@@ -263,8 +269,18 @@ const heist: Command = {
 		}
 
 
-		const zoneDifficulty = zonesLowercase[zoneName].difficulty;
-		const limits = BET_LIMITS[zoneDifficulty as 'low' | 'moderate' | 'high'];
+		const rawDifficulty = zonesLowercase[zoneName].difficulty;
+		const allowedDifficulties = ['low', 'moderate', 'high'] as const;
+		type AllowedDifficulty = (typeof allowedDifficulties)[number];
+		const defaultDifficulty: AllowedDifficulty = 'low';
+		function isAllowedDifficulty(v: unknown): v is AllowedDifficulty {
+			return typeof v === 'string' && (allowedDifficulties as readonly string[]).includes(v);
+		}
+		const zoneDifficulty: AllowedDifficulty = isAllowedDifficulty(rawDifficulty) ? rawDifficulty : defaultDifficulty;
+		if (zoneDifficulty !== rawDifficulty) {
+			logger.warn('Unknown zone difficulty, falling back to default', { zoneName, rawDifficulty, defaultDifficulty });
+		}
+		const limits = BET_LIMITS[zoneDifficulty];
 
 		if (betAmount < limits.min || betAmount > limits.max) {
 			return chatClient.say(channel, `${zoneDifficulty.toUpperCase()} heists require a bet between ${limits.min} and ${limits.max}.`);
