@@ -20,6 +20,29 @@ import { creditWallet } from './services/balanceAdapter';
 import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
 import { getUsernamesFromDatabase } from './database/tokenStore';
 import { randomInt } from 'crypto';
+import { lurkingUsers } from './Commands/Information/lurk';
+
+/**
+ * Handles auto-removal of a lurking user when they send a non-command message.
+ * Exported for testability.
+ */
+export async function handleAutoRemoveLurk(channel: string, user: string, text: string, msg: ChatMessage, chatClient: { say: (c: string, m: string) => Promise<unknown> }): Promise<void> {
+	if (!text.startsWith('!') && lurkingUsers.has(user)) {
+		// remove user from the set (prevents duplicates by design)
+		lurkingUsers.delete(user);
+		try {
+			await LurkMessageModel.deleteOne({ id: msg.userInfo.userId });
+		} catch (delErr) {
+			logger.warn('Failed to delete saved lurk message for user', { user: msg.userInfo.userId, err: delErr });
+		}
+
+		try {
+			await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
+		} catch (e) {
+			logger.warn('Failed to announce lurk removal', e);
+		}
+	}
+}
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
@@ -94,7 +117,25 @@ export async function initializeChat(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const TWITCH_ACTIVITY_ID = TwitchActivityWebhookID;
 	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
-	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
+	const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const getSavedLurkMessage = async (displayName: string) => {
+		// prefer indexed lowercase field for exact case-insensitive match
+		try {
+			const lower = String(displayName).toLowerCase();
+			const byLower = await LurkMessageModel.findOne({ displayNameLower: lower }).exec();
+			if (byLower) return byLower;
+
+			// fallback to regex if the indexed field isn't populated
+			const re = new RegExp(`^${escapeRegExp(displayName)}$`, 'i');
+			return await LurkMessageModel.findOne({ displayName: re }).exec();
+		} catch (e) {
+			logger.warn(`Failed to lookup saved lurk message for ${displayName}: ${e}`);
+			// The fallback exact, case-sensitive lookup is unlikely to help after an error
+			// (and may return null even if a differently-cased record exists). Return null
+			// to indicate lookup failure and avoid misleading exact-match queries.
+			return null;
+		}
+	};
 
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
@@ -241,6 +282,9 @@ export async function initializeChat(): Promise<void> {
 
 		const lowerText = text.toLowerCase();
 
+		// Auto-remove lurk when a lurking user sends any non-command chat message
+		await handleAutoRemoveLurk(channel, user, text, msg, chatClient);
+
 		// extract mentioned usernames (only used when message contains @)
 		const mentionedUsers = lowerText
 			.split(/\s+/)
@@ -249,9 +293,10 @@ export async function initializeChat(): Promise<void> {
 
 		// Only process saved lurk messages if the message contains a mention
 		if (mentionedUsers.length) {
-			const savedLurkMessage = await getSavedLurkMessage(mentionedUsers[0]);
-			if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
-				await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+			const mentioned = mentionedUsers[0];
+			const savedLurkMessage = await getSavedLurkMessage(mentioned);
+			if (savedLurkMessage && lowerText.includes(`@${String(savedLurkMessage.displayName).toLowerCase()}`)) {
+				await chatClient.say(channel, `${msg.userInfo.displayName}, ${savedLurkMessage.displayName}'s lurk message: ${savedLurkMessage.message}`);
 			}
 		}
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
