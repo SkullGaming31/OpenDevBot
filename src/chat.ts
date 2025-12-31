@@ -20,6 +20,7 @@ import { creditWallet } from './services/balanceAdapter';
 import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
 import { getUsernamesFromDatabase } from './database/tokenStore';
 import { randomInt } from 'crypto';
+import { lurkingUsers } from './Commands/Information/lurk';
 
 const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; intervalId: NodeJS.Timeout }> = new Map();
 const UPDATE_INTERVAL = 30000; // 30 seconds
@@ -94,7 +95,18 @@ export async function initializeChat(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const TWITCH_ACTIVITY_ID = TwitchActivityWebhookID;
 	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
-	const getSavedLurkMessage = async (displayName: string) => { return LurkMessageModel.findOne({ displayName }); };
+	const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const getSavedLurkMessage = async (displayName: string) => {
+		// search case-insensitively by displayName so mentions like @username (lowercase)
+		// still match stored DisplayName variants
+		try {
+			const re = new RegExp(`^${escapeRegExp(displayName)}$`, 'i');
+			return LurkMessageModel.findOne({ displayName: re });
+		} catch (e) {
+			// fallback to direct lookup
+			return LurkMessageModel.findOne({ displayName });
+		}
+	};
 
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
@@ -241,6 +253,25 @@ export async function initializeChat(): Promise<void> {
 
 		const lowerText = text.toLowerCase();
 
+		// Auto-remove lurk when a lurking user sends any non-command chat message
+		if (!text.startsWith('!') && lurkingUsers.includes(user)) {
+			const idx = lurkingUsers.indexOf(user);
+			if (idx > -1) {
+				lurkingUsers.splice(idx, 1);
+				try {
+					// remove stored lurk message from DB as well
+					try {
+						await LurkMessageModel.deleteOne({ id: msg.userInfo.userId });
+					} catch (delErr) {
+						logger.warn('Failed to delete saved lurk message for user', { user: msg.userInfo.userId, err: delErr });
+					}
+					await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
+				} catch (e) {
+					logger.warn('Failed to announce lurk removal', e);
+				}
+			}
+		}
+
 		// extract mentioned usernames (only used when message contains @)
 		const mentionedUsers = lowerText
 			.split(/\s+/)
@@ -249,9 +280,10 @@ export async function initializeChat(): Promise<void> {
 
 		// Only process saved lurk messages if the message contains a mention
 		if (mentionedUsers.length) {
-			const savedLurkMessage = await getSavedLurkMessage(mentionedUsers[0]);
-			if (savedLurkMessage && text.includes(`@${savedLurkMessage.displayName}`)) {
-				await chatClient.say(channel, `${msg.userInfo.displayName}, ${user}'s lurk message: ${savedLurkMessage.message}`);
+			const mentioned = mentionedUsers[0];
+			const savedLurkMessage = await getSavedLurkMessage(mentioned);
+			if (savedLurkMessage && lowerText.includes(`@${String(savedLurkMessage.displayName).toLowerCase()}`)) {
+				await chatClient.say(channel, `${msg.userInfo.displayName}, ${savedLurkMessage.displayName}'s lurk message: ${savedLurkMessage.message}`);
 			}
 		}
 		if (text.includes('overlay expert') && channel === '#canadiendragon') {
