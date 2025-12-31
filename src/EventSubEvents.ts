@@ -68,7 +68,8 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
 						}
 					}
-					lurkingUsers.length = 0;
+					// clear set of lurking users when stream ends
+					lurkingUsers.clear();
 					await LurkMessageModel.deleteMany({});
 				} catch (error) {
 					logger.error(error);

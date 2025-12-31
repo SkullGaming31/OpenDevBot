@@ -5,7 +5,7 @@ import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 import logger from '../../util/logger';
 
-export const lurkingUsers: string[] = [];
+export const lurkingUsers: Set<string> = new Set<string>();
 const lurk: Command = {
 	name: 'lurk',
 	description: 'Display a Lurk message and send it to anyone that tages you in chat',
@@ -29,27 +29,29 @@ const lurk: Command = {
 					if (message) {
 						if (savedLurkMessage) {
 							savedLurkMessage.message = message;
+							savedLurkMessage.displayName = msg.userInfo.displayName;
+							savedLurkMessage.displayNameLower = String(msg.userInfo.displayName).toLowerCase();
 							await savedLurkMessage.save();
 						} else {
 							const newLurkMessage = new LurkMessageModel({
 								id: msg.userInfo.userId,
 								displayName: msg.userInfo.displayName,
+								displayNameLower: String(msg.userInfo.displayName).toLowerCase(),
 								message: message,
 							});
 							await newLurkMessage.save();
 						}
-						lurkingUsers.push(user);
+						lurkingUsers.add(user);
 						await chatClient.say(channel, `${user} is now lurking with the message: ${message}`);
 					} else {
 						const lurkMessage = savedLurkMessage ? savedLurkMessage.message : '';
-						lurkingUsers.push(user);
+						lurkingUsers.add(user);
 						await chatClient.say(channel, `${msg.userInfo.displayName} is now lurking ${lurkMessage ? `with the message: ${lurkMessage}` : 'No Lurk Message was Provided'}`);
 					}
 					break;
 				case 'off':
-					const index = lurkingUsers.indexOf(user);
-					if (index > -1) {
-						lurkingUsers.splice(index, 1);
+					if (lurkingUsers.has(user)) {
+						lurkingUsers.delete(user);
 						await sleep(3000);
 						await chatClient.say(channel, `${msg.userInfo.displayName} is no longer lurking`);
 					}
@@ -59,7 +61,7 @@ const lurk: Command = {
 					break;
 			}
 			await sleep(5000);
-			await chatClient.say(channel, `Currently ${lurkingUsers.length} people are lurking. ${numLurkers}`);
+			await chatClient.say(channel, `Currently ${lurkingUsers.size} people are lurking. ${numLurkers}`);
 		} catch (error) {
 			logger.error('Error with the Lurk Command', error);
 		}

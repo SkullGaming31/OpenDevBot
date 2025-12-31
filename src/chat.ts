@@ -27,9 +27,9 @@ import { lurkingUsers } from './Commands/Information/lurk';
  * Exported for testability.
  */
 export async function handleAutoRemoveLurk(channel: string, user: string, text: string, msg: ChatMessage, chatClient: { say: (c: string, m: string) => Promise<unknown> }): Promise<void> {
-	const idx = lurkingUsers.indexOf(user);
-	if (!text.startsWith('!') && idx > -1) {
-		lurkingUsers.splice(idx, 1);
+	if (!text.startsWith('!') && lurkingUsers.has(user)) {
+		// remove user from the set (prevents duplicates by design)
+		lurkingUsers.delete(user);
 		try {
 			await LurkMessageModel.deleteOne({ id: msg.userInfo.userId });
 		} catch (delErr) {
@@ -119,14 +119,18 @@ export async function initializeChat(): Promise<void> {
 	const TWITCH_ACTIVITY_TOKEN = TwitchActivityWebhookToken;
 	const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 	const getSavedLurkMessage = async (displayName: string) => {
-		// search case-insensitively by displayName so mentions like @username (lowercase)
-		// still match stored DisplayName variants
+		// prefer indexed lowercase field for exact case-insensitive match
 		try {
+			const lower = String(displayName).toLowerCase();
+			const byLower = await LurkMessageModel.findOne({ displayNameLower: lower }).exec();
+			if (byLower) return byLower;
+
+			// fallback to regex if the indexed field isn't populated
 			const re = new RegExp(`^${escapeRegExp(displayName)}$`, 'i');
-			return LurkMessageModel.findOne({ displayName: re });
+			return await LurkMessageModel.findOne({ displayName: re }).exec();
 		} catch (e) {
-			// fallback to direct lookup
-			return LurkMessageModel.findOne({ displayName });
+			logger.warn(`Failed to lookup saved lurk message for ${displayName}: ${e}`);
+			return await LurkMessageModel.findOne({ displayName: displayName }).exec();
 		}
 	};
 
