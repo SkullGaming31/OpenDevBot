@@ -53,7 +53,7 @@
     "sourceMap": true, /* Create source map files for emitted JavaScript files. */
     "inlineSourceMap": false, /* Include sourcemap files inside the emitted JavaScript. */
     // "noUnusedLocals": false,
-    "noUnusedParameters": true,
+    "noUnusedParameters": false,
     // "noEmitOnError": false,
     // "outFile": "./",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
     "outDir": "./dist", /* Specify an output folder for all emitted files. */

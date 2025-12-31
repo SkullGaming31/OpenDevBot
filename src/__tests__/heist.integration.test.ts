@@ -75,8 +75,9 @@ describe('heist integration (replica-set transactions)', () => {
 		// Force deterministic randomInt: always return the lower bound so calls like randomInt(min, max) -> min
 		jest.doMock('crypto', () => ({
 			randomInt: (min: number, max?: number) => {
+				// reference max to satisfy TS unused-parameter checks
 				void max;
-				// mimic node crypto.randomInt signature (min, max?) -> return integer in [min, max)
+				// return the lower bound to force success checks where low values indicate success
 				return min;
 			}
 		}));
@@ -93,7 +94,7 @@ describe('heist integration (replica-set transactions)', () => {
 
 		// Start the heist: use an initiator who has enough in wallet
 		// Ensure initiator UserModel has balance for debitWallet path (balanceAdapter uses UserModel.balance)
-		await UserModel.create({ id: 'initiator', username: 'initiator', channelId: 'chan', balance: 1000 } as any);
+		await UserModel.create({ id: 'initiator', username: 'initiator', channelId: 'chan', balance: 5100 } as any);
 
 		// compute user balances before executing heist
 		const usersBefore = await UserModel.find({}).lean();
@@ -102,8 +103,9 @@ describe('heist integration (replica-set transactions)', () => {
 
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'initiator', userName: 'initiator' } };
 
-		// Execute a heist with amount 200 targeting 'bank'
-		await heistModule.default.execute('chan', 'initiator', ['200', 'bank'], '', msg);
+		// Execute a heist with amount 5000 targeting 'bank'
+		await heistModule.default.execute('chan', 'initiator', ['5000', 'bank'], '', msg);
+
 
 		// After heist, inspect bank account balances to ensure total bank balance decreased
 		const updatedDonors = await BankAccountModel.find({}).lean();
@@ -116,7 +118,7 @@ describe('heist integration (replica-set transactions)', () => {
 		// Verify transaction logs recorded withdraws and deposits/transfers
 		const TransactionLog = require('../database/models/transactionLog').default;
 		const logs = await TransactionLog.find({}).lean();
-		const withdrawCount = logs.filter((l: any) => l.type === 'withdraw').length;
+		const withdrawCount = logs.filter((l: { type: string; from?: string; to?: string; }) => l.type === 'withdraw').length;
 		logger.debug('transaction logs', logs);
 		expect(withdrawCount).toBeGreaterThan(0);
 		// Accept any of the following as evidence of winners being credited:
