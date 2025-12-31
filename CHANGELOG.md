@@ -102,6 +102,11 @@ Other misc:
 Notes:
 - XP/levels currently tracked in-memory; persistence can be added in a follow-up PR.
 
+### Tests & Chores (2025-12-31)
+
+- Test: Added deterministic `battleroyale` tests covering critical hits, sweeping multi-target damage, and XP math; tests use `TEST_FAST=1` for deterministic and fast execution (`src/__tests__/commands_battleroyale.test.ts`).
+- Chore: Committed battleroyale implementation, tests, and related fixes to branch `battleRoyaleGame` and pushed to origin for PR review.
+
 ### 2025-11-27 — Dynamic channel joins & Copilot instructions
 
 - **Updated AI guidance:** replaced and condensed `.github/copilot-instructions.md` with a focused Copilot/AI agent guide (repo big-picture, command shape, env quirks like `ENVIRONMENT`, run/test workflows, and gotchas). This helps AI agents onboard quickly.
