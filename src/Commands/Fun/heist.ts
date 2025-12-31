@@ -262,7 +262,6 @@ const heist: Command = {
 			}
 		}
 
-		isHeistInProgress = true;
 
 		const zoneDifficulty = zonesLowercase[zoneName].difficulty;
 		const limits = BET_LIMITS[zoneDifficulty as 'low' | 'moderate' | 'high'];
@@ -270,6 +269,9 @@ const heist: Command = {
 		if (betAmount < limits.min || betAmount > limits.max) {
 			return chatClient.say(channel, `${zoneDifficulty.toUpperCase()} heists require a bet between ${limits.min} and ${limits.max}.`);
 		}
+
+		// Mark heist as in-progress only after validation passed to avoid blocking future attempts on validation failure
+		isHeistInProgress = true;
 
 		// Add user to the participant list
 		participants.push(user);

@@ -132,7 +132,7 @@ const battleroyale: Command = {
 	usage: '!battleroyale',
 	moderator: false,
 	devOnly: false,
-	cooldown: 60, // 600 seconds = 10 minutes
+	cooldown: 60, // 600 seconds = 10 minutes. Ignore this, this is a note for myself
 	execute: async (channel: string, user: string, args: string[], _text: string, _msg: ChatMessage) => {
 		const chat = await getChatClient();
 		if (brInProgress) return chat.say(channel, 'A Battle Royale is already in progress.');
@@ -241,7 +241,9 @@ const battleroyale: Command = {
 			}
 		} catch (err) {
 			// Best-effort; if removal fails, the guard prevents further joins.
-			void err;
+			// Log to aid debugging if ChatClient API changes or removal fails.
+			// eslint-disable-next-line no-console
+			console.error('[BattleRoyale] Failed to remove onMessage listener during cleanup:', err);
 		}
 
 		const playerNames = Object.keys(participants);
@@ -360,7 +362,14 @@ const battleroyale: Command = {
 			try {
 				await balanceAdapter.creditWallet(s, coins, s, channel);
 			} catch (err) {
-				// ignore
+				// Log failures to credit wallet so failures are visible in logs
+				// eslint-disable-next-line no-console
+				console.error('Failed to credit wallet for Battle Royale survivor', {
+					user: s,
+					coins,
+					channel,
+					error: err instanceof Error ? err.message : err,
+				});
 			}
 			if (participants[s].level > prevLevel) {
 				survivorAnnouncements.push(`${s} survived and earned ${coins} coins and ${xpGain} XP and leveled up to ${participants[s].level}!`);
