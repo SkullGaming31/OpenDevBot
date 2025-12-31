@@ -44,7 +44,31 @@ const lurk: Command = {
 						lurkingUsers.add(user);
 						await chatClient.say(channel, `${user} is now lurking with the message: ${message}`);
 					} else {
-						const lurkMessage = savedLurkMessage ? savedLurkMessage.message : '';
+						// Ensure the DB has a lurk document for this user and that displayNameLower is populated
+						let lurkDoc = savedLurkMessage;
+						if (lurkDoc) {
+							lurkDoc.displayName = msg.userInfo.displayName;
+							if (!lurkDoc.displayNameLower) {
+								lurkDoc.displayNameLower = String(msg.userInfo.displayName).toLowerCase();
+							}
+							if (!lurkDoc.message) {
+								lurkDoc.message = '';
+							}
+						} else {
+							lurkDoc = new LurkMessageModel({
+								id: msg.userInfo.userId,
+								displayName: msg.userInfo.displayName,
+								displayNameLower: String(msg.userInfo.displayName).toLowerCase(),
+								message: '',
+							});
+						}
+						// persist any created/updated document
+						try {
+							await lurkDoc.save();
+						} catch (err) {
+							logger.warn('Failed to save lurk document for user', { user: msg.userInfo.userId, err });
+						}
+						const lurkMessage = lurkDoc.message || '';
 						lurkingUsers.add(user);
 						await chatClient.say(channel, `${msg.userInfo.displayName} is now lurking ${lurkMessage ? `with the message: ${lurkMessage}` : 'No Lurk Message was Provided'}`);
 					}

@@ -130,7 +130,10 @@ export async function initializeChat(): Promise<void> {
 			return await LurkMessageModel.findOne({ displayName: re }).exec();
 		} catch (e) {
 			logger.warn(`Failed to lookup saved lurk message for ${displayName}: ${e}`);
-			return await LurkMessageModel.findOne({ displayName: displayName }).exec();
+			// The fallback exact, case-sensitive lookup is unlikely to help after an error
+			// (and may return null even if a differently-cased record exists). Return null
+			// to indicate lookup failure and avoid misleading exact-match queries.
+			return null;
 		}
 	};
 
