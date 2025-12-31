@@ -90,6 +90,8 @@ const lurk: Command = {
 					if (savedLurkMessage) {
 						await savedLurkMessage.deleteOne();
 					}
+					// Explicitly ensure no status report is sent when lurk is turned off
+					shouldReportStatus = false;
 					break;
 			}
 			if (shouldReportStatus) {
