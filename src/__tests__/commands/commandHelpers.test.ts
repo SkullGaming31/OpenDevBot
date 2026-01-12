@@ -1,5 +1,5 @@
-import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from '../util/commandHelpers';
-import { Command } from '../interfaces/Command';
+import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from '../../util/commandHelpers';
+import { Command } from '../../interfaces/Command';
 
 describe('commandHelpers', () => {
 	test('parseCommandText parses command and args', () => {

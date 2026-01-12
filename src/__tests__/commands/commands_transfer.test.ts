@@ -8,11 +8,11 @@ describe('transfer command', () => {
 
 	test('missing args returns usage', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		// prevent importing real userApiClient which can pull in auth/token models
 		// make getUserByName truthy so the command reaches the args-check branch
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
-		const cmd = await import('../Commands/Fun/transfer');
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
+		const cmd = await import('../../Commands/Fun/transfer');
 		// text includes recipient so recipient.substring(1) is safe; args empty so usage branch should run
 		await cmd.default.execute('#chan', 'User', [], '!transfer @bob', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } } as any);
 		expect(say).toHaveBeenCalled();
@@ -21,11 +21,11 @@ describe('transfer command', () => {
 
 	test('invalid amount reports error', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		// mock getUserApi to return an object with users.getUserByName
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
 
-		const cmd = await import('../Commands/Fun/transfer');
+		const cmd = await import('../../Commands/Fun/transfer');
 		await cmd.default.execute('#chan', 'User', ['@bob', 'abc'], '!transfer @bob abc', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } } as any);
 		expect(say).toHaveBeenCalled();
 		expect(String(say.mock.calls[0][1])).toContain('please specify a valid amount');
@@ -33,10 +33,10 @@ describe('transfer command', () => {
 
 	test('positive amount zero/negative rejected', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
 
-		const cmd = await import('../Commands/Fun/transfer');
+		const cmd = await import('../../Commands/Fun/transfer');
 		await cmd.default.execute('#chan', 'User', ['@bob', '0'], '!transfer @bob 0', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } } as any);
 		expect(say).toHaveBeenCalled();
 		expect(String(say.mock.calls[0][1])).toContain('only transfer positive amounts');
@@ -44,11 +44,11 @@ describe('transfer command', () => {
 
 	test('successful transfer announces success', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
-		jest.doMock('../services/balanceAdapter', () => ({ transfer: (jest.fn() as any).mockResolvedValue(undefined) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ transfer: (jest.fn() as any).mockResolvedValue(undefined) }));
 
-		const cmd = await import('../Commands/Fun/transfer');
+		const cmd = await import('../../Commands/Fun/transfer');
 		await cmd.default.execute('#chan', 'Alice', ['@bob', '25'], '!transfer @bob 25', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'Alice' } } as any);
 
 		expect(say).toHaveBeenCalled();
@@ -60,11 +60,11 @@ describe('transfer command', () => {
 
 	test('transfer failure reports error', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
-		jest.doMock('../services/balanceAdapter', () => ({ transfer: (jest.fn() as any).mockRejectedValue(new Error('insufficient')) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue({ id: 'u2' }) } }) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ transfer: (jest.fn() as any).mockRejectedValue(new Error('insufficient')) }));
 
-		const cmd = await import('../Commands/Fun/transfer');
+		const cmd = await import('../../Commands/Fun/transfer');
 		await cmd.default.execute('#chan', 'Alice', ['@bob', '25'], '!transfer @bob 25', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'Alice' } } as any);
 
 		expect(say).toHaveBeenCalled();

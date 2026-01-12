@@ -5,7 +5,7 @@ jest.setTimeout(20000);
 const sayMockCmd = jest.fn().mockResolvedValue(undefined);
 
 // Mock the chat client without importing the real module to avoid side-effects
-jest.doMock('../chat', () => ({
+jest.doMock('../../chat', () => ({
   getChatClient: jest.fn().mockResolvedValue({ say: sayMockCmd }),
 }));
 
@@ -23,9 +23,9 @@ describe('lurk command', () => {
     (LurkMessageModel as any).findOne = findOneMock;
     (LurkMessageModel as any).countDocuments = countMock;
 
-    jest.doMock('../database/models/LurkModel', () => ({ LurkMessageModel }));
+    jest.doMock('../../database/models/LurkModel', () => ({ LurkMessageModel }));
 
-    const lurkModule = await import('../Commands/Information/lurk');
+    const lurkModule = await import('../../Commands/Information/lurk');
     const cmd = lurkModule.default as any;
 
     // clear state
@@ -35,7 +35,7 @@ describe('lurk command', () => {
 
     await cmd.execute('canadiendragon', 'tester', ['on', 'hello', 'world'], '!lurk on hello world', fakeMsg);
 
-    const mocked = (await import('../database/models/LurkModel')) as any;
+    const mocked = (await import('../../database/models/LurkModel')) as any;
     expect(mocked.LurkMessageModel).toHaveBeenCalled();
     const createdArg = mocked.LurkMessageModel.mock.calls[0][0];
     expect(createdArg).toMatchObject({ id: 'u-100', displayName: 'Tester', displayNameLower: 'tester', message: 'hello world' });
@@ -51,9 +51,9 @@ describe('lurk command', () => {
     (LurkMessageModel as any).findOne = findOneMock;
     (LurkMessageModel as any).countDocuments = countMock;
 
-    jest.doMock('../database/models/LurkModel', () => ({ LurkMessageModel }));
+    jest.doMock('../../database/models/LurkModel', () => ({ LurkMessageModel }));
 
-    const lurkModule = await import('../Commands/Information/lurk');
+    const lurkModule = await import('../../Commands/Information/lurk');
     const cmd = lurkModule.default as any;
 
     lurkModule.lurkingUsers.clear();
@@ -62,7 +62,7 @@ describe('lurk command', () => {
 
     await cmd.execute('canadiendragon', 'nomsguser', ['on'], '!lurk on', fakeMsg);
 
-    const mocked = (await import('../database/models/LurkModel')) as any;
+    const mocked = (await import('../../database/models/LurkModel')) as any;
     expect(mocked.LurkMessageModel).toHaveBeenCalled();
     const createdArg = mocked.LurkMessageModel.mock.calls[0][0];
     expect(createdArg).toMatchObject({ id: 'u-101', displayName: 'NoMsgUser', displayNameLower: 'nomsguser', message: '' });
@@ -78,9 +78,9 @@ describe('lurk command', () => {
     (LurkMessageModel as any).findOne = findOneMock;
     (LurkMessageModel as any).countDocuments = countMock;
 
-    jest.doMock('../database/models/LurkModel', () => ({ LurkMessageModel }));
+    jest.doMock('../../database/models/LurkModel', () => ({ LurkMessageModel }));
 
-    const lurkModule = await import('../Commands/Information/lurk');
+    const lurkModule = await import('../../Commands/Information/lurk');
     const cmd = lurkModule.default as any;
 
     // pre-populate
@@ -93,7 +93,7 @@ describe('lurk command', () => {
 
     expect(lurkModule.lurkingUsers.has('tooff')).toBe(false);
     expect(sayMockCmd).toHaveBeenCalledWith('canadiendragon', 'ToOff is no longer lurking');
-    const mocked = (await import('../database/models/LurkModel')) as any;
+    const mocked = (await import('../../database/models/LurkModel')) as any;
     expect(mocked.LurkMessageModel.findOne).toHaveBeenCalledWith({ id: 'u-102' });
   });
 });

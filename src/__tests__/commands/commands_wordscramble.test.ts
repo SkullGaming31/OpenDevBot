@@ -1,5 +1,5 @@
-jest.doMock('../auth/authProvider', () => ({ getChatAuthProvider: jest.fn() }));
-jest.doMock('../database/models/tokenModel', () => ({ TokenModel: {} }));
+jest.doMock('../../auth/authProvider', () => ({ getChatAuthProvider: jest.fn() }));
+jest.doMock('../../database/models/tokenModel', () => ({ TokenModel: {} }));
 
 describe('wordScramble command', () => {
 	beforeEach(() => {
@@ -10,15 +10,15 @@ describe('wordScramble command', () => {
 	test('start and correct guess', async () => {
 		// Mock chat client
 		const sayMock = jest.fn().mockResolvedValue(undefined);
-		jest.doMock('../chat', () => ({ getChatClient: jest.fn().mockResolvedValue({ say: sayMock }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: jest.fn().mockResolvedValue({ say: sayMock }) }));
 
 		// Make random deterministic to pick a known word from the WORDS list
 		jest.spyOn(Math, 'random').mockReturnValue(0);
 
-		const cmd: any = await import('../Commands/Fun/wordScramble');
+		const cmd: any = await import('../../Commands/Fun/wordScramble');
 
 		const msg: any = { channelId: 'chan1', userInfo: { userId: 'u1', userName: 'tester', isMod: true } };
-		const chat = await import('../chat');
+		const chat = await import('../../chat');
 		await (chat as any).getChatClient();
 
 		// Start the scramble

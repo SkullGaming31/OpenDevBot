@@ -1,5 +1,5 @@
-jest.doMock('../auth/authProvider', () => ({ getChatAuthProvider: jest.fn() }));
-jest.doMock('../database/models/tokenModel', () => ({ TokenModel: {} }));
+jest.doMock('../../auth/authProvider', () => ({ getChatAuthProvider: jest.fn() }));
+jest.doMock('../../database/models/tokenModel', () => ({ TokenModel: {} }));
 
 describe('hangman command', () => {
 	beforeEach(() => {
@@ -9,13 +9,13 @@ describe('hangman command', () => {
 
 	test('start, letter guess and full-word guess win', async () => {
 		const sayMock = jest.fn().mockResolvedValue(undefined);
-		jest.doMock('../chat', () => ({ getChatClient: jest.fn().mockResolvedValue({ say: sayMock }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: jest.fn().mockResolvedValue({ say: sayMock }) }));
 
 		// Force deterministic word selection (first word in array)
 		jest.spyOn(Math, 'random').mockReturnValue(0);
 
-		const cmd: any = await import('../Commands/Fun/hangman');
-		const chat = await import('../chat');
+		const cmd: any = await import('../../Commands/Fun/hangman');
+		const chat = await import('../../chat');
 		await (chat as any).getChatClient();
 
 		const msg: any = { channelId: 'chan1', userInfo: { userId: 'u1', userName: 'tester' } };

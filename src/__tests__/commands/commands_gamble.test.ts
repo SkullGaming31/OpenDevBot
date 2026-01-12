@@ -8,11 +8,11 @@ describe('gamble command', () => {
 
 	test('missing args prompts usage', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }) }));
 		jest.doMock('node:crypto', () => ({ randomInt: (jest.fn() as any) }));
 
-		const cmd = await import('../Commands/Fun/gamble');
+		const cmd = await import('../../Commands/Fun/gamble');
 
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 		await cmd.default.execute('#chan', 'User', [], '', msg);
@@ -24,11 +24,11 @@ describe('gamble command', () => {
 
 	test('insufficient funds path', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 10 }), debitWallet: (jest.fn() as any).mockResolvedValue(false) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 10 }), debitWallet: (jest.fn() as any).mockResolvedValue(false) }));
 		jest.doMock('node:crypto', () => ({ randomInt: (jest.fn() as any) }));
 
-		const cmd = await import('../Commands/Fun/gamble');
+		const cmd = await import('../../Commands/Fun/gamble');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', ['5'], '', msg);
@@ -39,14 +39,14 @@ describe('gamble command', () => {
 
 	test('win path credits winnings and announces', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		const debit = (jest.fn() as any).mockResolvedValue(true);
 		const credit = (jest.fn() as any).mockResolvedValue(undefined);
-		jest.doMock('../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }), debitWallet: debit, creditWallet: credit }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }), debitWallet: debit, creditWallet: credit }));
 		// force win
 		jest.doMock('node:crypto', () => ({ randomInt: (jest.fn() as any).mockReturnValue(1) }));
 
-		const cmd = await import('../Commands/Fun/gamble');
+		const cmd = await import('../../Commands/Fun/gamble');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', ['10'], '', msg);
@@ -61,14 +61,14 @@ describe('gamble command', () => {
 
 	test('lose path announces loss and does not credit', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		const debit = (jest.fn() as any).mockResolvedValue(true);
 		const credit = (jest.fn() as any);
-		jest.doMock('../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }), debitWallet: debit, creditWallet: credit }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getOrCreate: (jest.fn() as any).mockResolvedValue({ userId: 'u1', balance: 100 }), debitWallet: debit, creditWallet: credit }));
 		// force loss (randomInt > 3)
 		jest.doMock('node:crypto', () => ({ randomInt: (jest.fn() as any).mockReturnValue(10) }));
 
-		const cmd = await import('../Commands/Fun/gamble');
+		const cmd = await import('../../Commands/Fun/gamble');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', ['15'], '', msg);
