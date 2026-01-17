@@ -1,12 +1,10 @@
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-import type { UserIdResolvable } from '@twurple/api';
 import { ChatMessage } from '@twurple/chat/lib';
 import axios from 'axios';
 import { getUserApi } from '../../api/userApiClient';
 import { getChatClient } from '../../chat';
 import { TokenModel } from '../../database/models/tokenModel';
-import { broadcasterInfo } from '../../util/constants';
 
 axios.defaults;
 
@@ -33,14 +31,13 @@ const ping: Command = {
 		const chatClient = await getChatClient();
 		const userApiClient = await getUserApi();
 
-		const broadcasterID = await userApiClient.channels.getChannelInfoById(broadcasterInfo[0].id);
-		if (!broadcasterID?.id) return;
+		// Normalize channel name (Twurple may include a leading '#')
+		const normalizedChannel = channel.startsWith('#') ? channel.slice(1) : channel;
+		if (normalizedChannel !== 'canadiendragon') return;
 
-		const moderatorsResponse = await userApiClient.moderation.getModerators(broadcasterID?.id as UserIdResolvable);
-		const moderatorsData = moderatorsResponse.data; // Access the moderator data
-
-		const isModerator = moderatorsData.some(moderator => moderator.userId === msg.userInfo.userId);
-		const isBroadcaster = broadcasterID.id === msg.userInfo.userId;
+		// Use message-provided flags which are reliable and avoid extra API calls
+		const isModerator = Boolean(msg.userInfo.isMod);
+		const isBroadcaster = Boolean(msg.userInfo.isBroadcaster);
 		const isStaff = isModerator || isBroadcaster;
 
 		try {
