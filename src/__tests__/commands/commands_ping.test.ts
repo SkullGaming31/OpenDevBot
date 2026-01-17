@@ -28,7 +28,7 @@ describe('ping command', () => {
 
 		const cmd = await import('../../Commands/Development/ping');
 
-		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
+		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1', isBroadcaster: true } };
 		await cmd.default.execute('canadiendragon', 'User', [], '', msg);
 
 		expect(say).toHaveBeenCalled();
@@ -53,7 +53,7 @@ describe('ping command', () => {
 		jest.doMock('axios', () => ({ get: (jest.fn() as any).mockResolvedValue({}), defaults: {} }));
 
 		const cmd = await import('../../Commands/Development/ping');
-		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
+		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1', isBroadcaster: true } };
 
 		await cmd.default.execute('canadiendragon', 'User', ['game', 'Vigor'], '', msg);
 
@@ -81,7 +81,7 @@ describe('ping command', () => {
 		jest.doMock('axios', () => ({ get: (jest.fn() as any).mockResolvedValue({}), defaults: {} }));
 
 		const cmd = await import('../../Commands/Development/ping');
-		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
+		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1', isBroadcaster: true } };
 
 		await cmd.default.execute('canadiendragon', 'User', ['status'], '', msg);
 
