@@ -1,5 +1,5 @@
-import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from '../util/commandHelpers';
-import { Command } from '../interfaces/Command';
+import { parseCommandText, getCooldownRemaining, checkCommandPermission, isUserEditor } from '../../util/commandHelpers';
+import { Command } from '../../interfaces/Command';
 
 describe('commandHelpers', () => {
 	test('parseCommandText parses command and args', () => {
@@ -37,7 +37,7 @@ describe('commandHelpers', () => {
 		expect(res1.reason).toBe('devOnly');
 
 		// on special channel should be allowed even if not staff
-		const res2 = checkCommandPermission(devCommand, false, false, false, '1155035316');
+		const res2 = checkCommandPermission(devCommand, false, false, false, '31124455');
 		expect(res2.allowed).toBe(true);
 	});
 

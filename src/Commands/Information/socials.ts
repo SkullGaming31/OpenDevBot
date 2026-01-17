@@ -7,7 +7,7 @@ import logger from '../../util/logger';
 const socials: Command = {
 	name: 'socials',
 	description: 'A link to all my socials',
-	usage: '!socials twitter|instagram|facebook|tiktok|discord|tip|youtube|github',
+	usage: '!socials instagram|tiktok|discord|tip|youtube|github',
 	/**
 	 * Executes the socials command.
 	 *
@@ -24,11 +24,12 @@ const socials: Command = {
 		const chatClient = await getChatClient();
 
 		const socialURLs: Record<string, string> = {
-			tiktok: 'https://tiktok.com/@canadiendragon',
-			discord: 'https://discord.com/invite/6TGV75sDjW',
-			youtube: 'https://www.youtube.com/@canadiendragon',
+			tiktok: 'https://tiktok.com/@canadiendragontt',
+			discord: 'https://discord.com/invite/UhQuaASkKR',
+			youtube: 'https://www.youtube.com/@canadiendragonyt',
 			tip: 'https://overlay.expert/celebrate/canadiendragon',
 			github: 'https://github.com/skullgaming31/opendevbot',
+			instagram: 'https://instagram.com/canadiendragonig',
 		};
 
 		// const social = args[0]?.toLowerCase();

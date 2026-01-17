@@ -32,7 +32,7 @@ This repo is a Twitch chatbot built on Twurple with Discord webhook notification
 - Do not remove the startup side-effect in `src/index.ts` that clears the `injuries` collection without discussing with maintainers.
 - Preserve dynamic `import()` behavior for commands (mix of sync and dynamic imports exists).
 - Respect the `ENVIRONMENT` misspelling and search the repo before renaming env vars.
-- Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `1155035316`).
+- Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `31124455`).
 - Repository policy: All changes must be made through a pull request. Do not push changes directly to protected branches; open a PR, request review, and merge only after approval.
 
 **How to add or edit a command (example)**

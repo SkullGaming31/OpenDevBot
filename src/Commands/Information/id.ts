@@ -7,7 +7,7 @@ import logger from '../../util/logger';
 const id: Command = {
 	name: 'id',
 	description: 'lookup your channel id',
-	devOnly: true,
+	devOnly: false,
 	usage: '!id (name)',
 	execute: async (channel: string, user: string, args: string[], text: string, msg: ChatMessage) => {
 		void user; void text;

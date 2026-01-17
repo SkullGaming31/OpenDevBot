@@ -29,8 +29,11 @@ export function checkCommandPermission(
 ): { allowed: boolean; reason?: 'devOnly' | 'moderator' } {
 	const isStaff = isModerator || isBroadcaster || isEditor;
 	if (command.moderator && !isStaff) return { allowed: false, reason: 'moderator' };
-	if (command.devOnly && msgChannelId !== '1155035316' && !(isBroadcaster || isModerator)) return { allowed: false, reason: 'devOnly' };
-	if (msgChannelId === '1155035316' && command.moderator && !isStaff) return { allowed: false, reason: 'moderator' };
+	// Allow devOnly commands in the developer channel `canadiendragon` by id or name.
+	const normalizedChannel = String(msgChannelId || '').toLowerCase().replace(/^#/, '');
+	const isDevChannel = normalizedChannel === '31124455' || normalizedChannel === 'canadiendragon';
+	if (command.devOnly && !isDevChannel && !(isBroadcaster || isModerator)) return { allowed: false, reason: 'devOnly' };
+	if (msgChannelId === '31124455' && command.moderator && !isStaff) return { allowed: false, reason: 'moderator' };
 	return { allowed: true };
 }
 

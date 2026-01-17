@@ -8,18 +8,18 @@ describe('beg command', () => {
 
 	test('cooldown path informs user to wait', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
 		// mock UserModel so we don't load mongoose in tests
-		jest.doMock('../database/models/userModel', () => ({
+		jest.doMock('../../database/models/userModel', () => ({
 			UserModel: {
 				findOne: (jest.fn() as any).mockResolvedValue({ lastBegTime: new Date() }),
 			}
 		}));
 
-		const cmd = await import('../Commands/Fun/beg');
+		const cmd = await import('../../Commands/Fun/beg');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', [], '', msg);
@@ -31,12 +31,12 @@ describe('beg command', () => {
 
 	test('successful beg credits wallet and announces', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
 		// mock UserModel to avoid mongoose
-		jest.doMock('../database/models/userModel', () => ({
+		jest.doMock('../../database/models/userModel', () => ({
 			UserModel: {
 				findOne: (jest.fn() as any).mockResolvedValue(null),
 				updateOne: (jest.fn() as any).mockResolvedValue(undefined)
@@ -47,15 +47,15 @@ describe('beg command', () => {
 		jest.doMock('crypto', () => ({ randomInt: (jest.fn() as any).mockReturnValueOnce(1).mockReturnValueOnce(10).mockReturnValueOnce(0) }));
 
 		// mock balanceAdapter.creditWallet
-		jest.doMock('../services/balanceAdapter', () => ({ creditWallet: (jest.fn() as any).mockResolvedValue(undefined) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ creditWallet: (jest.fn() as any).mockResolvedValue(undefined) }));
 
-		const cmd = await import('../Commands/Fun/beg');
+		const cmd = await import('../../Commands/Fun/beg');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', [], '!beg', msg);
 
 		// creditWallet should have been called with amount 10
-		const bal = await import('../services/balanceAdapter');
+		const bal = await import('../../services/balanceAdapter');
 		expect((bal as any).creditWallet).toHaveBeenCalled();
 		expect(say).toHaveBeenCalled();
 		const found = say.mock.calls.find((c: any[]) => /Gold/.test(String(c[1])));
@@ -66,11 +66,11 @@ describe('beg command', () => {
 
 	test('failed beg announces failure and does not credit', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
-		jest.doMock('../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
+		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
-		jest.doMock('../database/models/userModel', () => ({
+		jest.doMock('../../database/models/userModel', () => ({
 			UserModel: {
 				findOne: (jest.fn() as any).mockResolvedValue(null)
 			}
@@ -78,14 +78,14 @@ describe('beg command', () => {
 
 		// force failure (randomInt > success threshold)
 		jest.doMock('crypto', () => ({ randomInt: (jest.fn() as any).mockReturnValue(99) }));
-		jest.doMock('../services/balanceAdapter', () => ({ creditWallet: (jest.fn() as any) }));
+		jest.doMock('../../services/balanceAdapter', () => ({ creditWallet: (jest.fn() as any) }));
 
-		const cmd = await import('../Commands/Fun/beg');
+		const cmd = await import('../../Commands/Fun/beg');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
 		await cmd.default.execute('#chan', 'User', [], '!beg', msg);
 
-		const bal = await import('../services/balanceAdapter');
+		const bal = await import('../../services/balanceAdapter');
 		expect((bal as any).creditWallet).not.toHaveBeenCalled();
 		expect(say).toHaveBeenCalled();
 	});

@@ -8,11 +8,11 @@ describe('quote command', () => {
 
 	test('add quote saves and announces', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		const cmd = await import('../Commands/Information/quote');
+		const cmd = await import('../../Commands/Information/quote');
 		// import the real model and stub the prototype save and static methods
-		const QuoteMod = await import('../database/models/Quote');
+		const QuoteMod = await import('../../database/models/Quote');
 		(QuoteMod.default.prototype as any).save = (jest.fn() as any).mockResolvedValue({ _id: '1', content: 'hello world' });
 		(QuoteMod.default as any).findByIdAndDelete = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) });
 		(QuoteMod.default as any).findById = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) });
@@ -28,10 +28,10 @@ describe('quote command', () => {
 
 	test('remove quote not found announces not found', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		const cmd = await import('../Commands/Information/quote');
-		const QuoteMod = await import('../database/models/Quote');
+		const cmd = await import('../../Commands/Information/quote');
+		const QuoteMod = await import('../../database/models/Quote');
 		(QuoteMod.default as any).findByIdAndDelete = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
 
@@ -43,10 +43,10 @@ describe('quote command', () => {
 
 	test('list random returns no quotes when empty', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		const cmd = await import('../Commands/Information/quote');
-		const QuoteMod = await import('../database/models/Quote');
+		const cmd = await import('../../Commands/Information/quote');
+		const QuoteMod = await import('../../database/models/Quote');
 		(QuoteMod.default as any).countDocuments = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(0) });
 		(QuoteMod.default as any).findOne = (jest.fn() as any).mockReturnValue({ skip: (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(null) }) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };
@@ -59,10 +59,10 @@ describe('quote command', () => {
 
 	test('list random returns a quote when present', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		const cmd = await import('../Commands/Information/quote');
-		const QuoteMod = await import('../database/models/Quote');
+		const cmd = await import('../../Commands/Information/quote');
+		const QuoteMod = await import('../../database/models/Quote');
 		(QuoteMod.default as any).countDocuments = (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue(1) });
 		(QuoteMod.default as any).findOne = (jest.fn() as any).mockReturnValue({ skip: (jest.fn() as any).mockReturnValue({ exec: (jest.fn() as any).mockResolvedValue({ _id: '5', content: 'a quote' }) }) });
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'u1', userName: 'u1' } };

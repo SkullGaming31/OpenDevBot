@@ -8,9 +8,9 @@ describe('balance command', () => {
 
 	test('balance forwards to bank message', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		const cmd = await import('../Commands/Fun/balance');
+		const cmd = await import('../../Commands/Fun/balance');
 		await cmd.default.execute('#chan', 'User', [], '', { channelId: 'chan', userInfo: { userId: 'u1', userName: 'User' } } as any);
 
 		expect(say).toHaveBeenCalled();

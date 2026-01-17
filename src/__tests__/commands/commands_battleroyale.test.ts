@@ -1,6 +1,6 @@
-jest.mock('../chat');
-jest.mock('../services/balanceAdapter');
-jest.mock('../util/util', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+jest.mock('../../chat');
+jest.mock('../../services/balanceAdapter');
+jest.mock('../../util/util', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 const nodeCrypto = require('crypto');
 
 describe('battleroyale command (expanded)', () => {
@@ -30,11 +30,11 @@ describe('battleroyale command (expanded)', () => {
 		};
 
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		// set test-fast mode to avoid waiting
 		(process.env as any).TEST_FAST = '1';
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 
 		// execute; TEST_FAST short-circuits waits and rounds
 		await battleroyale.execute('#chan', 'tester', ['3'], '', ({} as any));
@@ -54,10 +54,10 @@ describe('battleroyale command (expanded)', () => {
 			handlers,
 		};
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		(process.env as any).TEST_FAST = '1';
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 
 		// execute; TEST_FAST short-circuits waits and rounds
 		await battleroyale.execute('#chan', 'soloUser', [], '', ({} as any));
@@ -78,10 +78,10 @@ describe('battleroyale command (expanded)', () => {
 			handlers,
 		};
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		(process.env as any).TEST_FAST = '1';
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 
 		// Run the command (dev adds default simulated bots so survivors will exist)
 		await battleroyale.execute('#chan', 'tester', [], '', ({} as any));
@@ -101,12 +101,12 @@ describe('battleroyale command (expanded)', () => {
 			handlers,
 		};
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		// Sequence crafted to: shuffle, p1 damage (amount 15, no sweep), crit true, p2 damage (amount 12, no crit)
 		// See test analysis for ordering of randomInt calls.
 		mockRandomSequence([0, 50, 0, 15, 0, 20, 5, 50, 0, 12, 0, 50, 20]);
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 		await battleroyale.execute('#chan', 'tester', ['1'], '', ({} as any));
 		const said = (mockChat.say as jest.Mock).mock.calls.flat().join(' ');
 		expect(said).toContain('(CRITICAL)');
@@ -124,11 +124,11 @@ describe('battleroyale command (expanded)', () => {
 			handlers,
 		};
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		// Sequence crafted to: shuffle, p1 damage with sweep true (amount 10), choose source idx 0, targetCount 1, target idx 0, p2 heal
 		mockRandomSequence([0, 50, 0, 10, 0, 10, 20, 0, 1, 0, 20, 0, 5, 0, 50]);
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 		await battleroyale.execute('#chan', 'tester', ['1'], '', ({} as any));
 		const said = (mockChat.say as jest.Mock).mock.calls.flat().join(' ');
 		expect(said).toContain('hit by sweep from');
@@ -145,17 +145,17 @@ describe('battleroyale command (expanded)', () => {
 			handlers,
 		};
 		jest.resetModules();
-		const chatModule = await import('../chat');
+		const chatModule = await import('../../chat');
 		(chatModule.getChatClient as jest.Mock).mockResolvedValue(mockChat);
 		// Sequence: shuffle, p1 xp (30), p2 xp (5)
 		mockRandomSequence([0, 5, 0, 30, 0, 5, 0, 5, 0]);
-		const battleroyale = (await import('../Commands/Fun/battleroyale')).default;
+		const battleroyale = (await import('../../Commands/Fun/battleroyale')).default;
 		await battleroyale.execute('#chan', 'tester', ['1'], '', ({} as any));
 		const said = (mockChat.say as jest.Mock).mock.calls.flat().join(' ');
 		// survivors get 20 XP per round + event XP; expect at least one survivor message showing "now X XP"
 		expect(said).toMatch(/now \d+ XP/);
 		// coins should be awarded (10 coins per round survived)
-		const balanceModule = await import('../services/balanceAdapter');
+		const balanceModule = await import('../../services/balanceAdapter');
 		expect((balanceModule.creditWallet as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(1);
 	});
 });

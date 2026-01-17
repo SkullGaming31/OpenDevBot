@@ -10,11 +10,11 @@ describe('ping command', () => {
 		const say = jest.fn();
 
 		// mock chat client
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
 		// mock broadcaster info and userApiClient (broadcaster id and empty moderators so broadcaster check passes by id)
-		jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
-		jest.doMock('../api/userApiClient', () => ({
+		jest.doMock('../../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
+		jest.doMock('../../api/userApiClient', () => ({
 			getUserApi: async () => ({
 				channels: { getChannelInfoById: async () => ({ id: 'b1' }) },
 				moderation: { getModerators: async () => ({ data: [] }) },
@@ -23,10 +23,10 @@ describe('ping command', () => {
 		}));
 
 		// mock TokenModel and axios used by checkTwitchApiPing
-		jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
+		jest.doMock('../../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
 		jest.doMock('axios', () => ({ get: (jest.fn() as any).mockResolvedValue({}), defaults: {} }));
 
-		const cmd = await import('../Commands/Development/ping');
+		const cmd = await import('../../Commands/Development/ping');
 
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
 		await cmd.default.execute('canadiendragon', 'User', [], '', msg);
@@ -38,10 +38,10 @@ describe('ping command', () => {
 
 	test('!ping game Vigor returns game id', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
-		jest.doMock('../api/userApiClient', () => ({
+		jest.doMock('../../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
+		jest.doMock('../../api/userApiClient', () => ({
 			getUserApi: async () => ({
 				channels: { getChannelInfoById: async () => ({ id: 'b1' }) },
 				moderation: { getModerators: async () => ({ data: [] }) },
@@ -49,10 +49,10 @@ describe('ping command', () => {
 			}),
 		}));
 
-		jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
+		jest.doMock('../../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
 		jest.doMock('axios', () => ({ get: (jest.fn() as any).mockResolvedValue({}), defaults: {} }));
 
-		const cmd = await import('../Commands/Development/ping');
+		const cmd = await import('../../Commands/Development/ping');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
 
 		await cmd.default.execute('canadiendragon', 'User', ['game', 'Vigor'], '', msg);
@@ -66,10 +66,10 @@ describe('ping command', () => {
 
 	test('!ping status returns status string', async () => {
 		const say = jest.fn();
-		jest.doMock('../chat', () => ({ getChatClient: async () => ({ say }) }));
+		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		jest.doMock('../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
-		jest.doMock('../api/userApiClient', () => ({
+		jest.doMock('../../util/constants', () => ({ broadcasterInfo: [{ id: 'b1' }] }));
+		jest.doMock('../../api/userApiClient', () => ({
 			getUserApi: async () => ({
 				channels: { getChannelInfoById: async () => ({ id: 'b1' }) },
 				moderation: { getModerators: async () => ({ data: [] }) },
@@ -77,10 +77,10 @@ describe('ping command', () => {
 			}),
 		}));
 
-		jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
+		jest.doMock('../../database/models/tokenModel', () => ({ TokenModel: { findOne: (jest.fn() as any).mockResolvedValue({ access_token: 'token' }) } }));
 		jest.doMock('axios', () => ({ get: (jest.fn() as any).mockResolvedValue({}), defaults: {} }));
 
-		const cmd = await import('../Commands/Development/ping');
+		const cmd = await import('../../Commands/Development/ping');
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'b1', userName: 'b1' } };
 
 		await cmd.default.execute('canadiendragon', 'User', ['status'], '', msg);

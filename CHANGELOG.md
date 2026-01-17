@@ -5,6 +5,9 @@
 - Chore: Replace all mentions of `skullgaminghq` with `canadiendragon` (2025-12-23)
 - Note: this includes code, tests, and Discord/webhook messages where the old name appeared.
 
+- Fix: Command loader now skips non-JS files (for example `.map` files) to avoid runtime SyntaxError when requiring source-map files from `dist/` during production startup.
+- Fix: `devOnly` command permission logic updated so developer-only commands are allowed in the `canadiendragon` channel (name or id `31124455`).
+
  ### 2025-12-25
 - Fix: `!ping game <name>` now returns the correct Twitch game ID; `!ping` still reports bot uptime and Twitch API ping
 - added `!ping status` to report bot status (uptime, discord connection ping, twitch ping status)

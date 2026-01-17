@@ -76,7 +76,7 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 			continue;
 		}
 
-		if ((!isAllowedFileExtension(module) && isDevelopment()) || isIndexFile(module)) { continue; }
+		if (!isAllowedFileExtension(module) || isIndexFile(module)) { continue; }
 
 		// const { name } = path.parse(module);
 		// const command = (await import(modulePath)).default;
@@ -92,7 +92,7 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 }
 function isAllowedFileExtension(module: string): boolean { return process.env.ENVIRONMENT === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
 
-function isDevelopment(): boolean { return process.env.ENVIRONMENT !== 'prod'; }
+// Helper removed: environment checks use `process.env.ENVIRONMENT` directly.
 
 function isIndexFile(module: string): boolean { return module === 'index.ts' || module === 'index.js'; }
 
