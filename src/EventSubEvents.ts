@@ -60,12 +60,12 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						message: `${displayName} has gone offline, thank you for stopping by!`,
 					});
 					await sleep(2000);
-					if (info.id === '1155035316') {
+					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
 						await sleep(2000);
 						if (info.name === 'canadiendragon') {
-							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/6TGV75sDjW');
+							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
 						}
 					}
 					// clear set of lurking users when stream ends
@@ -600,7 +600,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				);
 				if (broadcasterInfo) {
 					await chatClient.say(
-						'1155035316',
+						'31124455',
 						`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 					);
 				}
@@ -652,7 +652,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			const userInfo = await ack.getBroadcaster();
 			void userInfo;
 			logger.info(`Warning Acknowledged Event for ${ack.userDisplayName}`);
-			await userApiClient.whispers.sendWhisper(openDevBotID, '1155035316' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
+			await userApiClient.whispers.sendWhisper(openDevBotID, '31124455' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
 		});
 
 		try {
