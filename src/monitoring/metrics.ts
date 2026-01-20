@@ -15,6 +15,24 @@ export const webhookAttempts = new client.Counter({
 	labelNames: ['provider', 'status'] as const,
 });
 
+export const webhookQueueLength = new client.Gauge({
+	name: 'opendevbot_webhook_queue_length',
+	help: 'Current length of the webhook in-memory queue',
+	labelNames: ['webhookId'] as const,
+});
+
+export const webhookFailureStreak = new client.Gauge({
+	name: 'opendevbot_webhook_failure_streak',
+	help: 'Consecutive failures observed for a specific webhook',
+	labelNames: ['webhookId'] as const,
+});
+
+export const webhookFailureAlerts = new client.Counter({
+	name: 'opendevbot_webhook_failure_alerts_total',
+	help: 'Total number of webhook failure alerts emitted after repeated failures',
+	labelNames: ['webhookId'] as const,
+});
+
 export const eventSubRetries = new client.Counter({
 	name: 'opendevbot_eventsub_retries_total',
 	help: 'Total EventSub resubscribe retry attempts',
@@ -38,6 +56,9 @@ register.registerMetric(webhookAttempts as unknown as client.Counter<string>);
 register.registerMetric(eventSubRetries as unknown as client.Counter<string>);
 register.registerMetric(tokenRefreshes as unknown as client.Counter<string>);
 register.registerMetric(dbUp as unknown as client.Gauge<string>);
+register.registerMetric(webhookQueueLength as unknown as client.Gauge<string>);
+register.registerMetric(webhookFailureStreak as unknown as client.Gauge<string>);
+register.registerMetric(webhookFailureAlerts as unknown as client.Counter<string>);
 
 // Health check helpers
 export async function getDbHealth(): Promise<boolean> {

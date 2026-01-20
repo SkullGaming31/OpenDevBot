@@ -1,5 +1,5 @@
 import { WebhookClient, RESTPostAPIWebhookWithTokenJSONBody, WebhookMessageCreateOptions } from 'discord.js';
-import { webhookAttempts } from '../monitoring/metrics';
+import { webhookAttempts, webhookQueueLength, webhookFailureStreak, webhookFailureAlerts } from '../monitoring/metrics';
 import logger from '../util/logger';
 import WebhookQueueModel, { IWebhookQueue } from '../database/models/webhookQueue';
 import mongoose, { UpdateQuery, Document } from 'mongoose';
@@ -13,6 +13,8 @@ type QueueItem = {
 const queues: Map<string, QueueItem[]> = new Map();
 const clients: Map<string, WebhookClient> = new Map();
 const processing: Map<string, boolean> = new Map();
+// Track consecutive failures per webhook id (do not key by token)
+const failureStreaks: Map<string, number> = new Map();
 
 const DEFAULT_RATE_MS = Number(process.env.DISCORD_WEBHOOK_RATE_MS) || 1000; // default 1 second per webhook
 
@@ -51,13 +53,30 @@ async function processQueue(id: string, token: string) {
 				res = await client.send(item.payload as WebhookMessageCreateOptions);
 			}
 			item.resolve(res);
+			// reset failure streak on success
+			try { failureStreaks.set(id, 0); webhookFailureStreak.set({ webhookId: id }, 0); } catch (e) { /* ignore */ }
 			try { webhookAttempts.inc({ provider: 'discord', status: 'success' }); } catch (e) { /* ignore metrics errors */ }
 		} catch (err) {
 			try { webhookAttempts.inc({ provider: 'discord', status: 'error' }); } catch (e) { /* ignore metrics errors */ }
+			// increment failure streak for this webhook id
+			try {
+				const prev = failureStreaks.get(id) || 0;
+				const now = prev + 1;
+				failureStreaks.set(id, now);
+				webhookFailureStreak.set({ webhookId: id }, now);
+				// emit an alert after threshold
+				const ALERT_THRESHOLD = Number(process.env.DISCORD_WEBHOOK_FAILURE_ALERT_THRESHOLD) || 5;
+				if (now === ALERT_THRESHOLD) {
+					logger.error(`Webhook ${id} has failed ${now} consecutive times`);
+					try { webhookFailureAlerts.inc({ webhookId: id }); } catch (e) { /* ignore */ }
+				}
+			} catch (e) { /* ignore metric errors */ }
 			item.reject(err);
 		}
 		// Respect per-webhook rate limit
 		await new Promise((r) => setTimeout(r, DEFAULT_RATE_MS));
+		// update queue length metric after popping
+		try { webhookQueueLength.set({ webhookId: id }, queue.length); } catch (e) { /* ignore */ }
 	}
 
 	processing.set(key, false);
@@ -172,6 +191,8 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 					reject(err);
 				}
 			});
+			// update queue length metric after enqueue
+			try { webhookQueueLength.set({ webhookId: id }, q.length); } catch (e) { /* ignore */ }
 			// kick off processor
 			void processQueue(id, token);
 		})().catch(reject);

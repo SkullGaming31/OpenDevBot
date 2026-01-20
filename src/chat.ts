@@ -181,7 +181,16 @@ export async function initializeChat(): Promise<void> {
 
 			const channelId = msg.channelId;
 			// logger.debug('Broadcaster Channel ID: ', channelId);
-			const processChatters = async (chatters: HelixChatChatter[]) => {// TODO: Only allow points/gold/coins to be collected while the stream is live
+			const processChatters = async (chatters: HelixChatChatter[]) => {
+				// Determine once whether the broadcaster is live; only points/credits should depend on this
+				let isLive = false;
+				try {
+					const currentStream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
+					isLive = currentStream !== null;
+				} catch (err) {
+					logger.warn('Could not determine stream status; will skip crediting points for this interval', String(err));
+					isLive = false;
+				}
 				const start = chunkIndex * chunkSize;
 				const end = (chunkIndex + 1) * chunkSize;
 				const chattersChunk = chatters.slice(start, end);
@@ -199,21 +208,29 @@ export async function initializeChat(): Promise<void> {
 
 							if (existingUser) {
 								// Credit the legacy wallet (UserModel.balance) rather than the BankAccount
-								try {
-									await creditWallet(chatter.userId, 100, existingUser.username, channelId);
-								} catch (err) {
-									logger.error('Failed to credit wallet for existing user:', err);
+								if (isLive) {
+									try {
+										await creditWallet(chatter.userId, 100, existingUser.username, channelId);
+									} catch (err: unknown) {
+										if (err instanceof Error) logger.error('Failed to credit wallet for existing user:', err);
+									}
+								} else {
+									// Offline: skip crediting points
 								}
 							} else {
 								// Create the legacy user document but do not store canonical balance on UserModel
 								try {
 									await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
 									// New user created; no bank balance stored on UserModel
-									// Seed the legacy wallet for the new user
-									try {
-										await creditWallet(chatter.userId, 100, chatter.userName, channelId);
-									} catch (err) {
-										logger.error('Failed to seed wallet for new user:', err);
+									// Seed the legacy wallet for the new user (only when stream is live)
+									if (isLive) {
+										try {
+											await creditWallet(chatter.userId, 100, chatter.userName, channelId);
+										} catch (err) {
+											logger.error('Failed to seed wallet for new user:', err);
+										}
+									} else {
+										// Offline: do not seed wallet
 									}
 								} catch (err) {
 									// creation may race with another process inserting user
