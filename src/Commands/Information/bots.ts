@@ -65,13 +65,14 @@ const bots: Command = {
 										.addFields([
 											{ name: 'Added By', value: msg.userInfo.displayName || msg.userInfo.userId, inline: true },
 											{ name: 'Channel', value: channel.startsWith('#') ? channel.slice(1) : channel, inline: true },
-											{ name: 'Bots', value: newUsernamesToAdd.join(', '), inline: false }
+											{ name: 'Bots', value: newUsernamesToAdd.join(', '), inline: false },
+											{ name: 'Bot Details', value: newBots.map((b) => `${b.username} (${b.id})`).join('\n'), inline: false }
 										])
 										.setTimestamp();
 									await enqueueWebhook(commandUsageWebhookID, CommandUsageWebhookTOKEN, { embeds: [embed] });
 								}
 							} catch (e: unknown) {
-								logger.error('Failed to enqueue promote webhook', String(e));
+								logger.error('Failed to enqueue bot-add webhook', String(e));
 							}
 						} else {
 							await chatClient.say(channel, 'All usernames provided are already in the database.');
