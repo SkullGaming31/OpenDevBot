@@ -5,23 +5,33 @@ const MAX_ATTEMPTS = 6;
 
 export class RetryManager {
 	async markFailed(subscriptionId: string, authUserId: string, errMsg: string): Promise<IRetryRecord> {
-		const existing = await RetryModel.findOne({ subscriptionId, authUserId });
-		if (!existing) {
+		// Use atomic upsert/update operations to avoid duplicate-insert races when
+		// multiple workers attempt to mark the same subscription failed at once.
+		const filter = { subscriptionId, authUserId };
+		// Ensure a record exists (create with zero attempts if not) then increment.
+		await RetryModel.findOneAndUpdate(filter, { $setOnInsert: { subscriptionId, authUserId, attempts: 0, status: 'pending' } }, { upsert: true }).exec();
+
+		// Atomically increment attempts and fetch the new value
+		const updated = await RetryModel.findOneAndUpdate(filter, { $inc: { attempts: 1 } }, { new: true }).exec();
+		if (!updated) {
+			// Fallback: create a fresh record if something unexpected happened
 			const rec = new RetryModel({ subscriptionId, authUserId, attempts: 1, lastError: errMsg, nextRetryAt: new Date(Date.now() + this.computeDelay(1)) });
 			await rec.save();
 			return rec;
 		}
-		existing.attempts += 1;
-		existing.lastError = errMsg;
-		if (existing.attempts >= MAX_ATTEMPTS) {
-			existing.status = 'failed';
-			existing.nextRetryAt = null;
+
+		// Update status and nextRetryAt based on attempts
+		const attempts = updated.attempts ?? 1;
+		if (attempts >= MAX_ATTEMPTS) {
+			updated.status = 'failed';
+			updated.nextRetryAt = null;
 		} else {
-			existing.nextRetryAt = new Date(Date.now() + this.computeDelay(existing.attempts));
-			existing.status = 'pending';
+			updated.status = 'pending';
+			updated.nextRetryAt = new Date(Date.now() + this.computeDelay(attempts));
 		}
-		await existing.save();
-		return existing;
+		updated.lastError = errMsg;
+		await updated.save();
+		return updated;
 	}
 
 	async markSucceeded(subscriptionId: string, authUserId: string): Promise<void> {

@@ -5,7 +5,6 @@ import { enqueueWebhook } from './Discord/webhookQueue';
 config({ path: '.env', encoding: 'utf8', quiet: true });
 
 import type { ApiClient, UserIdResolvable, } from '@twurple/api';
-import type { StaticAuthProvider } from '@twurple/auth';
 import logger from './util/logger';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
@@ -70,82 +69,116 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					}
 					// clear set of lurking users when stream ends
 					lurkingUsers.clear();
+					// await LurkMessageModel.deleteMany({});
+				} catch (error) {
+					logger.error(error);
+				}
+			},
+		);
+		void eventSubListener.onStreamOffline(
+			info.id as UserIdResolvable,
+			async (o) => {
+				streamStartTime = undefined;
+				const userApiClient = await getUserApi();
+				const userInfo = await o.getBroadcaster();
+
+				// guard nullable stream shape and derive a display name safely
+				const displayName = (userInfo as unknown as Record<string, unknown>)?.displayName
+					|| info.name;
+
+				try {
+					await sleep(2000);
+					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+						color: 'primary',
+						message: `${displayName} has gone offline, thank you for stopping by!`,
+					});
+					await sleep(2000);
+					if (info.id === '31124455') {
+						// send a simple offline notice to promote webhook when configured
+						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
+						await sleep(2000);
+						if (info.name === 'canadiendragon') {
+							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
+						}
+					}
+					// clear set of lurking users when stream ends
+					lurkingUsers.clear();
 					await LurkMessageModel.deleteMany({});
 				} catch (error) {
 					logger.error(error);
 				}
 			},
 		);
-		void eventSubListener.onChannelHypeTrainBegin(
-			info.id as UserIdResolvable,
-			async (hts) => {
-				const userInfo = await hts.getBroadcaster();
-				logger.info(
-					`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`,
-				);
-				chatClient.say(
-					userInfo.name,
-					`${hts.goal} to reach the next level of the Hype Train, Last Contributer: ${hts.lastContribution}`,
-				);
-			},
-		);
-		void eventSubListener.onChannelHypeTrainEnd(
-			info.id as UserIdResolvable,
-			async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
-				const userInfo = await hte.getBroadcaster();
-				logger.info(
-					`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`,
-				);
-				chatClient.say(
-					userInfo.name,
-					`${hte.topContributors} have contributed to the HypeTrain`,
-				);
+		// void eventSubListener.onChannelHypeTrainBeginV2(
+		// 	info.id as UserIdResolvable,
+		// 	async (hts) => {
+		// 		const userInfo = await hts.getBroadcaster();
+		// 		logger.info(
+		// 			`Listening but no messages setup, ${hts.goal} to reach the next level of the Hype Train`,
+		// 		);
+		// 		chatClient.say(
+		// 			userInfo.name,
+		// 			`${hts.goal} to reach the next level of the Hype Train, top Contributors: ${hts.topContributors}`,
+		// 		);
+		// 	},
+		// );
+		// void eventSubListener.onChannelHypeTrainEndV2(
+		// 	info.id as UserIdResolvable,
+		// 	async (hte) => { // needs to be tested, progress and start to be done after end has been tested and it works!
+		// 		const userInfo = await hte.getBroadcaster();
+		// 		logger.info(
+		// 			`HypeTrain End Event Ending, Total Contrubtion:${hte.total}, Total Level:${hte.level}`,
+		// 		);
+		// 		chatClient.say(
+		// 			userInfo.name,
+		// 			`${hte.topContributors} have contributed to the HypeTrain`,
+		// 		);
 
-				const hypeeventendEmbed = new EmbedBuilder()
-					.setTitle('Twitch Event[HypeTrainEND]')
-					.setAuthor({
-						name: `${userInfo.displayName}`,
-						iconURL: `${userInfo.profilePictureUrl}`,
-					})
-					// .setColor('Random')
-					.addFields([
-						{
-							name: 'Broadcaster Name',
-							value: `${userInfo.displayName},\n Start Date: ${hte.startDate}`,
-							inline: true,
-						},
-						{
-							name: 'Hype Event Level',
-							value: `${hte.level}`,
-							inline: true,
-						},
-						{
-							name: 'Hype Train Event Top Contributers',
-							value: `${[
-								hte.topContributors,
-							]},\nTotal Contributers: ${hte.total}`,
-							inline: true,
-						},
-					])
-					.setThumbnail(`${userInfo.profilePictureUrl}`)
-					.setFooter({
-						text: 'DragonFire Lair',
-						iconURL: `${userInfo.profilePictureUrl}`,
-					})
-					.setTimestamp();
-				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [hypeeventendEmbed] });
-			},
-		);
-		void eventSubListener.onChannelHypeTrainProgress(
-			info.id as UserIdResolvable,
-			async (htp) => {
-				const userInfo = await htp.getBroadcaster();
-				chatClient.say(
-					userInfo.name,
-					`HypeTrain Level:${htp.level}, Latest Contributer:${htp.lastContribution}, HypeTrain Progress:${htp.progress}`,
-				);
-			},
-		);
+		// 		const hypeeventendEmbed = new EmbedBuilder()
+		// 			.setTitle('Twitch Event[HypeTrainEND]')
+		// 			.setAuthor({
+		// 				name: `${userInfo.displayName}`,
+		// 				iconURL: `${userInfo.profilePictureUrl}`,
+		// 			})
+		// 			// .setColor('Random')
+		// 			.addFields([
+		// 				{
+		// 					name: 'Broadcaster Name',
+		// 					value: `${userInfo.displayName},\n Start Date: ${hte.startDate}`,
+		// 					inline: true,
+		// 				},
+		// 				{
+		// 					name: 'Hype Event Level',
+		// 					value: `${hte.level}`,
+		// 					inline: true,
+		// 				},
+		// 				{
+		// 					name: 'Hype Train Event Top Contributers',
+		// 					value: `${[
+		// 						hte.topContributors,
+		// 					]},\nTotal Contributers: ${hte.total}`,
+		// 					inline: true,
+		// 				},
+		// 			])
+		// 			.setThumbnail(`${userInfo.profilePictureUrl}`)
+		// 			.setFooter({
+		// 				text: 'DragonFire Lair',
+		// 				iconURL: `${userInfo.profilePictureUrl}`,
+		// 			})
+		// 			.setTimestamp();
+		// 		await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [hypeeventendEmbed] });
+		// 	},
+		// );
+		// void eventSubListener.onChannelHypeTrainProgressV2(
+		// 	info.id as UserIdResolvable,
+		// 	async (htp) => {
+		// 		const userInfo = await htp.getBroadcaster();
+		// 		chatClient.say(
+		// 			userInfo.name,
+		// 			`HypeTrain Level:${htp.level}, top Contributors:${htp.topContributors}, HypeTrain Progress:${htp.progress}`,
+		// 		);
+		// 	},
+		// );
 		void eventSubListener.onChannelSubscriptionGift(
 			info.id as UserIdResolvable,
 			async (gift) => {
@@ -600,7 +633,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				);
 				if (broadcasterInfo) {
 					await chatClient.say(
-						'31124455',
+						userInfo.name,
 						`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 					);
 				}
@@ -648,12 +681,15 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			logger.info('Warning Event for %s: Warning Reason: %s', userDisplayName, reasonDisplay);
 			await chatClient.say(userInfo.name, `Warning Event for ${userDisplayName}, Warning Reason: ${reasonDisplay}`);
 		});
-		void eventSubListener.onChannelWarningAcknowledge(broadcasterInfo[0].id as UserIdResolvable, broadcasterInfo[0].id as UserIdResolvable, async (ack) => {
+		void eventSubListener.onChannelWarningAcknowledge(info.id as UserIdResolvable, info.id as UserIdResolvable, async (ack) => {
 			const userInfo = await ack.getBroadcaster();
 			void userInfo;
 			logger.info(`Warning Acknowledged Event for ${ack.userDisplayName}`);
 			await userApiClient.whispers.sendWhisper(openDevBotID, '31124455' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
 		});
+
+		// dynamic redemption handler registration
+
 
 		try {
 			const listenerProto = Object.getPrototypeOf(eventSubListener) || eventSubListener;
@@ -710,47 +746,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		} catch (e) {
 			logger.warn('Failed to register channel points redemption handler', e);
 		}
-		let previousTitle: string = '';
-		let previousCategory: string = '';
-
-		void eventSubListener.onChannelUpdate(
-			info.id as UserIdResolvable,
-			async (event) => {
-				const { streamTitle, categoryName } = event;
-				const chatClient = await getChatClient();
-
-				if (info.name === 'canadiendragon') {
-					// Check if both title and category have changed
-					if (
-						streamTitle !== previousTitle && categoryName !== previousCategory
-					) {
-						// Display a chat message with both updated stream title and category
-						await chatClient.say(
-							event.broadcasterName,
-							`Stream title has been updated: ${streamTitle}. Stream category has been updated: ${categoryName}`,
-						);
-						previousTitle = streamTitle; // Update the previous title
-						previousCategory = categoryName; // Update the previous category
-					} else if (streamTitle !== previousTitle) {
-						// Display a chat message with the updated stream title
-						await chatClient.say(
-							event.broadcasterName,
-							`Stream title has been updated: ${streamTitle}`,
-						);
-						previousTitle = streamTitle; // Update the previous title
-					} else if (categoryName !== previousCategory) {
-						// Display a chat message with the updated stream category
-						await chatClient.say(
-							event.broadcasterName,
-							`Stream category has been updated: ${categoryName}`,
-						);
-						previousCategory = categoryName; // Update the previous category
-					}
-				} else {
-					return;
-				}
-			},
-		);
 	}
 
 	//#endregion
@@ -813,10 +808,8 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 
 		try {
 			if (ENVIRONMENT === 'debug') {
-				logger.debug(
-					`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
-				);
-				// await SubscriptionModel.deleteMany({});
+				logger.debug(`(SCS) SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+				await SubscriptionModel.deleteMany({});
 				logger.info('All existing subscriptions deleted in dev environment.');
 			}
 			// Check if the subscription already exists in MongoDB
@@ -834,14 +827,24 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				return; // Exit early if subscription already exists
 			}
 
-			// Save subscription details to MongoDB
-			const newSubscription = new SubscriptionModel({
-				subscriptionId: subscription.id,
-				authUserId: subscription.authUserId,
-			});
-			await newSubscription.save();
-			logger.debug(`New subscription saved to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
-			);
+			// Save subscription details to MongoDB using upsert to avoid races
+			try {
+				await SubscriptionModel.updateOne(
+					{ subscriptionId: subscription.id, authUserId: subscription.authUserId },
+					{ $setOnInsert: { subscriptionId: subscription.id, authUserId: subscription.authUserId } },
+					{ upsert: true }
+				).exec();
+				logger.debug(`New subscription upserted to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
+			} catch (e) {
+				// If another process inserted at the same time, ignore duplicate key errors
+				const err = e as unknown as { code?: number };
+				if (err && err.code === 11000) {
+					logger.debug('Subscription already present (race) - ignoring duplicate key');
+				} else {
+					throw e;
+				}
+			}
+			await sleep(7000);
 			// mark any retry record as succeeded
 			try {
 				await retryManager.markSucceeded(subscription.id, String(subscription.authUserId ?? ''));
@@ -922,7 +925,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	eventSubListener.onSubscriptionDeleteFailure((subscription, error) => {
 		try {
 			const ENVIRONMENT = process.env.ENVIRONMENT as string;
-			if (ENVIRONMENT === 'debug') {
+			if (ENVIRONMENT === 'dev') {
 				logger.error(
 					`(SDF){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 					error,
@@ -971,107 +974,154 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 	const clientId = process.env.TWITCH_CLIENT_ID as string;
 	if (!clientId) throw new Error('TWITCH_CLIENT_ID not set');
 
-	// subscription types we want to ensure exist
-	const subs = [
-		{ type: 'stream.online', version: '1' },
-		{ type: 'stream.offline', version: '1' },
-		{ type: 'channel.follow', version: '1' },
-		{ type: 'channel.subscribe', version: '1' },
-		{ type: 'channel.subscription.message', version: '1' },
-		{ type: 'channel.cheer', version: '1' },
-	];
+	// Reuse the existing ApiClient from `getUserApi()` which is already
+	// configured for the broadcaster (handles refresh/persistence correctly).
+	const apiClient: ApiClient = await getUserApi();
 
-	// Dynamically import ApiClient and StaticAuthProvider at runtime to avoid ESM-only import errors
-	const apiModule = await import('@twurple/api');
-	const authModule = await import('@twurple/auth');
-	const ApiClientCtor = apiModule.ApiClient as new (opts: { authProvider: unknown; logger?: unknown }) => ApiClient;
-	const StaticAuthProviderCtor = authModule.StaticAuthProvider as new (clientId: string, token: string) => StaticAuthProvider;
-	const apiClient = new ApiClientCtor({ authProvider: new StaticAuthProviderCtor(clientId, accessToken), logger: { minLevel: 'ERROR' } });
+	// Prefer reusing the persistent EventSub websocket listener to avoid creating
+	// many short-lived transports (which can hit Twitch limits). Register the
+	// minimal handlers on the existing listener so it will create the needed
+	// subscriptions for the broadcaster.
+	try {
+		const persistentListener = await getEventSubs();
 
-	// Twurple exposes EventSub helpers on the ApiClient in recent versions. Prefer that.
-	type EventSubHelper = { createSubscription: (body: unknown) => Promise<unknown> };
-	const eventSubHelper: EventSubHelper | null = (apiClient as unknown as Record<string, unknown>).eventSub as EventSubHelper
-		|| (apiClient as unknown as Record<string, unknown>).eventsub as EventSubHelper
-		|| null;
+		// Check DB for already-recorded subscriptions for this authUserId and
+		// skip registering handlers for types that already exist. This avoids
+		// redundant POSTs to Twitch which respond with 409 when the subscription
+		// already exists.
+		const existing = await SubscriptionModel.find({ authUserId: authUserId }).lean();
+		const existingTypes = new Set<string>();
+		for (const ex of existing) {
+			if (!ex || !ex.subscriptionId) continue;
+			const parts = String(ex.subscriptionId).split('.');
+			// If the stored subscriptionId includes the broadcaster id as the
+			// last segment (e.g. 'channel.raid.to.31124455'), treat the type as
+			// everything except the trailing id ('channel.raid.to'). Otherwise
+			// fall back to the whole value.
+			if (parts.length >= 2) {
+				const typePart = parts.length > 2 ? parts.slice(0, -1).join('.') : parts.join('.');
+				existingTypes.add(typePart);
+			} else {
+				existingTypes.add(String(ex.subscriptionId));
+			}
+		}
 
-	if (eventSubHelper && typeof eventSubHelper.createSubscription === 'function') {
-		// use Twurple helper to create subscriptions
-		let helperFailed = false;
-		for (const s of subs) {
-			const body = {
-				type: s.type,
-				version: s.version,
-				condition: { broadcaster_user_id: authUserId },
-				transport: { method: 'websocket' },
-			};
-
-			try {
-				await eventSubHelper.createSubscription(body);
-				logger.debug(`Created EventSub ${s.type} for ${authUserId} via Twurple`);
-			} catch (err) {
-				// Attempt to read HTTP status code from several possible shapes without using `any`
-				const getStatus = (e: unknown): number | undefined => {
-					if (!e || typeof e !== 'object') return undefined;
-					const rec = e as Record<string, unknown>;
-					if (typeof rec.status === 'number') return rec.status;
-					const resp = rec.response as Record<string, unknown> | undefined;
-					if (resp && typeof resp.status === 'number') return resp.status;
-					return undefined;
-				};
-				const status = getStatus(err);
-				const errStr = String(err);
-				if (status === 409 || errStr.includes('409')) {
-					logger.debug(`EventSub ${s.type} for ${authUserId} already exists (409) via Twurple`);
-				} else {
-					// If the helper fails for an unexpected reason (for example due to
-					// SDK mismatch or missing transport support), log and fall back to
-					// creating a short-lived EventSubWsListener instead of throwing.
-					logger.warn(`Twurple EventSub create failed for ${s.type}:`, err);
-					helperFailed = true;
-					break;
+		// Also query Twitch directly for any subscriptions that exist for this
+		// broadcaster but may not yet be recorded in our DB (for example after
+		// a previous run). Use the provided accessToken to list subscriptions
+		// scoped to that user and merge types into existingTypes.
+		try {
+			const axios = await import('axios');
+			const resp = await axios.default.get('https://api.twitch.tv/helix/eventsub/subscriptions', {
+				headers: {
+					'Authorization': `Bearer ${accessToken}`,
+					'Client-Id': clientId,
+				},
+				params: { first: 100 },
+			});
+			const rows = Array.isArray(resp?.data?.data) ? resp.data.data : [];
+			for (const row of rows) {
+				try {
+					const cond = row?.condition as Record<string, unknown> | undefined;
+					if (cond && String(cond['broadcaster_user_id'] ?? '') === String(authUserId)) {
+						const t = String(row.type ?? '');
+						if (t) existingTypes.add(t);
+					}
+				} catch (_e) {
+					// ignore malformed rows
 				}
 			}
-
-			// small delay to reduce chance of rate-limit bursts
-			// eslint-disable-next-line no-await-in-loop
-			await sleep(250);
+		} catch (e) {
+			logger.debug('Failed to fetch existing Twitch subscriptions for user, continuing', e);
 		}
 
-		if (!helperFailed) {
-			return;
-		}
-		logger.info('Twurple helper failed, falling back to temporary EventSubWsListener for subscription creation');
-	}
+		const safeRegister = (type: string, registerFn: (id: string, handler: (...a: unknown[]) => unknown) => void, noOpHandler: (...a: unknown[]) => unknown) => {
+			if (existingTypes.has(type)) {
+				logger.debug(`Skipping registration for ${type} - already present for ${authUserId}`);
+				return;
+			}
+			try {
+				registerFn(authUserId as string, noOpHandler);
+			} catch (e) {
+				logger.debug(`Failed to register handler for ${type} on persistent listener`, e);
+			}
+		};
 
-	// Fallback: if helper not available, create a short-lived listener to register handlers
-	// Dynamically import and construct a temporary EventSub listener for subscription creation
-	const _es = await import('@twurple/eventsub-ws');
-	if (!('EventSubWsListener' in _es)) throw new Error('EventSubWsListener not found in @twurple/eventsub-ws');
-	const TempEventSubWsListener = (_es as unknown as { EventSubWsListener: new (opts: { apiClient: unknown; logger?: unknown }) => EventSubWsListener }).EventSubWsListener;
-	const tempListener = new TempEventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
-	try {
-		tempListener.start();
-		// register minimal no-op handlers so the listener creates subscriptions
-		tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => undefined);
-		tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => undefined);
-		tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
-		tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => undefined);
-		tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => undefined);
-		tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => undefined);
+		// Register minimal no-op handlers so the persistent listener creates subscriptions
+		safeRegister('stream.online', (id, h) => persistentListener.onStreamOnline(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('stream.offline', (id, h) => persistentListener.onStreamOffline(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.follow', (id, h) => persistentListener.onChannelFollow(id as UserIdResolvable, id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.subscribe', (id, h) => persistentListener.onChannelSubscription(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.subscription.message', (id, h) => persistentListener.onChannelSubscriptionMessage(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.cheer', (id, h) => persistentListener.onChannelCheer(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.raid.from', (id, h) => persistentListener.onChannelRaidFrom(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.raid.to', (id, h) => persistentListener.onChannelRaidTo(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.goal.begin', (id, h) => persistentListener.onChannelGoalBegin(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.goal.progress', (id, h) => persistentListener.onChannelGoalProgress(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.goal.end', (id, h) => persistentListener.onChannelGoalEnd(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.warning.send', (id, h) => persistentListener.onChannelWarningSend(id as UserIdResolvable, id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.warning.acknowledge', (id, h) => persistentListener.onChannelWarningAcknowledge(id as UserIdResolvable, id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.vip.add', (id, h) => persistentListener.onChannelVipAdd(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.vip.remove', (id, h) => persistentListener.onChannelVipRemove(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.moderator.add', (id, h) => persistentListener.onChannelModeratorAdd(id as UserIdResolvable, h), async () => undefined);
+		safeRegister('channel.moderator.remove', (id, h) => persistentListener.onChannelModeratorRemove(id as UserIdResolvable, h), async () => undefined);
 
-		// allow some time for subscriptions to be created
-		await sleep(2000);
-	} finally {
+		// Attempt to register a redemption handler dynamically if the listener exposes one
 		try {
-			const stopProp = (tempListener as unknown as Record<string, unknown>)['stop'];
-			if (typeof stopProp === 'function') {
-				const fn = stopProp as (...args: unknown[]) => unknown;
-				const res = fn.call(tempListener);
-				if (res && typeof (res as Promise<unknown>).then === 'function') await res as Promise<unknown>;
+			const listenerProto = Object.getPrototypeOf(persistentListener) || persistentListener;
+			const candidateMethodNames = Object.getOwnPropertyNames(listenerProto).concat(Object.keys(persistentListener as unknown as Record<string, unknown>));
+			const redemptionMethodName = candidateMethodNames.find((n) => /reward|redemption|customreward/i.test(n));
+			if (redemptionMethodName) {
+				const fn = (persistentListener as unknown as Record<string, unknown>)[redemptionMethodName] as unknown;
+				if (typeof fn === 'function') {
+					(fn as (...args: unknown[]) => unknown).call(persistentListener, authUserId as UserIdResolvable, async (_ev: unknown) => undefined);
+					logger.debug('Registered ephemeral redemption handler on persistent EventSub listener for ' + authUserId);
+				}
 			}
 		} catch (e) {
-			// log unexpected stop errors at debug level
-			logger.debug('Failed to stop temp EventSub listener', (e as Error).message);
+			logger.debug('Failed to register redemption handler on persistent listener', e);
+		}
+
+		// Give Twitch some time to create the subscriptions
+		await sleep(2000);
+	} catch (e) {
+		// As a last resort, fall back to the previous temporary listener approach
+		logger.warn('Failed to register handlers on persistent EventSub listener, falling back to temporary listener', e);
+		const _es = await import('@twurple/eventsub-ws');
+		if (!('EventSubWsListener' in _es)) throw new Error('EventSubWsListener not found in @twurple/eventsub-ws');
+		const TempEventSubWsListener = (_es as unknown as { EventSubWsListener: new (opts: { apiClient: unknown; logger?: unknown }) => EventSubWsListener }).EventSubWsListener;
+		const tempListener = new TempEventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
+		try {
+			tempListener.start();
+			tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelRaidFrom(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelRaidTo(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelGoalBegin(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelGoalProgress(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelGoalEnd(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelWarningSend(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelWarningAcknowledge(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelVipAdd(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelVipRemove(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelModeratorAdd(authUserId as UserIdResolvable, async () => undefined);
+			tempListener.onChannelModeratorRemove(authUserId as UserIdResolvable, async () => undefined);
+			await sleep(5000);
+		} finally {
+			try {
+				const stopProp = (tempListener as unknown as Record<string, unknown>)['stop'];
+				if (typeof stopProp === 'function') {
+					const fn = stopProp as (...args: unknown[]) => unknown;
+					const res = fn.call(tempListener);
+					if (res && typeof (res as Promise<unknown>).then === 'function') await res as Promise<unknown>;
+				}
+			} catch (err) {
+				logger.debug('Failed to stop temp EventSub listener', (err as Error).message);
+			}
 		}
 	}
 }
