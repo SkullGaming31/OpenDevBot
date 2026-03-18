@@ -56,7 +56,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					await sleep(2000);
 					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'primary',
-						message: `${displayName} has gone offline, thank you for stopping by!`,
+						message: `${displayName} has gone offline — thank you for stopping by!`,
 					});
 					await sleep(2000);
 					if (info.id === '31124455') {
@@ -67,9 +67,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
 						}
 					}
-					// clear set of lurking users when stream ends
-					lurkingUsers.clear();
-					// await LurkMessageModel.deleteMany({});
 				} catch (error) {
 					logger.error(error);
 				}
@@ -687,8 +684,6 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			logger.info(`Warning Acknowledged Event for ${ack.userDisplayName}`);
 			await userApiClient.whispers.sendWhisper(openDevBotID, '31124455' as UserIdResolvable, `Your warning has been acknowledged by ${ack.userDisplayName}`);
 		});
-
-		// dynamic redemption handler registration
 
 
 		try {

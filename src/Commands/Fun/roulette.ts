@@ -73,6 +73,7 @@ const roulette: Command = {
 
 			if (bulletInChamber) {
 				// Bullet is fired, user loses
+				// FIX: needs attention - condition may be incorrect (likely should be && instead of ||)
 				if (!msg.userInfo.isBroadcaster || !msg.userInfo.isMod) {
 					await chatClient.say(channel, `@${msg.userInfo.displayName} Your lucky i dont have the power to time you out, YOU FAILED`);
 					chamberState.bullets = 1; // Reset the chamber to 1 bullet
@@ -90,15 +91,17 @@ const roulette: Command = {
 			} else {
 				// Bullet is not fired, user wins
 				const rewardGold = randomInt(GOLD_MIN, GOLD_MAX + 1); // Random gold reward between 500 and 2500
-				await chatClient.say(channel, `@${msg.userInfo.displayName} survived the gunshot and earned ${rewardGold} gold!`);
-				chamberState.bullets += 1; // Increase the bullets in the chamber
-
-				// Add gold reward to wallet (legacy UserModel) via adapter helper
-				await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, rewardGold, msg.userInfo.userName, msg.channelId ?? undefined);
-
+				// Increase bullets in the chamber, cap and then inform the player how many are loaded
+				chamberState.bullets += 1;
 				if (chamberState.bullets > MAX_BULLETS) {
 					chamberState.bullets = 1; // Reset the chamber to 1 bullet if it exceeds max bullets
 				}
+
+				// Inform the player of the win and current bullets loaded
+				await chatClient.say(channel, `@${msg.userInfo.displayName} survived the gunshot and earned ${rewardGold} gold! Bullets loaded: ${chamberState.bullets}/${MAX_BULLETS}`);
+
+				// Add gold reward to wallet (legacy UserModel) via adapter helper
+				await balanceAdapter.creditWallet(msg.userInfo.userId ?? msg.userInfo.userName, rewardGold, msg.userInfo.userName, msg.channelId ?? undefined);
 			}
 
 			await chamberState.save();

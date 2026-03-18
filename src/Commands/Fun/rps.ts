@@ -19,25 +19,25 @@ const rockPaperScissors: Command = {
 			const chatClient = await getChatClient();
 
 			if (args.length < 2) {
-				await chatClient.say(channelName, `${userName}, please provide a choice and a bet.`);
+				await chatClient.say(channelName, `${rockPaperScissors.usage} ${userName}, please provide a choice and a bet.`);
 				return;
 			}
 
 			const userChoice = args[0].toLowerCase();
 			if (!CHOICES.includes(userChoice)) {
-				await chatClient.say(channelName, `${userName}, please choose rock, paper, or scissors.`);
+				await chatClient.say(channelName, `${rockPaperScissors.usage} ${userName}, please choose rock, paper, or scissors.`);
 				return;
 			}
 
 			const betAmount = parseInt(args[1]);
 			if (isNaN(betAmount) || betAmount <= 0) {
-				await chatClient.say(channelName, `${userName}, please provide a valid bet.`);
+				await chatClient.say(channelName, `${rockPaperScissors.usage} ${userName}, please provide a valid bet.`);
 				return;
 			}
 
 			const user = await UserModel.findOne({ username: userName });
 			if (!user) {
-				await chatClient.say(channelName, `${userName}, you don't have an account.`);
+				await chatClient.say(channelName, `${userName}, you don't have an account, please run the !begin to start earning coins`);
 				return;
 			}
 			if (user.balance === undefined || user.balance < betAmount) {
@@ -45,10 +45,7 @@ const rockPaperScissors: Command = {
 				return;
 			}
 
-			if (user.balance < betAmount) {
-				await chatClient.say(channelName, `${userName}, you don't have enough balance to place this bet.`);
-				return;
-			}
+			// FIX: needs attention - duplicate balance check removed above; ensure single validation is correct
 
 			const botChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
 			const result = determineWinner(userChoice, botChoice);
