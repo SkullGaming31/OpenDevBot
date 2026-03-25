@@ -45,7 +45,7 @@ const rockPaperScissors: Command = {
 				return;
 			}
 
-			// FIX: needs attention - duplicate balance check removed above; ensure single validation is correct
+			// FIXED: duplicate balance check removed above; ensure single validation is correct
 
 			const botChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
 			const result = determineWinner(userChoice, botChoice);

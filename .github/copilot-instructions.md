@@ -33,7 +33,6 @@ This repo is a Twitch chatbot built on Twurple with Discord webhook notification
 - Preserve dynamic `import()` behavior for commands (mix of sync and dynamic imports exists).
 - Respect the `ENVIRONMENT` misspelling and search the repo before renaming env vars.
 - Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `31124455`).
-- Be careful with hard-coded IDs (e.g., `openDevBotID` 659523613 and broadcaster ids like `31124455`).
 
 **How to add or edit a command (example)**
 1. Create `src/Commands/<Category>/myCommand.ts`.
@@ -57,3 +56,17 @@ export default {
 - For EventSub problems, ensure `ENABLE_EVENTSUB` is set and DB token entries map to broadcasters.
 
 If you want, I can expand any of these sections (env vars list, sample .env, example command + test) — tell me which part to expand.
+
+**EventSub & Token Notes (recent changes)**
+- **Persistent EventSub listener:** The code now prefers a single persistent `EventSubWsListener` (see `getEventSubs()` in `src/EventSubEvents.ts`) to avoid creating many short-lived websocket transports and hitting Twitch limits.
+- **Avoid duplicate subscriptions:** `createSubscriptionsForAuthUser` queries both the local DB and Twitch Helix (`/eventsub/subscriptions`) to skip creating subscriptions that already exist; subscription writes use `upsert` to avoid E11000 race errors.
+- **Subscription storage:** Subscriptions are persisted via `SubscriptionModel` in `src/database/models/eventSubscriptions.ts` (compound unique index on `subscriptionId` + `authUserId`).
+- **Retry manager:** The retry logic (`src/EventSub/retryManager.ts`) now uses atomic `findOneAndUpdate`/`$inc` semantics to avoid duplicate retry documents under concurrent runs.
+- **Token storage & auth provider:** Twitch tokens are stored in the `usertokens` collection through `TokenModel` (`src/database/models/tokenModel.ts`). `getAuthProvider()` and `getChatAuthProvider()` load tokens and persist refreshed tokens via `onRefresh`.
+- **.env highlights:** Keep `ENVIRONMENT` (intentional misspelling), `ENABLE_EVENTSUB`, `ENABLE_CHAT`, `DOCKER_URI`, and `TWITCH_EVENTSUB_SECRET` in mind — they materially affect startup behavior.
+- **Docker / Mongo:** In many local setups a Mongo container named `mongo_dev` is used. To safely inspect tokens without printing secrets, prefer masked queries. Example (replace <DB>):
+  ```bash
+  docker exec -it mongo_dev mongosh <DB> --eval "db.usertokens.find().forEach(doc => print(JSON.stringify({ userId: doc.user_id, scopes: doc.scope, accessToken: doc.access_token ? (doc.access_token.substring(0,6)+'...') : null })))"
+  ```
+- **Tests:** The test suite mocks `TokenModel` and `SubscriptionModel` heavily and uses `mongodb-memory-server` for DB tests; tests avoid touching production DB or real Twitch APIs.
+- **Secrets:** Never print or commit full tokens. If a secret is exposed, rotate it immediately and replace the stored DB entry.
