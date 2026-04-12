@@ -55,16 +55,16 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				try {
 					await sleep(2000);
 					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
-						color: 'primary',
-						message: `${displayName} has gone offline — thank you for stopping by!`,
+						color: 'green',
+						message: `${displayName} has Begun the stream — thank you for Hanging out`,
 					});
 					await sleep(2000);
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
-						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
+						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` });
 						await sleep(2000);
 						if (info.name === 'canadiendragon') {
-							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
+							await chatClient.say(info.name, 'dont forget you can play some games aswell just use the !help command to see all the commands you can use in chat!');
 						}
 					}
 				} catch (error) {
