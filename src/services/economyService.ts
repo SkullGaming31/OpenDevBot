@@ -88,12 +88,18 @@ export async function transfer(from: string, to: string, amount: number, meta?: 
 			await deposit(to, amount, session);
 			await TransactionLog.create([{ type: 'transfer', from, to, amount, meta: meta ?? {} }], { session });
 			await session.commitTransaction();
-			session.endSession();
 			return;
 		} catch (err) {
-			await session.abortTransaction();
-			session.endSession();
+			try {
+				if (typeof session.inTransaction === 'function' ? session.inTransaction() : (session).inTransaction) {
+					await session.abortTransaction();
+				}
+			} catch (_) {
+				// ignore abort errors
+			}
 			throw err;
+		} finally {
+			session.endSession();
 		}
 	}
 
@@ -132,12 +138,18 @@ export async function buyItem(buyerId: string, itemId: string) {
 			await item.deleteOne({ session });
 			await TransactionLog.create([{ type: 'purchase', from: buyerId, to: item.sellerId, amount: item.price, meta: { itemId } }], { session });
 			await session.commitTransaction();
-			session.endSession();
 			return { success: true };
 		} catch (err) {
-			await session.abortTransaction();
-			session.endSession();
+			try {
+				if (typeof session.inTransaction === 'function' ? session.inTransaction() : (session).inTransaction) {
+					await session.abortTransaction();
+				}
+			} catch (_) {
+				// ignore abort errors
+			}
 			throw err;
+		} finally {
+			session.endSession();
 		}
 	}
 
