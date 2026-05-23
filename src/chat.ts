@@ -179,7 +179,7 @@ export async function initializeChat(): Promise<void> {
 			let chunkIndex = 0; // Counter for tracking the current chunk index
 			let requestIndex = 0; // Counter for tracking the current request index
 
-			const channelId = msg.channelId;
+			const channelId = msg.channelId ?? '';
 			// logger.debug('Broadcaster Channel ID: ', channelId);
 			const processChatters = async (chatters: HelixChatChatter[]) => {
 				// Determine once whether the broadcaster is live; only points/credits should depend on this
