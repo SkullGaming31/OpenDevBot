@@ -1,6 +1,6 @@
 {
   "name": "opendevbot",
-  "version": "0.8.5",
+  "version": "0.9.0",
   "description": "a twitch chatbot for multiple channels using twurple",
   "main": "./dist/index.js",
   "author": "SkullGaming31",
