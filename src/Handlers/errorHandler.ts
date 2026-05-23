@@ -66,6 +66,7 @@ class ErrorHandler {
 			if (!fs.existsSync(this.logFile)) {
 				fs.writeFileSync(this.logFile, '');
 			}
+			logger.info(`Log file created at: ${this.logFile}`);
 		} catch (err) {
 			logger.error(`Error creating log file: ${err}`);
 			throw err;

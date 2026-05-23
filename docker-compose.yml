@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - ENVIRONMENT=prod
+      - MONGO_URI=mongodb://mongodb:27017/opendevbot
+      - PORT=3000
+    env_file:
+      - .env.prod
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - opendevbot-network
+
+  mongodb:
+    image: mongo:7-alpine
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=opendevbot
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - opendevbot-network
+
+volumes:
+  mongodb-data:
+
+networks:
+  opendevbot-network:
+    driver: bridge
