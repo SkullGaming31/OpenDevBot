@@ -1,8 +1,7 @@
 import { Document, Schema, model } from 'mongoose';
 
 export interface IQuote extends Document {
-	_id: string;
-  content: string;
+	content: string;
 }
 
 const quoteSchema = new Schema<IQuote>({
