@@ -8,6 +8,7 @@ dist/
 /src/Warframe_Data.json
 /src/devlogs
 /src/scripts
+!/src/scripts/safety.ts
 NOTES.txt
 /logs
 /coverage
