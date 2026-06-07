@@ -47,7 +47,7 @@ export async function deposit(userId: string, amount: number, session?: mongoose
 	const acct = await BankAccount.findOneAndUpdate(
 		{ userId },
 		{ $inc: { balance: amount }, $setOnInsert: { userId } },
-		{ upsert: true, new: true }
+		{ upsert: true, returnDocument: 'after' }
 	).lean();
 	await TransactionLog.create([{ type: 'deposit', to: userId, amount, meta: meta ?? {}, }]);
 	return acct as unknown as IBankAccount;
@@ -70,7 +70,7 @@ export async function withdraw(userId: string, amount: number, session?: mongoos
 	const acct = await BankAccount.findOneAndUpdate(
 		{ userId, balance: { $gte: amount } },
 		{ $inc: { balance: -amount } },
-		{ new: true }
+		{ returnDocument: 'after' }
 	).lean();
 	if (!acct) throw new EconomyError('Insufficient funds');
 	await TransactionLog.create([{ type: 'withdraw', from: userId, amount, meta: meta ?? {} }]);
@@ -108,14 +108,14 @@ export async function transfer(from: string, to: string, amount: number, meta?: 
 	const dec = await BankAccount.findOneAndUpdate(
 		{ userId: from, balance: { $gte: amount } },
 		{ $inc: { balance: -amount } },
-		{ new: true }
+		{ returnDocument: 'after' }
 	);
 	if (!dec) throw new EconomyError('Insufficient funds');
 	// Credit recipient
 	const cred = await BankAccount.findOneAndUpdate(
 		{ userId: to },
 		{ $inc: { balance: amount } },
-		{ upsert: true, new: true }
+		{ upsert: true, returnDocument: 'after' }
 	);
 	void cred;
 	await TransactionLog.create([{ type: 'transfer', from, to, amount, meta: meta ?? {} }]);
@@ -160,7 +160,7 @@ export async function buyItem(buyerId: string, itemId: string) {
 	const buyerAfter = await BankAccount.findOneAndUpdate(
 		{ userId: buyerId, balance: { $gte: item.price } },
 		{ $inc: { balance: -item.price } },
-		{ new: true }
+		{ returnDocument: 'after' }
 	);
 	if (!buyerAfter) throw new EconomyError('Insufficient funds');
 

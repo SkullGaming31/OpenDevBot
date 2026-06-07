@@ -12,3 +12,5 @@ NOTES.txt
 /logs
 /coverage
 .tsbuildinfo
+/.agents
+*.agent.md

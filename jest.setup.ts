@@ -72,7 +72,7 @@ beforeEach(() => {
 					mockedLogger.error.mockImplementation((...args: any[]) => console.error(...args));
 				}
 				if (mockedLogger.debug && typeof mockedLogger.debug.mockImplementation === 'function') {
-					mockedLogger.debug.mockImplementation((...args: any[]) => console.log(...args));
+					mockedLogger.debug.mockImplementation((...args: any[]) => console.debug(...args));
 				}
 			} catch (e) {
 				// ignore if mockedLogger methods are not jest.fn()

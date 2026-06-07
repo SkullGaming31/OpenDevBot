@@ -16,6 +16,7 @@ import logger from './util/logger';
 import { EmbedBuilder } from 'discord.js';
 import { enqueueWebhook } from './Discord/webhookQueue';
 import { UserModel } from './database/models/userModel';
+import type { IUser } from './database/models/userModel';
 import { creditWallet } from './services/balanceAdapter';
 import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
 import { getUsernamesFromDatabase } from './database/tokenStore';
@@ -590,9 +591,9 @@ export async function getChatClient(): Promise<ChatClient> {
 
 						try {
 							// Update or create user record in the database for the current channel
-							const filter = { id: userId.id, channelId };
-							const update = { $set: { watchTime: totalWatchTime } };
-							const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+							const filter: Partial<IUser> = { id: userId.id, channelId };
+							const update = { $set: { watchTime: totalWatchTime } } as any;
+							const options = { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true } as any;
 
 							await UserModel.findOneAndUpdate(filter, update, options);
 

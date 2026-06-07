@@ -78,7 +78,7 @@ const bank: Command = {
 							const updated = await UserModel.findOneAndUpdate(
 								{ id: msg.userInfo.userId, balance: { $gte: amount } },
 								{ $inc: { balance: -amount } },
-								{ new: true }
+								{ returnDocument: 'after' }
 							);
 							if (!updated) return chatClient.say(channel, `@${user}, insufficient wallet funds.`);
 						} else {
@@ -86,7 +86,7 @@ const bank: Command = {
 							const updated = await UserModel.findOneAndUpdate(
 								{ username, channelId, balance: { $gte: amount } },
 								{ $inc: { balance: -amount } },
-								{ new: true }
+								{ returnDocument: 'after' }
 							);
 							if (!updated) return chatClient.say(channel, `@${user}, insufficient wallet funds.`);
 						}

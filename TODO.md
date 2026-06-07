@@ -25,3 +25,7 @@
   * [X] Hangman?: Start a hangman game where viewers guess letters to figure out the word. Display the current state of the word and incorrect guesses in chat
 * [x] change channelPoints Message to display only on the console when channelpoints rewardId is not found.
 * [x] Que/delay webhooks being sent to avoid being rate limited by the Discord API
+
+
+FIX:
+* [x] (node:2288) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.

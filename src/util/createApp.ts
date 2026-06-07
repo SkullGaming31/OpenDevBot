@@ -324,9 +324,11 @@ export default function createApp(): express.Application {
 			// `part` or `quit` as non-callable values in different versions.
 			// Use a small typed interface to avoid `any` and silence ESLint warnings.
 			if (typeof ((client as unknown as ChatClientLike).part) === 'function') {
-				await (client as unknown as ChatClientLike).part!(normalized);
+				const fn = (client as unknown as ChatClientLike).part as unknown as (channel: string) => Promise<unknown> | void;
+				await fn(normalized);
 			} else if (typeof ((client as unknown as ChatClientLike).quit) === 'function') {
-				await (client as unknown as ChatClientLike).quit!(normalized);
+				const fn = (client as unknown as ChatClientLike).quit as unknown as (channel: string) => Promise<unknown> | void;
+				await fn(normalized);
 			}
 			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
 			return res.json({ ok: true, parted: normalized });

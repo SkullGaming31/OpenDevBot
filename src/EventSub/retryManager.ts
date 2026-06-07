@@ -12,7 +12,7 @@ export class RetryManager {
 		await RetryModel.findOneAndUpdate(filter, { $setOnInsert: { subscriptionId, authUserId, attempts: 0, status: 'pending' } }, { upsert: true }).exec();
 
 		// Atomically increment attempts and fetch the new value
-		const updated = await RetryModel.findOneAndUpdate(filter, { $inc: { attempts: 1 } }, { new: true }).exec();
+		const updated = await RetryModel.findOneAndUpdate(filter, { $inc: { attempts: 1 } }, { returnDocument: 'after' }).exec();
 		if (!updated) {
 			// Fallback: create a fresh record if something unexpected happened
 			const rec = new RetryModel({ subscriptionId, authUserId, attempts: 1, lastError: errMsg, nextRetryAt: new Date(Date.now() + this.computeDelay(1)) });

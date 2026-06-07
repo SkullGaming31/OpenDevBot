@@ -616,7 +616,7 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 				await InjuryModel.findOneAndUpdate(
 					{ participantName },
 					{ injuries: [injury] }, // Update with the new injury
-					{ new: true, upsert: true }
+					{ upsert: true, returnDocument: 'after' }
 				);
 			}
 		}

@@ -35,10 +35,15 @@ async function processQueue(id: string, token: string) {
 	if (processing.get(key)) return;
 	processing.set(key, true);
 
-	const queue = queues.get(key) || [];
+	const queue = queues.get(key);
+	if (!queue) {
+		processing.set(key, false);
+		return;
+	}
 
 	while (queue.length > 0) {
-		const item = queue.shift()!;
+		const item = queue.shift();
+		if (!item) break;
 		try {
 			const client = getClient(id, token);
 			// discord.js accepts string or message options. Narrow payload to avoid unsafe any.
@@ -94,7 +99,11 @@ async function processPendingFromDB() {
 			const key = `${doc.webhookId}:${doc.token}`;
 			if (!queues.has(key)) queues.set(key, []);
 			// convert payload to the shape discord.js expects (it's already plain JSON)
-			const q = queues.get(key)!;
+			let q = queues.get(key);
+			if (!q) {
+				q = [];
+				queues.set(key, q);
+			}
 			// create a placeholder promise resolver that will update the DB entry when processed
 			new Promise((resolve, reject) => {
 				q.push({
@@ -155,7 +164,11 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 
 	return new Promise((resolve, reject) => {
 		(async () => {
-			const q = queues.get(key)!;
+			let q = queues.get(key);
+			if (!q) {
+				q = [];
+				queues.set(key, q);
+			}
 			// Persist the queued webhook to DB (best-effort)
 			let dbDoc: Document | null = null;
 			try {

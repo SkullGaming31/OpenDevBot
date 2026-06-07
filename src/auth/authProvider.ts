@@ -35,7 +35,7 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 					expires_in: newTokenData.expiresIn,
 					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
 				},
-				{ upsert: true, new: true }
+				{ upsert: true, returnDocument: 'after' }
 			);
 			// record metric success
 			try { (await import('../monitoring/metrics')).tokenRefreshes.inc({ userId, result: 'success' }); } catch (e) { /* ignore */ }
@@ -87,7 +87,7 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 					expires_in: newTokenData.expiresIn,
 					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
 				},
-				{ upsert: true, new: true }
+				{ upsert: true, returnDocument: 'after' }
 			);
 		} catch (e) {
 			logger.warn('ChatAuthProvider: failed to persist refreshed token', e);

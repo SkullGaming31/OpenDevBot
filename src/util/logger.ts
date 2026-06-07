@@ -1,4 +1,5 @@
 /* Minimal logger wrapper that supports levels, respects ENVIRONMENT, and writes errors to a file */
+/* eslint-disable no-console */
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,6 +11,9 @@ type TimeLabel = string | number | symbol;
 const timers = new Map<TimeLabel, bigint>();
 
 const isDev = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
+
+// Capture initial LOG_LEVEL at module load time. Tests set this before requiring the module.
+const initialEnvLevel = process.env.LOG_LEVEL ? String(process.env.LOG_LEVEL).toLowerCase() : '';
 
 const errorLogFile = process.env.ERROR_LOG_FILE || path.join(process.cwd(), 'logs', 'errors.log');
 
@@ -38,16 +42,40 @@ function formatForLog(args: unknown[]): string {
 		.join(' ');
 }
 
+// Logging level support: debug < info < warn < error
+const LEVELS = ['debug', 'info', 'warn', 'error'] as const;
+type Level = (typeof LEVELS)[number];
+
+function getCurrentLevel(): Level {
+	const envLevel = (process.env.LOG_LEVEL || (isDev ? 'debug' : 'info')).toLowerCase();
+	return (LEVELS.includes(envLevel as Level) ? (envLevel as Level) : (isDev ? 'debug' : 'info'));
+}
+
+function levelEnabled(level: Level): boolean {
+	const idx = LEVELS.indexOf(level);
+	const cur = LEVELS.indexOf(getCurrentLevel());
+	return idx >= cur;
+}
+
 export const debug: LogFn = (...args: unknown[]) => {
-	if (isDev) console.debug('[debug]', ...args);
+	const env = process.env.LOG_LEVEL && String(process.env.LOG_LEVEL).toLowerCase();
+	const shouldDebug = initialEnvLevel === 'debug' || env === 'debug' || levelEnabled('debug');
+	if (shouldDebug) {
+		try {
+			if (typeof console.debug === 'function') console.debug('[debug]', ...args);
+			else console.log('[debug]', ...args);
+		} catch (e) {
+			/* ignore */
+		}
+	}
 };
 
 export const info: LogFn = (...args: unknown[]) => {
-	console.log('[info]', ...args);
+	if (levelEnabled('info')) console.log('[info]', ...args);
 };
 
 export const warn: LogFn = (...args: unknown[]) => {
-	console.warn('[warn]', ...args);
+	if (levelEnabled('warn')) console.warn('[warn]', ...args);
 };
 
 export const error: LogFn = (...args: unknown[]) => {
@@ -101,3 +129,13 @@ export const timeEnd = (label: TimeLabel = 'default'): void => {
 };
 
 export default { debug, info, warn, error, time, timeEnd };
+
+// One-time initialization log to help tests that set LOG_LEVEL before importing.
+try {
+	if (initialEnvLevel === 'debug') {
+		if (typeof console.debug === 'function') console.debug('[logger] initialized (debug)');
+		else console.log('[logger] initialized (debug)');
+	}
+} catch (e) {
+	/* ignore */
+}

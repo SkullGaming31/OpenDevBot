@@ -84,16 +84,16 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 	try {
 		const isNumericId = /^\d+$/.test(String(userKey || ''));
 		if (isNumericId) {
-			const updated = await UserModel.findOneAndUpdate({ id: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { new: true });
+			const updated = await UserModel.findOneAndUpdate({ id: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 			return !!updated;
 		}
 
 		if (username && channelId) {
-			const updated = await UserModel.findOneAndUpdate({ username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { new: true });
+			const updated = await UserModel.findOneAndUpdate({ username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 			return !!updated;
 		}
 
-		const updated = await UserModel.findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { new: true });
+		const updated = await UserModel.findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 		return !!updated;
 	} catch (err) {
 		logger.warn('Failed to debit wallet in UserModel', err);
