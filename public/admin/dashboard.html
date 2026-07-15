@@ -559,7 +559,7 @@
           const name = joinInput.value.trim().toLowerCase();
           if (!name) return;
           if (!hasBridge) { channels.value.push(name); joinInput.value = ''; return; }
-          await window.adminApi.fetch('/api/v1/chat/join', { method: 'POST', body: JSON.stringify({ channel: name }) });
+          await window.adminApi.fetch('/api/v1/chat/join', { method: 'POST', body: JSON.stringify({ username: name }) });
           joinInput.value = '';
           await loadChannels();
           showToast(`Joined #${name}`);
@@ -567,7 +567,7 @@
 
         async function partChannel(name) {
           if (!hasBridge) { channels.value = channels.value.filter(c => c !== name); return; }
-          await window.adminApi.fetch('/api/v1/chat/part', { method: 'POST', body: JSON.stringify({ channel: name }) });
+          await window.adminApi.fetch('/api/v1/chat/part', { method: 'POST', body: JSON.stringify({ username: name }) });
           await loadChannels();
           showToast(`Left #${name}`);
         }

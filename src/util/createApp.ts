@@ -82,19 +82,6 @@ export default function createApp(): express.Application {
 		if (!provided || provided !== token) return res.status(401).json({ error: 'Unauthorized' });
 		next();
 	}
-	app.post('/api/v1/chat/part', requireAdmin, async (req, res) => {
-		const raw = req.body?.username ?? req.query.username;
-		const username = normalizeUsername(raw);
-		if (!username) return res.status(400).json({ error: 'username required' });
-		try {
-			const { partChannel } = await import('../chat');
-			await partChannel(username);
-			return res.json({ ok: true, parted: username });
-		} catch (e) {
-			logger.error('Admin part failed', e as Error);
-			return res.status(500).json({ error: 'failed to part' });
-		}
-	});
 
 	// Admin endpoints: list / join / part channels dynamically
 	app.get('/api/v1/chat/channels', requireAdmin, async (_req, res) => {
@@ -330,6 +317,7 @@ export default function createApp(): express.Application {
 		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
 		try {
+
 			const { getChatClient, joinedChannels } = await import('../chat');
 			const client = await getChatClient();
 			const normalized = username.startsWith('#') ? username.slice(1) : username;
