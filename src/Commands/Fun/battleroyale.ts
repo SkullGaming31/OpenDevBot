@@ -1,11 +1,18 @@
 import { Command } from '../../interfaces/Command';
 import { getChatClient } from '../../chat';
-import { ChatClient, ChatMessage } from '@twurple/chat/lib';
+import { ChatMessage } from '@twurple/chat/lib';
 import fs from 'fs';
 import path from 'path';
 import { randomInt } from 'crypto';
 import { sleep } from '../../util/util';
 import balanceAdapter from '../../services/balanceAdapter';
+
+/**
+ * TODO:
+ * - save levels and xp to database (UserModel) for persistence across games IF they survive in the Battle Royale
+ */
+
+
 type PlayerState = { health: number; name: string; xp: number; level: number; roundsSurvived: number };
 
 type BRRandomEvent = { type: 'damage' | 'heal' | 'xp'; amount: number; description: string; sweep?: boolean };
@@ -40,7 +47,7 @@ const EVENT_TEMPLATES: Array<{ type: BRRandomEvent['type']; description: string[
 // otherwise use a built-in fallback list.
 function loadTestBotNames(): string[] {
 	try {
-		const filePath = path.join(process.cwd(), 'data', 'botNames.txt');
+		const filePath = path.join(process.cwd(), 'src', 'data', 'botNames.txt');
 		if (fs.existsSync(filePath)) {
 			const raw = fs.readFileSync(filePath, 'utf8');
 			const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -134,8 +141,42 @@ const battleroyale: Command = {
 	devOnly: false,
 	cooldown: 60, // 600 seconds = 10 minutes. Ignore this, this is a note for myself
 	execute: async (channel: string, user: string, args: string[], _text: string, _msg: ChatMessage) => {
-		const chat = await getChatClient();
-		if (brInProgress.get(channel)) return chat.say(channel, 'A Battle Royale is already in progress.');
+		const chatClient = await getChatClient();
+
+		// Queue outgoing chat messages to avoid hitting rate limits when many
+		// messages are generated quickly (e.g., large BR events). Interval can
+		// be reduced during tests via TEST_FAST=1.
+		const MESSAGE_INTERVAL_MS = process.env.TEST_FAST === '1' ? 0 : 1500;
+		type QueueItem = { channel: string; message: string; args: unknown[]; resolve: (v?: unknown) => void; reject: (err?: unknown) => void };
+		const sendQueue: QueueItem[] = [];
+		let sending = false;
+		async function processQueue() {
+			if (sending) return;
+			sending = true;
+			while (sendQueue.length) {
+				const item = sendQueue.shift();
+				if (!item) continue;
+				try {
+					// call through to ChatClient.say preserving extra args
+					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+					// @ts-ignore
+					await chatClient.say(item.channel, item.message, ...item.args);
+					item.resolve(undefined);
+				} catch (err) {
+					item.reject(err);
+				}
+				if (MESSAGE_INTERVAL_MS > 0) await sleep(MESSAGE_INTERVAL_MS);
+			}
+			sending = false;
+		}
+		function queuedSay(channelArg: string, message: string, ...args: unknown[]) {
+			return new Promise((resolve, reject) => {
+				sendQueue.push({ channel: channelArg, message, args, resolve, reject });
+				void processQueue();
+			});
+		}
+
+		if (brInProgress.get(channel)) return queuedSay(channel, 'A Battle Royale is already in progress.');
 
 		brInProgress.set(channel, true);
 		try {
@@ -146,7 +187,7 @@ const battleroyale: Command = {
 			// Initiator automatically joins
 			participants[user] = { name: user, health: 100, xp: 0, level: 0, roundsSurvived: 0 };
 
-			await chat.say(channel, `Battle Royale started by ${user}! Type !brjoin to join. You have ${Math.round(joinPeriodMs / 1000)} seconds to join.`);
+			await queuedSay(channel, `Battle Royale started by ${user}! Type !brjoin to join. You have ${Math.round(joinPeriodMs / 1000)} seconds to join.`);
 
 			// eslint-disable-next-line no-inner-declarations
 			async function addSimulatedBots(count: number, participantsObj: Record<string, PlayerState>, botSet: Set<string>) {
@@ -168,7 +209,7 @@ const battleroyale: Command = {
 				if (added.length) {
 					const displayNames = added.map(n => `${n} [bot]`);
 					for (const n of added) botSet.add(n);
-					await chat.say(channel, `${displayNames.join(', ')} (simulated) joined the Battle Royale for testing.`, {}, { limitReachedBehavior: 'enqueue' });
+					await queuedSay(channel, `${displayNames.join(', ')} (simulated) joined the Battle Royale for testing.`, {}, { limitReachedBehavior: 'enqueue' });
 				}
 			}
 
@@ -186,7 +227,6 @@ const battleroyale: Command = {
 			}
 
 			// Temporary join listener — register a guarded wrapper so we can stop handling after the join window.
-			const chatClient: ChatClient = await getChatClient();
 			let acceptJoins = true;
 			const onMessageWrapper = async (ch: string, who: string, message: string, msg: ChatMessage) => {
 				void msg;
@@ -195,7 +235,7 @@ const battleroyale: Command = {
 				const cmd = message.trim().toLowerCase();
 				if (cmd === '!brjoin' && !participants[who]) {
 					participants[who] = { name: who, health: 100, xp: 0, level: 0, roundsSurvived: 0 };
-					await chatClient.say(channel, `${who} joined the Battle Royale!`);
+					await queuedSay(channel, `${who} joined the Battle Royale!`);
 				}
 			};
 			chatClient.onMessage(onMessageWrapper);
@@ -234,10 +274,10 @@ const battleroyale: Command = {
 			const minParticipants = process.env.ENVIRONMENT === 'dev' ? 1 : 2;
 			if (playerNames.length < minParticipants) {
 				brInProgress.delete(channel);
-				return chat.say(channel, `The Battle Royale requires at least ${minParticipants} players to start. Battle Royale cancelled.`);
+				return queuedSay(channel, `The Battle Royale requires at least ${minParticipants} players to start. Battle Royale cancelled.`);
 			}
 
-			await chat.say(channel, `Battle Royale beginning with ${playerNames.length} players! Good luck.`);
+			await queuedSay(channel, `Battle Royale beginning with ${playerNames.length} players! Good luck.`);
 
 			// Run rounds until one left or max rounds. Tests can shorten this by setting TEST_FAST=1.
 			const maxRounds = process.env.TEST_FAST === '1' ? 1 : 20;
@@ -311,7 +351,7 @@ const battleroyale: Command = {
 					eliminatedAnnouncements.push(`${display(name)} was eliminated and lost ${xpLoss} XP (now ${newXp} XP)`);
 				}
 				if (eliminatedAnnouncements.length) {
-					await chat.say(channel, eliminatedAnnouncements.join(' | '), {}, { limitReachedBehavior: 'enqueue' });
+					await queuedSay(channel, eliminatedAnnouncements.join(' | '), {}, { limitReachedBehavior: 'enqueue' });
 				}
 				for (const e of eliminated) delete participants[e];
 
@@ -320,13 +360,13 @@ const battleroyale: Command = {
 					participants[pname].roundsSurvived = (participants[pname].roundsSurvived || 0) + 1;
 				}
 
-				await chat.say(channel, `Round ${round} results: ${events.join(' | ')}${eliminated.length > 0 ? ' | Eliminated: ' + eliminated.join(', ') : ''}`);
+				await queuedSay(channel, `Round ${round} results: ${events.join(' | ')}${eliminated.length > 0 ? ' | Eliminated: ' + eliminated.join(', ') : ''}`);
 				if (process.env.TEST_FAST !== '1') await sleep(2000);
 			}
 
 			const survivors = Object.keys(participants);
 			if (survivors.length === 0) {
-				await chat.say(channel, 'No one survived the Battle Royale.');
+				await queuedSay(channel, 'No one survived the Battle Royale.');
 				// end of game logic
 				return;
 			}
@@ -362,10 +402,10 @@ const battleroyale: Command = {
 				}
 			}
 			if (survivorAnnouncements.length) {
-				await chat.say(channel, survivorAnnouncements.join(' | '), {}, { limitReachedBehavior: 'enqueue' });
+				await queuedSay(channel, survivorAnnouncements.join(' | '), {}, { limitReachedBehavior: 'enqueue' });
 			}
 			const displaySurvivors = survivors.map(s => display(s));
-			await chat.say(channel, `Battle Royale finished! Survivors: ${displaySurvivors.join(', ')}.`, {}, { limitReachedBehavior: 'enqueue' });
+			await queuedSay(channel, `Battle Royale finished! Survivors: ${displaySurvivors.join(', ')}.`, {}, { limitReachedBehavior: 'enqueue' });
 		} finally {
 			brInProgress.delete(channel);
 		}

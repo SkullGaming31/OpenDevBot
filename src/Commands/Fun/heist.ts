@@ -224,7 +224,7 @@ const heist: Command = {
 		// Check if the amount is within the allowed range
 		// if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
 
-		const zonesFilePath = path.resolve(process.cwd(), 'data', 'zones.json');
+		const zonesFilePath = path.resolve(process.cwd(), 'src', 'data', 'zones.json');
 		if (!fs.existsSync(zonesFilePath)) {
 			logger.error('zones.json not found in data folder', { path: zonesFilePath });
 			return chatClient.say(channel, 'Configuration error: zones.json not found in data/.');

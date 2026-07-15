@@ -80,7 +80,7 @@ class OpenDevBot {
 			// Determine MongoDB URI based on environment
 			switch (environment) {
 				case 'prod':
-					mongoURI = process.env.MONGO_URI || '';
+					mongoURI = process.env.DOCKER_URI || '';
 					break;
 				case 'debug':
 				case 'dev':

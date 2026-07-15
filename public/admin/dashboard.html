@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
+  <title>OpenDevBot — Control Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --bg: #14121B;
+      --panel: #1B1826;
+      --panel-raised: #221E30;
+      --line: #322C42;
+      --text: #EDE9F5;
+      --text-dim: #9A93AE;
+      --accent: #FF5D5D;
+      /* live / signal coral */
+      --accent-soft: rgba(255, 93, 93, 0.14);
+      --ok: #7FE7C4;
+      --ok-soft: rgba(127, 231, 196, 0.12);
+      --warn: #F3B95F;
+      --warn-soft: rgba(243, 185, 95, 0.12);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Manrope', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(255, 93, 93, 0.07), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(127, 231, 196, 0.06), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+    }
+
+    ::selection {
+      background: var(--accent-soft);
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand .mark {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      padding: 5px 9px;
+      border-radius: 6px;
+      color: var(--accent);
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .brand .sub {
+      color: var(--text-dim);
+      font-size: 12.5px;
+      font-family: var(--mono);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .signal.online .dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    .signal.online {
+      color: var(--ok);
+      border-color: rgba(127, 231, 196, 0.3);
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.45);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(127, 231, 196, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(127, 231, 196, 0);
+      }
+    }
+
+    .btn {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 13.5px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #1A1013;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(255, 93, 93, 0.35);
+    }
+
+    .btn-danger:hover {
+      background: var(--accent-soft);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .user-chip b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ---------- Layout ---------- */
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 22px;
+      padding: 26px 32px 40px;
+      max-width: 1180px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    @media (max-width: 880px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-head .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .panel-head h2 {
+      margin: 2px 0 0;
+      font-size: 15.5px;
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 16px 18px 20px;
+    }
+
+    /* ---------- Channels ---------- */
+    .join-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .join-row input {
+      flex: 1;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .join-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .channel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    .channel-name {
+      font-family: var(--mono);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .channel-name .dot {
+      background: var(--ok);
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--mono);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .icon-btn:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .empty {
+      color: var(--text-dim);
+      font-size: 13px;
+      font-family: var(--mono);
+      padding: 18px 4px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+    }
+
+    /* ---------- Webhook queue ---------- */
+    .tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: 0.4px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+
+    .tab.active {
+      color: var(--bg);
+      background: var(--text-dim);
+    }
+
+    .tab.active.pending {
+      background: var(--warn);
+    }
+
+    .tab.active.failed {
+      background: var(--accent);
+    }
+
+    .tab.active.sent {
+      background: var(--ok);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 0 10px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.4px;
+    }
+
+    .badge.pending {
+      color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .badge.processing {
+      color: var(--text-dim);
+      background: rgba(154, 147, 174, 0.12);
+    }
+
+    .badge.sent {
+      color: var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .badge.failed {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .mono-id {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .queue-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--line);
+    }
+
+    .page-info {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .pager {
+      display: flex;
+      gap: 6px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script>
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // Falls back to demo data when not running inside the Electron shell,
+        // so this page can also be opened directly for preview.
+        const hasBridge = !!(window.twitchApi && window.adminApi);
+
+        const connected = ref(false);
+        const user = ref(null);
+
+        const channels = ref(['skullgaming31', 'opendevbot']);
+        const joinInput = ref('');
+
+        const status = ref('pending');
+        const items = ref([
+          { _id: 'a1b2c3', event: 'channel.follow', status: 'pending', createdAt: new Date().toISOString() },
+          { _id: 'd4e5f6', event: 'channel.subscribe', status: 'failed', createdAt: new Date().toISOString() },
+        ]);
+        const page = ref(1);
+        const limit = 10;
+        const total = ref(items.value.length);
+        const selected = ref(new Set());
+        const toast = ref('');
+
+        function showToast(msg) {
+          toast.value = msg;
+          setTimeout(() => { toast.value = ''; }, 2400);
+        }
+
+        function signUp() {
+          if (!hasBridge) { showToast('Sign-up requires the Electron shell'); return; }
+          window.twitchApi.signup('user');
+        }
+
+        async function loadChannels() {
+          if (!hasBridge) return;
+          channels.value = await window.adminApi.fetch('/api/v1/chat/channels').then(r => r.channels);
+        }
+
+        async function joinChannel() {
+          const name = joinInput.value.trim().toLowerCase();
+          if (!name) return;
+          if (!hasBridge) { channels.value.push(name); joinInput.value = ''; return; }
+          await window.adminApi.fetch('/api/v1/chat/join', { method: 'POST', body: JSON.stringify({ channel: name }) });
+          joinInput.value = '';
+          await loadChannels();
+          showToast(`Joined #${name}`);
+        }
+
+        async function partChannel(name) {
+          if (!hasBridge) { channels.value = channels.value.filter(c => c !== name); return; }
+          await window.adminApi.fetch('/api/v1/chat/part', { method: 'POST', body: JSON.stringify({ channel: name }) });
+          await loadChannels();
+          showToast(`Left #${name}`);
+        }
+
+        async function loadQueue() {
+          if (!hasBridge) return;
+          const res = await window.adminApi.fetch(`/api/v1/admin/webhooks?status=${status.value}&page=${page.value}&limit=${limit}`);
+          items.value = res.items;
+          total.value = res.total;
+        }
+
+        function setStatus(s) { status.value = s; page.value = 1; selected.value = new Set(); loadQueue(); }
+
+        function toggleSelect(id) {
+          selected.value.has(id) ? selected.value.delete(id) : selected.value.add(id);
+          selected.value = new Set(selected.value);
+        }
+
+        async function requeue(ids) {
+          if (!hasBridge) { showToast('Requeue requires the Electron shell'); return; }
+          await window.adminApi.fetch('/api/v1/admin/webhooks/requeue', { method: 'POST', body: JSON.stringify({ ids }) });
+          showToast(`Requeued ${ids.length} item${ids.length > 1 ? 's' : ''}`);
+          selected.value = new Set();
+          await loadQueue();
+        }
+
+        async function remove(ids) {
+          if (!hasBridge) { showToast('Delete requires the Electron shell'); return; }
+          await window.adminApi.fetch('/api/v1/admin/webhooks', { method: 'DELETE', body: JSON.stringify({ ids }) });
+          showToast(`Deleted ${ids.length} item${ids.length > 1 ? 's' : ''}`);
+          selected.value = new Set();
+          await loadQueue();
+        }
+
+        const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)));
+
+        function fmtTime(iso) {
+          return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        onMounted(() => {
+          if (hasBridge) {
+            window.twitchApi.onSignupComplete((result) => {
+              connected.value = true;
+              user.value = result;
+              showToast(`Signed up as ${result.username}`);
+              loadChannels();
+            });
+            loadChannels();
+            loadQueue();
+          }
+        });
+
+        return {
+          connected, user, channels, joinInput, status, items, page, total, totalPages,
+          selected, toast, signUp, joinChannel, partChannel, setStatus, toggleSelect,
+          requeue, remove, fmtTime, limit,
+          prevPage: () => { if (page.value > 1) { page.value--; loadQueue(); } },
+          nextPage: () => { if (page.value < totalPages.value) { page.value++; loadQueue(); } },
+        };
+      },
+      template: `
+    <header>
+      <div class="brand">
+        <span class="mark">ODB</span>
+        <div>
+          <h1>OpenDevBot Control Room</h1>
+          <div class="sub">local admin · localhost</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="signal" :class="{ online: connected }">
+          <span class="dot"></span>
+          {{ connected ? 'BOT ONLINE' : 'AWAITING SIGN-UP' }}
+        </div>
+        <div v-if="connected" class="user-chip">
+          streamer&nbsp;<b>{{ user?.username }}</b>
+        </div>
+        <button v-else class="btn btn-primary" @click="signUp">Sign Up with Twitch</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Presence</div>
+            <h2>Joined Channels</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="join-row">
+            <input v-model="joinInput" placeholder="channel name" @keyup.enter="joinChannel" />
+            <button class="btn btn-ghost" @click="joinChannel">Join</button>
+          </div>
+          <div v-if="channels.length" class="channel-list">
+            <div class="channel-row" v-for="c in channels" :key="c">
+              <span class="channel-name"><span class="dot" style="width:6px;height:6px;border-radius:50%;"></span>#{{ c }}</span>
+              <button class="icon-btn" @click="partChannel(c)">part</button>
+            </div>
+          </div>
+          <div v-else class="empty">No channels joined yet</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">EventSub</div>
+            <h2>Webhook Queue</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab" :class="{ active: status==='pending', pending: status==='pending' }" @click="setStatus('pending')">pending</button>
+            <button class="tab" :class="{ active: status==='processing' }" @click="setStatus('processing')">processing</button>
+            <button class="tab" :class="{ active: status==='sent', sent: status==='sent' }" @click="setStatus('sent')">sent</button>
+            <button class="tab" :class="{ active: status==='failed', failed: status==='failed' }" @click="setStatus('failed')">failed</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table v-if="items.length">
+            <thead>
+              <tr>
+                <th style="width:24px"></th>
+                <th>Event</th>
+                <th>Status</th>
+                <th>Received</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="it in items" :key="it._id">
+                <td><input type="checkbox" :checked="selected.has(it._id)" @change="toggleSelect(it._id)" /></td>
+                <td>
+                  {{ it.event }}<br/>
+                  <span class="mono-id">{{ it._id }}</span>
+                </td>
+                <td><span class="badge" :class="it.status">{{ it.status }}</span></td>
+                <td class="mono-id">{{ fmtTime(it.createdAt) }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" @click="requeue([it._id])">requeue</button>
+                    <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" @click="remove([it._id])">delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty">No {{ status }} items</div>
+
+          <div class="queue-foot">
+            <span class="page-info">page {{ page }} / {{ totalPages }} · {{ total }} total</span>
+            <div class="pager">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="page<=1" @click="prevPage">prev</button>
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="page>=totalPages" @click="nextPage">next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" v-if="toast">{{ toast }}</div>
+  `
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

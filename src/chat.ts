@@ -49,6 +49,8 @@ const viewerWatchTimes: Map<string, { joinedAt: number; watchTime: number; inter
 const UPDATE_INTERVAL = 30000; // 30 seconds
 // Ensure we only start the periodic social message once per process
 let periodicSocialTimerStarted = false;
+let periodicChatterCreditTimerStarted = false;
+let periodicChatterCreditIntervalId: NodeJS.Timeout | null = null;
 // Define your constants
 let PERIODIC_SAVE_INTERVAL: number;
 
@@ -99,6 +101,135 @@ function isIndexFile(module: string): boolean { return module === 'index.ts' || 
 
 // ViewerWatchTime interface intentionally removed; inline type is used above
 
+async function startPeriodicChatterCreditTimer(userApiClient: Awaited<ReturnType<typeof getUserApi>>): Promise<void> {
+	if (periodicChatterCreditTimerStarted) {
+		return;
+	}
+
+	periodicChatterCreditTimerStarted = true;
+
+	try {
+		const broadcasterUserId = broadcasterInfo[0].id as UserIdResolvable;
+		const channelId = String(broadcasterInfo[0].id ?? '');
+		const cursor = '';
+		let chatters: HelixChatChatter[] = [];
+		try {
+			const chattersResponse = await userApiClient.chat.getChatters(broadcasterUserId, { after: cursor, limit: 100 });
+			chatters = chattersResponse.data || chattersResponse || [];
+		} catch (err: unknown) {
+			const msgStr = err instanceof Error ? err.message : String(err);
+			if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
+				logger.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
+				chatters = [];
+			} else {
+				logger.error('Error fetching chatters:', err);
+				throw err;
+			}
+		}
+
+		const chunkSize = 100;
+		const intervalDuration = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug'
+			? 30 * 1000
+			: 60 * 1000;
+		const requestsPerInterval = 800;
+		const totalChunks = Math.ceil(chatters.length / chunkSize);
+		let chunkIndex = 0;
+		let requestIndex = 0;
+
+		const processChatters = async (chattersToProcess: HelixChatChatter[]) => {
+			let isLive = false;
+			try {
+				const currentStream = await userApiClient.streams.getStreamByUserId(broadcasterUserId);
+				isLive = currentStream !== null;
+			} catch (err) {
+				logger.warn('Could not determine stream status; will skip crediting points for this interval', String(err));
+				isLive = false;
+			}
+
+			const start = chunkIndex * chunkSize;
+			const end = (chunkIndex + 1) * chunkSize;
+			const chattersChunk = chattersToProcess.slice(start, end);
+
+			for (const chatter of chattersChunk) {
+				try {
+					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
+
+					const isBot = knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase();
+					const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
+
+					if (isBot || !isIgnoredUser) {
+						const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
+
+						if (existingUser) {
+							if (isLive) {
+								try {
+									await creditWallet(chatter.userId, 100, existingUser.username, channelId);
+								} catch (err: unknown) {
+									if (err instanceof Error) logger.error('Failed to credit wallet for existing user:', err);
+								}
+							}
+						} else {
+							try {
+								await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
+								if (isLive) {
+									try {
+										await creditWallet(chatter.userId, 100, chatter.userName, channelId);
+									} catch (err) {
+										logger.error('Failed to seed wallet for new user:', err);
+									}
+								}
+							} catch (err) {
+								if (err instanceof Error && err.message.includes('E11000')) {
+									logger.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
+								} else {
+									logger.error('Error creating new user:', err);
+								}
+							}
+						}
+					}
+				} catch (error: unknown) {
+					if (error instanceof Error) {
+						if (error.message.includes('E11000')) {
+							logger.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
+						} else {
+							logger.error('Error processing chatter:', error);
+						}
+					}
+				}
+			}
+
+			requestIndex++;
+			chunkIndex++;
+
+			if (chunkIndex === totalChunks) {
+				chunkIndex = 0;
+			}
+		};
+
+		const intervalHandler = async () => {
+			if (requestIndex < requestsPerInterval) {
+				const stream = await userApiClient.streams.getStreamByUserId(broadcasterUserId);
+				if (stream !== null) {
+					const currentChatters = await userApiClient.chat.getChatters(broadcasterUserId, { after: cursor, limit: chunkSize });
+					await processChatters(currentChatters.data);
+					requestIndex++;
+				}
+			} else {
+				requestIndex = 0;
+			}
+		};
+
+		periodicChatterCreditIntervalId = setInterval(() => {
+			void intervalHandler().catch((error: unknown) => {
+				logger.error('Periodic chatter credit timer failed', error as Error);
+			});
+		}, intervalDuration);
+	} catch (error: unknown) {
+		periodicChatterCreditTimerStarted = false;
+		logger.error('Failed to start periodic chatter credit timer', error as Error);
+	}
+}
+
 /**
  * Initializes the Twitch chat client and sets up event listeners for commands.
  *
@@ -131,9 +262,6 @@ export async function initializeChat(): Promise<void> {
 			return await LurkMessageModel.findOne({ displayName: re }).exec();
 		} catch (e) {
 			logger.warn(`Failed to lookup saved lurk message for ${displayName}: ${e}`);
-			// The fallback exact, case-sensitive lookup is unlikely to help after an error
-			// (and may return null even if a differently-cased record exists). Return null
-			// to indicate lookup failure and avoid misleading exact-match queries.
 			return null;
 		}
 	};
@@ -141,162 +269,6 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
-		// environment string is available via process.env when needed
-		// (dev) verbose logging removed; errors are still logged
-
-		try {
-			const cursor = ''; // Initialize the cursor value
-			let chatters: HelixChatChatter[] = [];
-			try {
-				const chattersResponse = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: 100 });
-				chatters = chattersResponse.data || chattersResponse || [];
-			} catch (err: unknown) {
-				// Handle missing moderator scope or other 401 Unauthorized errors gracefully
-				const msgStr = err instanceof Error ? err.message : String(err);
-				if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
-					logger.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
-					if (process.env.ENVIRONMENT === 'debug') {
-						await chatClient.say(channel, 'Chatters list unavailable - bot needs \'moderator:read:chatters\' scope. Skipping chatter processing.');
-					}
-					chatters = [];
-				} else {
-					logger.error('Error fetching chatters:', err);
-					throw err; // rethrow unexpected errors
-				}
-			}
-			const chunkSize = 100; // Desired number of chatters per chunk
-
-			let intervalDuration: number;
-			if (process.env.Env === 'dev' || process.env.Env === 'debug') {
-				intervalDuration = 30 * 1000; // 30 seconds in milliseconds
-			} else {
-				intervalDuration = 60 * 1000; // 1 minutes in milliseconds
-			}
-
-			const requestsPerInterval = 800; // Maximum number of requests allowed per interval
-
-			const totalChunks = Math.ceil(chatters.length / chunkSize); // Total number of chunks
-
-			let chunkIndex = 0; // Counter for tracking the current chunk index
-			let requestIndex = 0; // Counter for tracking the current request index
-
-			const channelId = msg.channelId ?? '';
-			// logger.debug('Broadcaster Channel ID: ', channelId);
-			const processChatters = async (chatters: HelixChatChatter[]) => {
-				// Determine once whether the broadcaster is live; only points/credits should depend on this
-				let isLive = false;
-				try {
-					const currentStream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-					isLive = currentStream !== null;
-				} catch (err) {
-					logger.warn('Could not determine stream status; will skip crediting points for this interval', String(err));
-					isLive = false;
-				}
-				const start = chunkIndex * chunkSize;
-				const end = (chunkIndex + 1) * chunkSize;
-				const chattersChunk = chatters.slice(start, end);
-
-				for (const chatter of chattersChunk) {
-					try {
-						const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-
-						const isBot = knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase();
-						const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
-
-						if (isBot || !isIgnoredUser) {
-							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
-							// logger.debug('existingUser:', existingUser);
-
-							if (existingUser) {
-								// Credit the legacy wallet (UserModel.balance) rather than the BankAccount
-								if (isLive) {
-									try {
-										await creditWallet(chatter.userId, 100, existingUser.username, channelId);
-									} catch (err: unknown) {
-										if (err instanceof Error) logger.error('Failed to credit wallet for existing user:', err);
-									}
-								} else {
-									// Offline: skip crediting points
-								}
-							} else {
-								// Create the legacy user document but do not store canonical balance on UserModel
-								try {
-									await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
-									// New user created; no bank balance stored on UserModel
-									// Seed the legacy wallet for the new user (only when stream is live)
-									if (isLive) {
-										try {
-											await creditWallet(chatter.userId, 100, chatter.userName, channelId);
-										} catch (err) {
-											logger.error('Failed to seed wallet for new user:', err);
-										}
-									} else {
-										// Offline: do not seed wallet
-									}
-								} catch (err) {
-									// creation may race with another process inserting user
-									if (err instanceof Error && err.message.includes('E11000')) {
-										logger.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
-									} else {
-										logger.error('Error creating new user:', err);
-									}
-								}
-							}
-						}
-					} catch (error: unknown) {
-						if (error instanceof Error) {
-							if (error.message.includes('E11000')) {
-								logger.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
-								// Handle or log the duplicate key error as needed
-							} else {
-								logger.error('Error processing chatter:', error);
-								// Handle other errors accordingly
-							}
-						}
-					}
-				}
-
-				requestIndex++;
-				chunkIndex++;
-
-				if (chunkIndex === totalChunks) {
-					chunkIndex = 0;
-				}
-			};
-
-			const isIntervalRunning = true;
-
-			/**
-			 * This function is the interval handler for the periodic updating of viewers in the database.
-			 * It checks if the number of requests made is less than the maximum allowed per interval.
-			 * If so, it gets the stream of the given channel and fetches the chatters for that channel.
-			 * The chatters are then processed and added to the database.
-			 * If the number of requests made reaches the maximum allowed per interval, the request index is reset.
-			 */
-			const intervalHandler = async () => {
-				if (requestIndex < requestsPerInterval) {
-					const stream = await userApiClient.streams.getStreamByUserId(broadcasterInfo[0].id as UserIdResolvable);
-					if (stream !== null) {
-						const chatters = await userApiClient.chat.getChatters(broadcasterInfo[0].id as UserIdResolvable, { after: cursor, limit: chunkSize });
-						await processChatters(chatters.data);
-						requestIndex++;
-					}
-				} else {
-					requestIndex = 0; // Reset the request index when the maximum number of requests per interval is reached
-				}
-			};
-
-			void setInterval(async () => {
-				if (isIntervalRunning) {
-					await intervalHandler();
-				}
-			}, intervalDuration);
-
-		} catch (error: unknown) {
-			if (error instanceof Error) {
-				logger.error(error);
-			}
-		}
 
 		const lowerText = text.toLowerCase();
 
@@ -479,6 +451,7 @@ export async function initializeChat(): Promise<void> {
 	};
 	chatClient.onMessage(commandHandler);
 	chatClient.onAuthenticationFailure((text: string, retryCount: number) => { logger.warn('Attempted to connect to a channel ', text, retryCount); });
+	void startPeriodicChatterCreditTimer(userApiClient);
 }
 
 /**
@@ -796,6 +769,11 @@ export async function shutdownChat(): Promise<void> {
 			clearInterval(periodicSaveIntervalId);
 			periodicSaveIntervalId = null;
 		}
+		if (periodicChatterCreditIntervalId) {
+			clearInterval(periodicChatterCreditIntervalId);
+			periodicChatterCreditIntervalId = null;
+			periodicChatterCreditTimerStarted = false;
+		}
 
 		// clear per-user watch time intervals
 		for (const [, viewer] of viewerWatchTimes) {
@@ -818,6 +796,29 @@ export async function shutdownChat(): Promise<void> {
 		}
 	} catch (err) {
 		logger.error('Error during shutdownChat', err as Error);
+	}
+}
+/**
+ * Leave a single channel at runtime. Mirrors `joinChannel`.
+ * @param username Twitch login name (without #)
+ */
+export async function partChannel(username: string): Promise<void> {
+	try {
+		if (!username) return;
+		const client = await getChatClient();
+		if (!client) {
+			logger.warn('partChannel: chat client not available');
+			return;
+		}
+		const normalized = username.startsWith('#') ? username.slice(1) : username;
+		const partFn = (client as unknown as { part?: (ch: string) => Promise<void> }).part;
+		if (typeof partFn === 'function') {
+			await partFn.call(client, normalized);
+		}
+		joinedChannels.delete(normalized);
+		if (process.env.ENVIRONMENT === 'dev') logger.info(`Dynamically parted channel: ${normalized}`);
+	} catch (err) {
+		logger.error('partChannel failed for', username, err as Error);
 	}
 }
 /**
