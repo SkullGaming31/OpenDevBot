@@ -239,7 +239,8 @@ export default function createApp(): express.Application {
 			const subs = await SubscriptionModel.find({}).lean();
 			const retries = await RetryModel.find({}).lean();
 			// Build a map for quick lookup
-			const retryMap = new Map<string, unknown>();
+			type RetryRecord = { attempts?: number; status?: string; lastError?: string | null; nextRetryAt?: Date | null };
+			const retryMap = new Map<string, RetryRecord | null>();
 			for (const r of retries) retryMap.set(`${r.subscriptionId}:${r.authUserId}`, r);
 			// Collect unique keys from both sets
 			const keys = new Map<string, { subscriptionId: string; authUserId: string }>();
@@ -249,9 +250,10 @@ export default function createApp(): express.Application {
 			for (const [k, v] of keys) {
 				const present = subs.some(s => s.subscriptionId === v.subscriptionId && s.authUserId === v.authUserId);
 				const retry = retryMap.get(k) || null;
-				const rawAttempts = retry && typeof retry.attempts === 'number' ? retry.attempts : 0;
+				const r = retry as RetryRecord | null;
+				const rawAttempts = r && typeof r.attempts === 'number' ? r.attempts : 0;
 				const attempts = Math.min(rawAttempts, EVENTSUB_MAX_ATTEMPTS);
-				items.push({ subscriptionId: v.subscriptionId, authUserId: v.authUserId, present, retryStatus: retry ? retry.status : 'none', attempts, rawAttempts, lastError: retry ? retry.lastError : null, nextRetryAt: retry ? retry.nextRetryAt : null });
+				items.push({ subscriptionId: v.subscriptionId, authUserId: v.authUserId, present, retryStatus: r ? r.status : 'none', attempts, rawAttempts, lastError: r ? r.lastError : null, nextRetryAt: r ? r.nextRetryAt : null });
 			}
 			return res.json({ total: items.length, items });
 		} catch (e) {

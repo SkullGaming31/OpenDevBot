@@ -1017,6 +1017,10 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 		// broadcaster but may not yet be recorded in our DB (for example after
 		// a previous run). Use the provided accessToken to list subscriptions
 		// scoped to that user and merge types into existingTypes.
+		// Counters for enabled websocket subscriptions and their total cost.
+		let enabledCount = 0;
+		let currentCost = 0;
+
 		try {
 			const axios = await import('axios');
 			const resp = await axios.default.get('https://api.twitch.tv/helix/eventsub/subscriptions', {
@@ -1028,8 +1032,6 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 			});
 			const rows = Array.isArray(resp?.data?.data) ? resp.data.data : [];
 			// Compute existing types and enforce websocket limits/costs
-			let enabledCount = 0;
-			let currentCost = 0;
 			for (const row of rows) {
 				try {
 					const cond = row?.condition as Record<string, unknown> | undefined;
