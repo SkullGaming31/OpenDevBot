@@ -4,10 +4,6 @@
     "rootDir": "..",
     "outDir": "../dist-electron",
     "module": "commonjs",
-    "types": [
-      "node",
-      "electron"
-    ]
   },
   "include": [
     "./**/*.ts",

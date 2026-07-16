@@ -523,6 +523,10 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		chatClientInstance.onJoin(async (channel: string, user: string) => {
 			try {
+				if (!broadcasterInfo[0]) {
+					logger.warn(`onJoin fired for ${user} in ${channel} before broadcasterInfo was initialized — skipping`);
+					return;
+				}
 				if (process.env.Environment === 'dev' || process.env.Environment === 'debug') {
 					logger.info(`${user} has joined ${channel}'s channel`);
 				}
@@ -659,6 +663,12 @@ export async function getChatClient(): Promise<ChatClient> {
 
 		// Connect the chat client
 		chatClientInstance.connect();
+
+		// Ensure we never track the bot's own channel in the joinedChannels cache.
+		try {
+			joinedChannels.delete('opendevbot');
+			joinedChannels.delete(String(openDevBotID));
+		} catch { /* ignore */ }
 
 		// capture a stable reference for use in timers/closures so TypeScript
 		// can narrow the value and we avoid "possibly undefined" errors

@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import * as fs from 'fs';
 import * as path from 'path';
+import { EventEmitter } from 'events';
 
 type LogFn = (...args: unknown[]) => void;
 
@@ -11,6 +12,13 @@ type TimeLabel = string | number | symbol;
 const timers = new Map<TimeLabel, bigint>();
 
 const isDev = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
+
+// Emits a 'log' event with `{ level, message, timestamp }` for every call that
+// actually logs (i.e. respects the same level gating as console output).
+// Consumers — e.g. the Electron logs window — subscribe to this instead of
+// scraping stdout.
+export const logEvents = new EventEmitter();
+logEvents.setMaxListeners(50);
 
 // Capture initial LOG_LEVEL at module load time. Tests set this before requiring the module.
 const initialEnvLevel = process.env.LOG_LEVEL ? String(process.env.LOG_LEVEL).toLowerCase() : '';
@@ -57,6 +65,14 @@ function levelEnabled(level: Level): boolean {
 	return idx >= cur;
 }
 
+function emitLog(level: Level, args: unknown[]): void {
+	try {
+		logEvents.emit('log', { level, message: formatForLog(args), timestamp: new Date().toISOString() });
+	} catch (e) {
+		/* never let a bad listener take down logging */
+	}
+}
+
 export const debug: LogFn = (...args: unknown[]) => {
 	const env = process.env.LOG_LEVEL && String(process.env.LOG_LEVEL).toLowerCase();
 	const shouldDebug = initialEnvLevel === 'debug' || env === 'debug' || levelEnabled('debug');
@@ -67,20 +83,28 @@ export const debug: LogFn = (...args: unknown[]) => {
 		} catch (e) {
 			/* ignore */
 		}
+		emitLog('debug', args);
 	}
 };
 
 export const info: LogFn = (...args: unknown[]) => {
-	if (levelEnabled('info')) console.log('[info]', ...args);
+	if (levelEnabled('info')) {
+		console.log('[info]', ...args);
+		emitLog('info', args);
+	}
 };
 
 export const warn: LogFn = (...args: unknown[]) => {
-	if (levelEnabled('warn')) console.warn('[warn]', ...args);
+	if (levelEnabled('warn')) {
+		console.warn('[warn]', ...args);
+		emitLog('warn', args);
+	}
 };
 
 export const error: LogFn = (...args: unknown[]) => {
 	// Always output to console for visibility
 	console.error('[error]', ...args);
+	emitLog('error', args);
 
 	// Also append to the error log file asynchronously to avoid blocking
 	const timestamp = new Date().toISOString();

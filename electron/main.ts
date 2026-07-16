@@ -9,6 +9,11 @@ import Database from '../src/database';
 import logger from '../src/util/logger';
 import { registerAdminProxy } from './adminProxy';
 import { registerTwitchSignupHandler } from './twitchSignup';
+import { registerLogsBridge } from './logsBridge';
+import { initializeConstants } from '../src/util/constants';
+import { initializeTwitchEventSub } from '../src/EventSubEvents';
+import { startRetryWorker } from '../src/EventSub/retryWorker';
+import { initializeChat } from '../src/chat';
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu');
@@ -43,7 +48,7 @@ async function bootstrap(): Promise<void> {
 
 	switch (environment) {
 		case 'prod':
-			mongoURI = process.env.MONGO_URI || '';
+			mongoURI = process.env.DOCKER_URI || '';
 			break;
 		case 'debug':
 		case 'dev':
@@ -55,6 +60,30 @@ async function bootstrap(): Promise<void> {
 
 	const database = new Database(mongoURI);
 	await database.connect();
+
+	// Mirror the startup sequence from src/index.ts so constants/chat/eventsub
+	// are initialized when running under the Electron shell.
+	try {
+		if (process.env.ENVIRONMENT !== 'test') {
+			if (process.env.ENABLE_EVENTSUB) {
+				logger.time('Event Sub Initializing (electron)');
+				await initializeConstants();
+				await initializeTwitchEventSub();
+				void startRetryWorker();
+				logger.timeEnd('Event Sub Initializing (electron)');
+			}
+
+			if (process.env.ENABLE_CHAT) {
+				logger.time('Chat Initializing (electron)');
+				await initializeConstants();
+				await initializeChat();
+				logger.timeEnd('Chat Initializing (electron)');
+			}
+		}
+	} catch (err) {
+		logger.error('Error during electron initialization of services', err as Error);
+		// allow the express app to come up even if service init fails
+	}
 
 	createApp().listen(PORT, () => {
 		logger.info(`[electron] bot API listening on http://localhost:${PORT}`);
@@ -90,6 +119,7 @@ app.whenReady().then(async () => {
 
 	registerAdminProxy(PORT);
 	registerTwitchSignupHandler(PORT);
+	registerLogsBridge();
 	createMainWindow();
 
 	app.on('activate', () => {

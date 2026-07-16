@@ -263,6 +263,12 @@
       }
     }
 
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -495,6 +501,56 @@
       gap: 6px;
     }
 
+    /* ---------- Bot status ---------- */
+    .status-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .status-row .label {
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .status-row .value {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .status-dot-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .status-dot.up {
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.down {
+      background: var(--accent);
+    }
+
     .toast {
       position: fixed;
       bottom: 22px;
@@ -545,9 +601,14 @@
           setTimeout(() => { toast.value = ''; }, 2400);
         }
 
-        function signUp() {
+        function signUp(type = 'user') {
           if (!hasBridge) { showToast('Sign-up requires the Electron shell'); return; }
-          window.twitchApi.signup('user');
+          window.twitchApi.signup(type);
+        }
+
+        function openLogs() {
+          if (!hasBridge || !window.logsApi) { showToast('Logs require the Electron shell'); return; }
+          window.logsApi.openWindow();
         }
 
         async function loadChannels() {
@@ -579,6 +640,33 @@
           total.value = res.total;
         }
 
+        // ---- EventSub subscriptions panel state + loader
+        const esItems = ref([]);
+        const esTotal = ref(0);
+        const esPage = ref(1);
+        const esLimit = 10;
+        const esTotalPages = computed(() => Math.max(1, Math.ceil((esTotal.value || esItems.value.length) / esLimit)));
+        const esPageItems = computed(() => {
+          const start = (esPage.value - 1) * esLimit;
+          return esItems.value.slice(start, start + esLimit);
+        });
+
+        async function loadEventSubs() {
+          if (!hasBridge) return;
+          try {
+            const res = await window.adminApi.fetch('/api/v1/admin/eventsubs');
+            esItems.value = res.items || [];
+            esTotal.value = res.total || esItems.value.length;
+            esPage.value = 1;
+          } catch (e) {
+            // ignore; keep previous state
+            console.debug('Failed to load eventsubs', e);
+          }
+        }
+
+        function esPrevPage() { if (esPage.value > 1) { esPage.value--; } }
+        function esNextPage() { if (esPage.value < esTotalPages.value) { esPage.value++; } }
+
         function setStatus(s) { status.value = s; page.value = 1; selected.value = new Set(); loadQueue(); }
 
         function toggleSelect(id) {
@@ -608,15 +696,43 @@
           return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
 
-        const healthStatus = ref('unknown');
+        // API health is now part of the botStatus object and checked in loadStatus
 
-        async function checkHealth() {
-          if (!hasBridge) { healthStatus.value = 'unknown'; return; }
+        // ---- Bot status panel ----
+        const botStatus = ref({ pid: null, startedAt: null, dbConnected: false, chatConnected: false });
+        const liveUptimeSeconds = ref(0);
+
+        function formatUptime(totalSeconds) {
+          const s = Math.max(0, Math.floor(totalSeconds));
+          const d = Math.floor(s / 86400);
+          const h = Math.floor((s % 86400) / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          if (d > 0) return `${d}d ${h}h ${m}m`;
+          if (h > 0) return `${h}h ${m}m`;
+          if (m > 0) return `${m}m ${sec}s`;
+          return `${sec}s`;
+        }
+
+        async function loadStatus() {
+          if (!hasBridge) {
+            // demo fallback so this is still previewable outside Electron
+            botStatus.value = {
+              pid: 12345,
+              startedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+              dbConnected: true,
+              chatConnected: true,
+              api: true
+            };
+            liveUptimeSeconds.value = 3 * 3600;
+            return;
+          }
           try {
-            await window.adminApi.fetch('/health');
-            healthStatus.value = 'ok';
+            const res = await window.adminApi.fetch('/api/v1/admin/status');
+            botStatus.value = res;
+            liveUptimeSeconds.value = res.uptimeSeconds;
           } catch (err) {
-            healthStatus.value = 'err';
+            botStatus.value = { ...botStatus.value, dbConnected: false, chatConnected: false };
           }
         }
 
@@ -630,16 +746,21 @@
             });
             loadChannels();
             loadQueue();
-            // initial health check and periodic updates
-            checkHealth();
-            setInterval(checkHealth, 10000);
+            loadEventSubs();
+            // health is checked as part of loadStatus; no separate header health polling
           }
+
+          loadStatus();
+          setInterval(loadStatus, 120000);
+          setInterval(() => { liveUptimeSeconds.value += 1; }, 1000);
         });
 
         return {
           connected, user, channels, joinInput, status, items, page, total, totalPages,
           selected, toast, signUp, joinChannel, partChannel, setStatus, toggleSelect,
-          requeue, remove, fmtTime, limit, healthStatus,
+          requeue, remove, fmtTime, limit, botStatus, liveUptimeSeconds, formatUptime, openLogs,
+          // EventSub panel bindings
+          esItems, esTotal, esPage, esPageItems, esTotalPages, loadEventSubs, esPrevPage, esNextPage,
           prevPage: () => { if (page.value > 1) { page.value--; loadQueue(); } },
           nextPage: () => { if (page.value < totalPages.value) { page.value++; loadQueue(); } },
         };
@@ -654,24 +775,58 @@
         </div>
       </div>
       <div class="header-right">
-        <div class="health" :class="{ ok: healthStatus==='ok', err: healthStatus==='err' }">
-          <span class="dot"></span>
-          <span v-if="healthStatus==='ok'">API OK</span>
-          <span v-else-if="healthStatus==='unknown'">Checking...</span>
-          <span v-else>API ERROR</span>
-        </div>
-        <div class="signal" :class="{ online: connected }">
-          <span class="dot"></span>
-          {{ connected ? 'BOT ONLINE' : 'AWAITING SIGN-UP' }}
-        </div>
+        <!-- signup/user area -->
         <div v-if="connected" class="user-chip">
           streamer&nbsp;<b>{{ user?.username }}</b>
         </div>
-        <button v-else class="btn btn-primary" @click="signUp">Sign Up with Twitch</button>
+        <button class="btn btn-primary" v-if="!connected" @click="signUp('user')">Sign Up (User)</button>
+        <button class="btn btn-ghost" @click="signUp('bot')">Sign Up Bot</button>
+        <button class="btn btn-ghost" @click="openLogs">Logs</button>
       </div>
     </header>
 
     <main>
+      <div class="col-left">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Health</div>
+            <h2>Bot Status</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="status-grid">
+            <div class="status-row">
+              <span class="label">Chat connection</span>
+              <span class="status-dot-row">
+                <span class="status-dot" :class="botStatus.chatConnected ? 'up' : 'down'"></span>
+                <span class="value">{{ botStatus.chatConnected ? 'connected' : 'disconnected' }}</span>
+              </span>
+            </div>
+            <div class="status-row">
+              <span class="label">Database</span>
+              <span class="status-dot-row">
+                <span class="status-dot" :class="botStatus.dbConnected ? 'up' : 'down'"></span>
+                <span class="value">{{ botStatus.dbConnected ? 'connected' : 'disconnected' }}</span>
+              </span>
+            </div>
+            <!-- API status removed: /api/v1/admin/status indicates API reachability -->
+            <div class="status-row">
+              <span class="label">Uptime</span>
+              <span class="value">{{ formatUptime(liveUptimeSeconds) }}</span>
+            </div>
+            <div class="status-row">
+              <span class="label">Last restart</span>
+              <span class="value">{{ botStatus.startedAt ? fmtTime(botStatus.startedAt) : '—' }}</span>
+            </div>
+            <div class="status-row">
+              <span class="label">Process PID</span>
+              <span class="value">{{ botStatus.pid ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-head">
           <div>
@@ -693,11 +848,14 @@
           <div v-else class="empty">No channels joined yet</div>
         </div>
       </section>
+      </div>
+
+      <div class="col-right">
 
       <section class="panel">
         <div class="panel-head">
           <div>
-            <div class="eyebrow">EventSub</div>
+            <div class="eyebrow">Discord</div>
             <h2>Webhook Queue</h2>
           </div>
           <div class="tabs">
@@ -745,8 +903,59 @@
               <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="page>=totalPages" @click="nextPage">next</button>
             </div>
           </div>
+
         </div>
       </section>
+
+      <!-- EventSub Subscriptions panel (separate section under Discord Webhook Queue) -->
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Twitch</div>
+            <h2>EventSub Subscriptions</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab" @click="loadEventSubs">refresh</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table v-if="esPageItems.length">
+            <thead>
+              <tr>
+                <th>Subscription ID</th>
+                <th>Auth User</th>
+                <th>Present</th>
+                <th>Retry Status</th>
+                <th>Attempts</th>
+                <th>Last Error</th>
+                <th>Next Retry</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="it in esPageItems" :key="it.subscriptionId + ':' + it.authUserId">
+                <td class="mono-id">{{ it.subscriptionId }}</td>
+                <td class="mono-id">{{ it.authUserId }}</td>
+                <td><span :class="it.present ? 'status-dot up' : 'status-dot down'"> </span> {{ it.present ? 'active' : 'missing' }}</td>
+                <td>{{ it.retryStatus }}</td>
+                <td class="mono-id">{{ it.attempts }}</td>
+                <td class="mono-id">{{ it.lastError || '' }}</td>
+                <td class="mono-id">{{ it.nextRetryAt ? new Date(it.nextRetryAt).toLocaleString() : '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty">No subscriptions found</div>
+          <div class="queue-foot">
+            <span class="page-info">page {{ esPage }} / {{ esTotalPages }} · {{ esTotal }} total</span>
+            <div class="pager">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="esPage<=1" @click="esPrevPage">prev</button>
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="esPage>=esTotalPages" @click="esNextPage">next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+
     </main>
 
     <div class="toast" v-if="toast">{{ toast }}</div>

@@ -24,11 +24,61 @@ export async function attemptResubscribe(rec: IRetryRecord): Promise<void> {
 			return;
 		}
 		try { eventSubRetries.inc({ authUserId: rec.authUserId }); } catch (e) { /* ignore */ }
-		await createSubscriptionsForAuthUser(rec.authUserId, token.access_token);
-		// After attempting targeted creation, check if subscription now exists in DB
+		// Use subscription limiter to avoid creating many subscriptions at once
+		await (await import('./subscriptionLimiter')).default.schedule(() => createSubscriptionsForAuthUser(rec.authUserId, token.access_token));
+		// After attempting targeted creation, check Twitch (and DB) to see if
+		// the subscription actually exists. Twurple/create events may record
+		// different forms of identifiers (type-based strings vs UUIDs), so
+		// query Twitch directly to avoid mismatches.
+		try {
+			const axios = await import('axios');
+			const clientId = process.env.TWITCH_CLIENT_ID as string;
+			const resp = await axios.default.get('https://api.twitch.tv/helix/eventsub/subscriptions', {
+				headers: {
+					'Authorization': `Bearer ${token.access_token}`,
+					'Client-Id': clientId,
+				},
+				params: { first: 100 },
+			});
+			const rows = Array.isArray(resp?.data?.data) ? resp.data.data : [];
+
+			// Try to match by exact subscription id (UUID) first
+			const byId = rows.find((r: unknown) => String((r as Record<string, unknown>)['id']) === String(rec.subscriptionId));
+			if (byId) {
+				logger.debug(`RetryWorker: found subscription by id on Twitch for ${rec.subscriptionId}`);
+				await retryManager.markSucceeded(rec.subscriptionId, rec.authUserId);
+				return;
+			}
+
+			// If subscriptionId looks like a type with broadcaster suffix (type.broadcasterId),
+			// match by type and condition.broadcaster_user_id
+			if (String(rec.subscriptionId).includes('.')) {
+				const parts = String(rec.subscriptionId).split('.');
+				const maybeBroadcaster = parts[parts.length - 1];
+				const typePart = parts.length > 1 ? parts.slice(0, -1).join('.') : String(rec.subscriptionId);
+				const byType = rows.find((r: unknown) => {
+					try {
+						const rec = r as Record<string, unknown>;
+						const cond = rec.condition as Record<string, unknown> | undefined;
+						return String(rec.type) === typePart && cond && String(cond['broadcaster_user_id'] ?? '') === String(maybeBroadcaster);
+					} catch (_e) {
+						return false;
+					}
+				});
+				if (byType) {
+					logger.debug(`RetryWorker: found subscription by type/broadcaster on Twitch for ${rec.subscriptionId}`);
+					await retryManager.markSucceeded(rec.subscriptionId, rec.authUserId);
+					return;
+				}
+			}
+		} catch (e) {
+			logger.debug('RetryWorker: failed to query Twitch subscriptions after resubscribe attempt', e);
+		}
+
+		// Also check local DB by UUID as a fallback
 		const exists = await SubscriptionModel.findOne({ subscriptionId: rec.subscriptionId, authUserId: rec.authUserId }).exec();
 		if (exists) {
-			logger.debug(`RetryWorker: subscription ${rec.subscriptionId} exists after recreate, marking succeeded`);
+			logger.debug(`RetryWorker: subscription ${rec.subscriptionId} exists in DB after recreate, marking succeeded`);
 			await retryManager.markSucceeded(rec.subscriptionId, rec.authUserId);
 			return;
 		}

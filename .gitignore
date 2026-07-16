@@ -12,5 +12,4 @@ NOTES.txt
 /logs
 /coverage
 .tsbuildinfo
-/.agents
-*.agent.md
+bot-status.diff

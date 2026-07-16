@@ -11,6 +11,15 @@ export class RetryManager {
 		// Ensure a record exists (create with zero attempts if not) then increment.
 		await RetryModel.findOneAndUpdate(filter, { $setOnInsert: { subscriptionId, authUserId, attempts: 0, status: 'pending' } }, { upsert: true }).exec();
 
+		// If the record is already permanently failed, don't keep incrementing.
+		const existing = await RetryModel.findOne(filter).exec();
+		if (existing && existing.status === 'failed') {
+			// Update lastError for operator visibility but do not increment attempts
+			existing.lastError = errMsg;
+			await existing.save();
+			return existing;
+		}
+
 		// Atomically increment attempts and fetch the new value
 		const updated = await RetryModel.findOneAndUpdate(filter, { $inc: { attempts: 1 } }, { returnDocument: 'after' }).exec();
 		if (!updated) {
@@ -21,13 +30,17 @@ export class RetryManager {
 		}
 
 		// Update status and nextRetryAt based on attempts
-		const attempts = updated.attempts ?? 1;
+		let attempts = updated.attempts ?? 1;
+		// Cap attempts to MAX_ATTEMPTS to prevent runaway incrementing
+		if (attempts > MAX_ATTEMPTS) attempts = MAX_ATTEMPTS;
 		if (attempts >= MAX_ATTEMPTS) {
 			updated.status = 'failed';
 			updated.nextRetryAt = null;
+			updated.attempts = attempts;
 		} else {
 			updated.status = 'pending';
 			updated.nextRetryAt = new Date(Date.now() + this.computeDelay(attempts));
+			updated.attempts = attempts;
 		}
 		updated.lastError = errMsg;
 		await updated.save();

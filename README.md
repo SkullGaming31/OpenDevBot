@@ -129,9 +129,13 @@ This is an example of how to list things you need to use the software and how to
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->
-<!-- ## Usage
+## Usage
+<p>electron:dev will build the electron app and start it</p>
 
-<p align="right">(<a href="#top">back to top</a>)</p> -->
+```sh
+npm run electron:dev
+```
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- ROADMAP -->
 ## Roadmap
@@ -147,7 +151,7 @@ This is an example of how to list things you need to use the software and how to
 * [x] add word detection to send commands without prefix
 * [x] create channelPoints with userToken to modify the channel points with commands [Hard Coded ChannelPoints]
 * [x] Advanced Lurk Command
-* [ ] Timer Commands
+* [X] Timer Command
 * [x] Counters
 * [x] Quotes System?
 * [x] Viewer Watch Time?

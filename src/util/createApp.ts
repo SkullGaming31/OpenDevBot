@@ -6,7 +6,16 @@ import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import mongoose from 'mongoose';
 import { limiter } from './util';
 import logger from './logger';
-import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
+import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
+
+// Captured once when this module first loads (i.e. once per process
+// lifetime), not per createApp() call — that's what "uptime"/"last restart"
+// should be measured against.
+const BOOT_TIME = new Date();
+
+// Mirror of retry cap used by retry manager so the admin UI can show a
+// human-friendly capped attempt count without changing DB state.
+const EVENTSUB_MAX_ATTEMPTS = 6;
 
 /**
  * Creates an Express.js app that handles the OAuth2 flow for getting an access token from Twitch.
@@ -87,10 +96,49 @@ export default function createApp(): express.Application {
 	app.get('/api/v1/chat/channels', requireAdmin, async (_req, res) => {
 		try {
 			const { joinedChannels } = await import('../chat');
+			// If the in-memory cache is empty (e.g., chat subsystem not initialized
+			// yet), fall back to returning usernames from the token store so the
+			// admin UI still shows configured channels.
+			if (!joinedChannels || joinedChannels.size === 0) {
+				try {
+					const { getUsernamesFromDatabase } = await import('../database/tokenStore');
+					const users = await getUsernamesFromDatabase();
+					return res.json({ channels: users });
+				} catch (err) {
+					// fallback to empty list if DB read fails
+					logger.debug('Failed to load usernames from DB for channels fallback', err as Error);
+					return res.json({ channels: [] });
+				}
+			}
 			return res.json({ channels: Array.from(joinedChannels) });
 		} catch (e) {
 			logger.error('Failed to list joined channels', e as Error);
 			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: bot status for the dashboard's status panel (pid, uptime, connectivity)
+	app.get('/api/v1/admin/status', requireAdmin, async (_req, res) => {
+		try {
+			const { getChatClient } = await import('../chat');
+			let chatConnected = false;
+			try {
+				const client = await getChatClient();
+				chatConnected = !!(client as unknown as { isConnected?: boolean } | undefined)?.isConnected;
+			} catch {
+				// chat client not initialized yet — treated as disconnected, not an error
+			}
+
+			return res.json({
+				pid: process.pid,
+				startedAt: BOOT_TIME.toISOString(),
+				uptimeSeconds: Math.floor(process.uptime()),
+				dbConnected: await getDbHealth(),
+				chatConnected
+			});
+		} catch (e) {
+			logger.error('Admin status failed', e as Error);
+			return res.status(500).json({ error: 'failed to get status' });
 		}
 	});
 
@@ -178,6 +226,46 @@ export default function createApp(): express.Application {
 			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'webhooks.html'));
 		} catch (e) {
 			logger.error('Failed to serve admin webhooks UI', e as Error);
+			return res.status(500).send('failed to load admin UI');
+		}
+	});
+
+	// Admin: list EventSub subscriptions and retry status
+	app.get('/api/v1/admin/eventsubs', requireAdmin, async (req, res) => {
+		try {
+			const { SubscriptionModel } = await import('../database/models/eventSubscriptions');
+			const { RetryModel } = await import('../EventSub/retryModel');
+			// Fetch subscriptions and retry records
+			const subs = await SubscriptionModel.find({}).lean();
+			const retries = await RetryModel.find({}).lean();
+			// Build a map for quick lookup
+			const retryMap = new Map<string, unknown>();
+			for (const r of retries) retryMap.set(`${r.subscriptionId}:${r.authUserId}`, r);
+			// Collect unique keys from both sets
+			const keys = new Map<string, { subscriptionId: string; authUserId: string }>();
+			for (const s of subs) keys.set(`${s.subscriptionId}:${s.authUserId}`, { subscriptionId: s.subscriptionId, authUserId: s.authUserId });
+			for (const r of retries) keys.set(`${r.subscriptionId}:${r.authUserId}`, { subscriptionId: r.subscriptionId, authUserId: r.authUserId });
+			const items: Array<Record<string, unknown>> = [];
+			for (const [k, v] of keys) {
+				const present = subs.some(s => s.subscriptionId === v.subscriptionId && s.authUserId === v.authUserId);
+				const retry = retryMap.get(k) || null;
+				const rawAttempts = retry && typeof retry.attempts === 'number' ? retry.attempts : 0;
+				const attempts = Math.min(rawAttempts, EVENTSUB_MAX_ATTEMPTS);
+				items.push({ subscriptionId: v.subscriptionId, authUserId: v.authUserId, present, retryStatus: retry ? retry.status : 'none', attempts, rawAttempts, lastError: retry ? retry.lastError : null, nextRetryAt: retry ? retry.nextRetryAt : null });
+			}
+			return res.json({ total: items.length, items });
+		} catch (e) {
+			logger.error('Failed to list EventSub subscriptions', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Serve admin EventSub UI
+	app.get('/admin/eventsubs', requireAdmin, (_req: express.Request, res: express.Response) => {
+		try {
+			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'eventsubs.html'));
+		} catch (e) {
+			logger.error('Failed to serve admin eventsubs UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
 		}
 	});
@@ -325,11 +413,11 @@ export default function createApp(): express.Application {
 			// `part` or `quit` as non-callable values in different versions.
 			// Use a small typed interface to avoid `any` and silence ESLint warnings.
 			if (typeof ((client as unknown as ChatClientLike).part) === 'function') {
-				const fn = (client as unknown as ChatClientLike).part as unknown as (channel: string) => Promise<unknown> | void;
-				await fn(normalized);
+				const fn = (client as unknown as ChatClientLike).part as ((channel: string) => Promise<unknown> | void) | undefined;
+				if (fn) await fn.call(client, normalized);
 			} else if (typeof ((client as unknown as ChatClientLike).quit) === 'function') {
-				const fn = (client as unknown as ChatClientLike).quit as unknown as (channel: string) => Promise<unknown> | void;
-				await fn(normalized);
+				const fn = (client as unknown as ChatClientLike).quit as ((channel: string) => Promise<unknown> | void) | undefined;
+				if (fn) await fn.call(client, normalized);
 			}
 			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
 			return res.json({ ok: true, parted: normalized });

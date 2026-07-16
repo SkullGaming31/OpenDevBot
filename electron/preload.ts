@@ -10,3 +10,10 @@ contextBridge.exposeInMainWorld('adminApi', {
 	fetch: (path: string, opts?: { method?: string; body?: string }) =>
 		ipcRenderer.invoke('admin:fetch', path, opts)
 });
+
+contextBridge.exposeInMainWorld('logsApi', {
+	openWindow: () => ipcRenderer.send('logs:open'),
+	getHistory: () => ipcRenderer.invoke('logs:getHistory'),
+	onNewLog: (callback: (entry: { level: string; message: string; timestamp: string }) => void) =>
+		ipcRenderer.on('logs:new', (_event, entry) => callback(entry))
+});

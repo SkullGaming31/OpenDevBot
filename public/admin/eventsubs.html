@@ -4,16 +4,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin — Webhook Queue</title>
+  <title>Admin — EventSub Subscriptions</title>
   <link rel="stylesheet" href="/assets/css/admin.css" />
   <style>
     body {
       font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       margin: 20px
-    }
-
-    .controls {
-      margin-bottom: 12px
     }
 
     table {
@@ -32,48 +28,45 @@
       background: #f4f4f4
     }
 
-    button {
-      margin-right: 6px
-    }
-
     .small {
       font-size: 0.9em;
       color: #666
+    }
+
+    .status-up {
+      color: green
+    }
+
+    .status-down {
+      color: red
     }
   </style>
 </head>
 
 <body>
-  <h1>Discord Webhook Queue (Admin)</h1>
-  <p class="small">This queue stores Discord webhooks. Twitch EventSub handlers enqueue messages here.</p>
+  <h1>EventSub Subscriptions (Admin)</h1>
+  <p class="small">Shows Twitch EventSub subscriptions and retry status for resubscribe attempts.</p>
   <div class="controls">
     <label>Admin token: <input id="token" placeholder="x-admin-token" size="40" /></label>
     <button id="saveToken">Save</button>
     <button id="refresh">Refresh</button>
-    <label class="small">Status: <select id="status">
-        <option value="pending">pending</option>
-        <option value="failed">failed</option>
-        <option value="processing">processing</option>
-        <option value="sent">sent</option>
-      </select></label>
   </div>
-
   <div id="summary" class="small"></div>
   <table id="items">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Webhook</th>
-        <th>Payload</th>
-        <th>Status</th>
+        <th>Subscription ID</th>
+        <th>Auth User</th>
+        <th>Present</th>
+        <th>Retry Status</th>
         <th>Attempts</th>
-        <th>Actions</th>
+        <th>Last Error</th>
+        <th>Next Retry</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
-
-  <script src="/assets/js/admin-webhooks.js"></script>
+  <script src="/assets/js/admin-eventsubs.js"></script>
 </body>
 
 </html>
