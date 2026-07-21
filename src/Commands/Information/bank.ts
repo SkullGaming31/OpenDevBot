@@ -46,13 +46,10 @@ const bank: Command = {
 				}
 
 				const acct = await balanceAdapter.getOrCreate(resolvedId || targetUsername);
-				// Wallet: prefer lookup by id if resolved, otherwise by username
-				let userDoc;
-				if (resolvedId) userDoc = await UserModel.findOne({ id: resolvedId });
-				else userDoc = await UserModel.findOne({ username: targetUsername });
-				const wallet = userDoc?.balance || 0;
+				// Wallet: prefer lookup via adapter
+				const wallet = await (await import('../../services/balanceAdapter')).getWalletBalance(resolvedId || targetUsername, targetUsername, channelId);
 
-				return chatClient.say(channel, `@${user}, bank: ${acct.balance} | wallet: ${wallet}`);
+				return chatClient.say(channel, `@${user}, bank: ${acct.balance?.bank ?? 0} | wallet: ${wallet}`);
 			}
 
 			if (sub === 'deposit') {
@@ -71,25 +68,10 @@ const bank: Command = {
 				// If user is depositing from their wallet into their bank
 				if (target === username) {
 					try {
-						const { UserModel } = await import('../../database/models/userModel');
-						// Prefer numeric id when available
-						if (msg.userInfo?.userId) {
-							// Atomically decrement wallet only if sufficient funds
-							const updated = await UserModel.findOneAndUpdate(
-								{ id: msg.userInfo.userId, balance: { $gte: amount } },
-								{ $inc: { balance: -amount } },
-								{ returnDocument: 'after' }
-							);
-							if (!updated) return chatClient.say(channel, `@${user}, insufficient wallet funds.`);
-						} else {
-							// fallback to username+channelId
-							const updated = await UserModel.findOneAndUpdate(
-								{ username, channelId, balance: { $gte: amount } },
-								{ $inc: { balance: -amount } },
-								{ returnDocument: 'after' }
-							);
-							if (!updated) return chatClient.say(channel, `@${user}, insufficient wallet funds.`);
-						}
+						// Atomically debit the user's wallet via adapter
+						const userKey = msg.userInfo?.userId ?? username;
+						const debited = await (await import('../../services/balanceAdapter')).debitWallet(userKey, amount, username, channelId);
+						if (!debited) return chatClient.say(channel, `@${user}, insufficient wallet funds.`);
 
 						// Now credit the bank
 						await economyService.deposit(key, amount);
@@ -121,17 +103,17 @@ const bank: Command = {
 					// Withdraw from bank account
 					await economyService.withdraw(key, amount);
 
-					// Credit wallet (legacy UserModel) by id when possible
-					const { UserModel } = await import('../../database/models/userModel');
+					// Credit wallet via adapter (now stored in BankAccount.wallet)
 					if (msg.userInfo?.userId && target === username) {
-						await UserModel.updateOne({ id: msg.userInfo.userId }, { $inc: { balance: amount }, $setOnInsert: { username } }, { upsert: true });
+						await (await import('../../services/balanceAdapter')).creditWallet(msg.userInfo.userId, amount, username, channelId);
 					} else {
-						// try to find id for target user
+						// try to find id for target user via UserModel to prefer id-keyed account
+						const { UserModel } = await import('../../database/models/userModel');
 						const targetDoc = await UserModel.findOne({ username: target });
 						if (targetDoc?.id) {
-							await UserModel.updateOne({ id: targetDoc.id }, { $inc: { balance: amount } }, { upsert: true });
+							await (await import('../../services/balanceAdapter')).creditWallet(targetDoc.id, amount, target, channelId);
 						} else {
-							await UserModel.updateOne({ username: target }, { $inc: { balance: amount }, $setOnInsert: { username: target } }, { upsert: true });
+							await (await import('../../services/balanceAdapter')).creditWallet(target, amount, target, channelId);
 						}
 					}
 

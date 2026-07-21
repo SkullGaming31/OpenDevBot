@@ -40,7 +40,7 @@ test('concurrent deposits and transfers remain consistent', async () => {
 	await Promise.all(depositTasks);
 
 	// At this point total balance should be 100 * 10 = 1000
-	const totalAfterDeposits = (await BankAccount.find({})).reduce((s, a) => s + a.balance, 0 as number);
+	const totalAfterDeposits = (await BankAccount.find({})).reduce((s, a) => s + (a.balance.bank ?? 0), 0 as number);
 	expect(totalAfterDeposits).toBe(1000);
 
 	// Now perform concurrent transfers between random users
@@ -56,11 +56,11 @@ test('concurrent deposits and transfers remain consistent', async () => {
 
 	// The sum across all accounts must still equal 1000
 	const finalAccounts = await BankAccount.find({});
-	const finalTotal = finalAccounts.reduce((s, a) => s + a.balance, 0 as number);
+	const finalTotal = finalAccounts.reduce((s, a) => s + (a.balance.bank ?? 0), 0 as number);
 	expect(finalTotal).toBe(1000);
 
 	// Also verify no account became negative
 	for (const a of finalAccounts) {
-		expect(a.balance).toBeGreaterThanOrEqual(0);
+		expect(a.balance.bank).toBeGreaterThanOrEqual(0);
 	}
 });

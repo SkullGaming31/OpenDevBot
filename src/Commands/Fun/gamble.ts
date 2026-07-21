@@ -4,12 +4,7 @@ import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-/**
- * Bug: Not deducting correct amount when losing, FIXED
- */
-// ...
 
-// ...
 
 const gamble: Command = {
 	name: 'gamble',
@@ -63,15 +58,15 @@ const gamble: Command = {
 			let amount: number;
 
 			if (args[0] === 'all') {
-				// Gamble all balance
-				amount = Math.max(0, acct?.balance ?? 0); // Ensure amount is positive
+				// Gamble all bank balance
+				amount = Math.max(0, acct?.balance?.bank ?? 0); // Ensure amount is positive
 			} else if (args[0].endsWith('%')) {
 				// Gamble a percentage of the balance
 				const percentage = parseInt(args[0].slice(0, -1));
 				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
 					return chatClient.say(channel, `Please provide a valid percentage for gambling. Usage: ${gamble.usage}`);
 				}
-				amount = Math.floor((acct?.balance ?? 0) * (percentage / 100));
+				amount = Math.floor((acct?.balance?.bank ?? 0) * (percentage / 100));
 			} else {
 				// Gamble a specific amount
 				amount = parseInt(args[0]);

@@ -232,6 +232,31 @@
       cursor: default;
     }
 
+    /* ---------- Top navigation ---------- */
+    .main-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: 18px;
+    }
+
+    .nav-item {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: var(--bg);
+      background: var(--text-dim);
+      font-weight: 700;
+    }
+
     .user-chip {
       display: flex;
       align-items: center;
@@ -571,7 +596,7 @@
   <div id="app"></div>
 
   <script>
-    const { createApp, ref, reactive, computed, onMounted } = Vue;
+    const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
 
     createApp({
       setup() {
@@ -581,6 +606,7 @@
 
         const connected = ref(false);
         const user = ref(null);
+        const activeView = ref('dashboard');
 
         const channels = ref(['skullgaming31', 'opendevbot']);
         const joinInput = ref('');
@@ -595,6 +621,33 @@
         const total = ref(items.value.length);
         const selected = ref(new Set());
         const toast = ref('');
+
+        // Economy panel state
+        const economyAccounts = ref([]);
+        const economyTotal = ref(0);
+        const economyPage = ref(1);
+        const economyLimit = 20;
+
+        async function loadEconomy() {
+          if (!hasBridge) {
+            // demo fallback
+            economyAccounts.value = [
+              { userId: '12345', balance: 5000, updatedAt: new Date().toISOString() },
+              { userId: 'alice', balance: 1200, updatedAt: new Date().toISOString() },
+            ];
+            economyTotal.value = economyAccounts.value.length;
+            return;
+          }
+          try {
+            const res = await window.adminApi.fetch(`/api/v1/admin/economy/accounts?page=${economyPage.value}&limit=${economyLimit}`);
+            economyAccounts.value = res.items || [];
+            economyTotal.value = res.total || economyAccounts.value.length;
+          } catch (e) {
+            console.debug('Failed to load economy', e);
+            economyAccounts.value = [];
+            economyTotal.value = 0;
+          }
+        }
 
         function showToast(msg) {
           toast.value = msg;
@@ -736,6 +789,7 @@
           }
         }
 
+        let refreshInterval = null;
         onMounted(() => {
           if (hasBridge) {
             window.twitchApi.onSignupComplete((result) => {
@@ -753,14 +807,33 @@
           loadStatus();
           setInterval(loadStatus, 120000);
           setInterval(() => { liveUptimeSeconds.value += 1; }, 1000);
+
+          // Auto-refresh every minute: refresh Economy if active, otherwise refresh dashboard panels
+          refreshInterval = window.setInterval(() => {
+            try {
+              if (activeView.value === 'economy') {
+                loadEconomy();
+              } else {
+                // Dashboard view: refresh webhooks and eventsubs
+                loadQueue();
+                loadEventSubs();
+              }
+            } catch (e) { console.debug('Auto-refresh error', e); }
+          }, 60 * 1000);
+        });
+
+        onUnmounted(() => {
+          if (refreshInterval) clearInterval(refreshInterval);
         });
 
         return {
-          connected, user, channels, joinInput, status, items, page, total, totalPages,
+          connected, user, activeView, channels, joinInput, status, items, page, total, totalPages,
           selected, toast, signUp, joinChannel, partChannel, setStatus, toggleSelect,
           requeue, remove, fmtTime, limit, botStatus, liveUptimeSeconds, formatUptime, openLogs,
           // EventSub panel bindings
           esItems, esTotal, esPage, esPageItems, esTotalPages, loadEventSubs, esPrevPage, esNextPage,
+          // Economy
+          economyAccounts, economyTotal, economyPage, economyLimit, loadEconomy,
           prevPage: () => { if (page.value > 1) { page.value--; loadQueue(); } },
           nextPage: () => { if (page.value < totalPages.value) { page.value++; loadQueue(); } },
         };
@@ -774,6 +847,10 @@
           <div class="sub">local admin · localhost</div>
         </div>
       </div>
+      <div class="main-nav">
+        <button class="nav-item" :class="{ active: activeView === 'dashboard' }" @click="activeView='dashboard'">Dashboard</button>
+        <button class="nav-item" :class="{ active: activeView === 'economy' }" @click="(activeView='economy', loadEconomy())">Economy</button>
+      </div>
       <div class="header-right">
         <!-- signup/user area -->
         <div v-if="connected" class="user-chip">
@@ -785,7 +862,7 @@
       </div>
     </header>
 
-    <main>
+    <main v-if="activeView !== 'economy'">
       <div class="col-left">
       <section class="panel">
         <div class="panel-head">
@@ -956,6 +1033,42 @@
 
       </div>
 
+    </main>
+
+    <!-- Economy view -->
+    <main v-if="activeView === 'economy'">
+      <div style="max-width:1180px;margin:0 auto;padding:26px 32px 40px;">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">Economy</div>
+              <h2>Accounts</h2>
+            </div>
+            <div class="tabs">
+              <button class="tab" @click="loadEconomy">refresh</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <table v-if="economyAccounts.length">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Balance</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="acc in economyAccounts" :key="acc.userId">
+                  <td class="mono-id">{{ acc.userId }}</td>
+                  <td>{{ acc.balance }}</td>
+                  <td class="mono-id">{{ new Date(acc.updatedAt).toLocaleString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty">No economy data available. Ensure the admin API exposes /api/v1/admin/economy/accounts</div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <div class="toast" v-if="toast">{{ toast }}</div>

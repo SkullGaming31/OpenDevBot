@@ -26,6 +26,15 @@
 * [x] change channelPoints Message to display only on the console when channelpoints rewardId is not found.
 * [x] Que/delay webhooks being sent to avoid being rate limited by the Discord API
 
+## Remaining work
 
-FIX:
-* [x] (node:2288) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+* [ ] Finish the test-fix sweep and make the full test suite (`npm test`) pass deterministically.
+* [ ] Remove temporary diagnostic `console.log` lines added during debugging and re-run tests.
+* [ ] Harden mirroring logic: avoid upserts with null keys, add guards before mirror writes, and make `MIRROR_TO_USERMODEL` explicitly toggleable (default OFF for migrations).
+* [ ] Finalize and validate migration tooling for canonicalizing user IDs (dry-run + `--apply`, batching/limit, backups).
+* [ ] Ensure all commands use the correct API: wallet ops via `balanceAdapter` (short-lived/game bets) and bank ops via `economyService` (persistent ops), and update any remaining command code/tests.
+* [ ] Add/expand integration tests for transactional flows (heist/replica-set transactions) and outbox/migration scenarios.
+* [ ] Fix remaining TypeScript/Jest issues (unused imports like in `src/Commands/Fun/rps.ts`) and run `tsc`/lint to clean up errors.
+* [ ] Update docs: `NOTES.txt`, `README.md`, and migration instructions showing `MIRROR_TO_USERMODEL` usage and rollback guidance.
+* [ ] Run formatting and prepare a tidy commit/PR with descriptive changes and test results.
+

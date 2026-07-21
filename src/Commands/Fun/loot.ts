@@ -141,7 +141,8 @@ const robber: Command = {
 				void percentageToTake;
 
 				// Calculate the robbery amount, ensuring it doesn't exceed 15% of the bot's balance
-				const botUserBalance = randomBotUser.balance || 0;
+				const botKey = randomBotUser.id ?? randomBotUser.username;
+				const botUserBalance = await (await import('../../services/balanceAdapter')).getWalletBalance(botKey, randomBotUser.username, msg.channelId);
 				const maxRobberyAmount = Math.floor(botUserBalance * 0.15); // 15% of the balance
 				robberyAmount = Math.min(randomInt(1, 15), maxRobberyAmount); // Take a random percentage between 1-15%
 

@@ -374,7 +374,7 @@ const heist: Command = {
 				const needed = amount;
 
 				// Fetch candidate donors (limit to a few times sample size to randomize)
-				const candidates = await BankAccount.find({ balance: { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();
+				const candidates = await BankAccount.find({ 'balance.bank': { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();
 				if (!candidates || candidates.length === 0) {
 					// No eligible donors — heist fails
 					loot = 0;
@@ -396,7 +396,7 @@ const heist: Command = {
 						session.startTransaction();
 						for (const donor of donors) {
 							if (collected >= needed) break;
-							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
 							const take = Math.min(maxFromDonor, needed - collected);
 							if (take <= 0) continue;
 							await economyService.withdraw(donor.userId, take, session);
@@ -421,7 +421,7 @@ const heist: Command = {
 						// Non-transactional fallback: attempt to withdraw from each donor individually
 						for (const donor of donors) {
 							if (collected >= needed) break;
-							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
 							const take = Math.min(maxFromDonor, needed - collected);
 							if (take <= 0) continue;
 							try {

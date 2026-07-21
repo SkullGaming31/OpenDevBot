@@ -262,6 +262,101 @@ export default function createApp(): express.Application {
 		}
 	});
 
+	// Admin: list economy bank accounts (paginated)
+	app.get('/api/v1/admin/economy/accounts', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 20 : 20;
+			if (limit < 1) limit = 1;
+			if (limit > 500) limit = 500;
+			const total = await BankAccount.countDocuments({});
+			const items = await BankAccount.find({}, { __v: 0 }).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			return res.json({ total, page, limit, items });
+		} catch (e) {
+			logger.error('Failed to list economy accounts', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: get single account details (bank + legacy wallet when available)
+	app.get('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const { UserModel } = await import('../database/models/userModel');
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			const bank = await BankAccount.findOne({ userId }).lean();
+			const legacy = await UserModel.findOne({ $or: [{ id: userId }, { username: userId }] }).lean();
+			return res.json({ bank, legacy });
+		} catch (e) {
+			logger.error('Failed to get economy account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: list transactions (optionally filter by userId)
+	app.get('/api/v1/admin/economy/transactions', requireAdmin, async (req, res) => {
+		try {
+			const TransactionLog = (await import('../database/models/transactionLog')).default;
+			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 50 : 50;
+			if (limit < 1) limit = 1;
+			if (limit > 1000) limit = 1000;
+			const userId = typeof req.query.userId === 'string' ? req.query.userId.trim() : undefined;
+			const filter: Record<string, unknown> = {};
+			if (userId) filter.$or = [{ from: userId }, { to: userId }];
+			const total = await TransactionLog.countDocuments(filter);
+			const items = await TransactionLog.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			return res.json({ total, page, limit, items });
+		} catch (e) {
+			logger.error('Failed to list transactions', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: adjust account balance (deposit if amount>0, withdraw if amount<0). If `force` is true, perform blind $inc (no insufficient funds check).
+	app.post('/api/v1/admin/economy/account/:userId/adjust', requireAdmin, async (req, res) => {
+		try {
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			const amountRaw = req.body?.amount ?? req.query.amount;
+			const amount = Number(amountRaw);
+			if (!Number.isFinite(amount) || amount === 0) return res.status(400).json({ error: 'amount must be non-zero number' });
+			const force = !!req.body?.force || req.query.force === '1' || req.query.force === 'true';
+			const reason = req.body?.reason || req.query.reason || 'admin_adjust';
+			const economyService = await import('../services/economyService');
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			if (amount > 0) {
+				// deposit via service so TransactionLog is written and mirroring happens
+				await economyService.deposit(userId, amount, undefined, { admin: true, reason });
+				const bank = await BankAccount.findOne({ userId }).lean();
+				return res.json({ ok: true, bank });
+			} else {
+				// negative amount -> withdraw
+				if (force) {
+					// blind decrement (force)
+					const acct = await BankAccount.findOneAndUpdate({ userId }, { $inc: { balance: amount } }, { upsert: true, returnDocument: 'after' }).lean();
+					// create a transaction log entry to record the admin action
+					const TransactionLog = (await import('../database/models/transactionLog')).default;
+					await TransactionLog.create([{ type: 'withdraw', from: userId, amount: Math.abs(amount), meta: { admin: true, reason } }]);
+					return res.json({ ok: true, bank: acct });
+				} else {
+					try {
+						await economyService.withdraw(userId, Math.abs(amount));
+						const bank = await BankAccount.findOne({ userId }).lean();
+						return res.json({ ok: true, bank });
+					} catch (err) {
+						return res.status(400).json({ error: (err instanceof Error) ? err.message : String(err) });
+					}
+				}
+			}
+		} catch (e) {
+			logger.error('Failed to adjust account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
 	// Serve admin EventSub UI
 	app.get('/admin/eventsubs', requireAdmin, (_req: express.Request, res: express.Response) => {
 		try {
@@ -447,6 +542,7 @@ export default function createApp(): express.Application {
 					<li><a href="/admin/webhooks">Admin UI — Webhook Queue</a></li>
 					<li><a href="/api/v1/admin/webhooks?status=pending&page=1&limit=50">API: List webhooks (GET)</a></li>
 					<li>API: Requeue (POST) — <code>/api/v1/admin/webhooks/requeue</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
+					<li><a href="/api/v1/admin/economy/accounts?page=1&limit=20">API: List economy accounts (GET)</a></li>
 					<li>API: Delete (DELETE) — <code>/api/v1/admin/webhooks</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
 				</ul>
 				<p class="small">Note: the UI will store the token in your browser's localStorage and send it as <code>x-admin-token</code>.</p>

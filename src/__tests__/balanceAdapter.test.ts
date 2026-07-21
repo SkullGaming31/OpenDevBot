@@ -15,6 +15,10 @@ describe('balanceAdapter', () => {
 		const updateOne = (jest.fn() as any).mockResolvedValue(undefined);
 		jest.doMock('../database/models/userModel', () => ({ UserModel: { updateOne } }));
 
+		// Mock BankAccount to avoid real DB calls in unit tests
+		const bankMock: any = { updateOne: (jest.fn() as any).mockResolvedValue(undefined), findOneAndUpdate: (jest.fn() as any).mockResolvedValue(undefined) };
+		jest.doMock('../database/models/bankAccount', () => ({ default: bankMock }));
+
 		const warn = (jest.fn() as any);
 		jest.doMock('../util/logger', () => ({ warn }));
 
@@ -56,6 +60,10 @@ describe('balanceAdapter', () => {
 		const updateOne = (jest.fn() as any).mockResolvedValue(undefined);
 		const findOneAndUpdate = (jest.fn() as any).mockResolvedValue({});
 		jest.doMock('../database/models/userModel', () => ({ UserModel: { updateOne, findOneAndUpdate } }));
+
+		// Mock BankAccount to avoid real DB calls in unit tests
+		const bankMock2: any = { updateOne: (jest.fn() as any).mockResolvedValue(undefined), findOneAndUpdate: (jest.fn() as any).mockResolvedValue({}) };
+		jest.doMock('../database/models/bankAccount', () => ({ default: bankMock2 }));
 		const warn = (jest.fn() as any);
 		jest.doMock('../util/logger', () => ({ warn }));
 
@@ -131,7 +139,7 @@ test('deposit mirrors to UserModel and creates BankAccount via economyService', 
 
 	const acct = await BankAccount.findOne({ userId: '12345' }).lean();
 	expect(acct).not.toBeNull();
-	expect(acct!.balance).toBe(50);
+	expect(acct!.balance.bank).toBe(50);
 });
 
 test('debitWallet fails when insufficient funds and succeeds when enough', async () => {

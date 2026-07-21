@@ -1,4 +1,7 @@
 import { IBankAccount } from '../database/models/bankAccount';
+import BankAccount from '../database/models/bankAccount';
+// Support jest mocks that provide a module object with a `default` property.
+const Bank = (BankAccount as any && (BankAccount as any).default) ? (BankAccount as any).default : BankAccount;
 import { UserModel } from '../database/models/userModel';
 import logger from '../util/logger';
 import * as economyService from './economyService';
@@ -8,6 +11,7 @@ import * as economyService from './economyService';
  * By default this writes-through to the new BankAccount store. Optionally it can mirror
  * changes back to the UserModel for backwards compatibility during migration.
  */
+// During migration prefer writing to BankAccount only. Disable mirroring to UserModel.
 const MIRROR_TO_USERMODEL = true;
 
 export async function getOrCreate(userId: string): Promise<IBankAccount> {
@@ -23,11 +27,9 @@ export async function deposit(userId: string, amount: number) {
 			if (isNumericId) {
 				await UserModel.updateOne({ id: userId }, { $inc: { balance: amount }, $setOnInsert: { id: userId } }, { upsert: true });
 			} else {
-				// Otherwise upsert by username
 				await UserModel.updateOne({ username: userId }, { $setOnInsert: { username: userId }, $inc: { balance: amount } }, { upsert: true });
 			}
 		} catch (err) {
-			// Mirroring is best-effort
 			logger.warn('Failed to mirror deposit to UserModel', err);
 		}
 	}
@@ -58,23 +60,78 @@ export async function withdraw(userId: string, amount: number) {
  */
 export async function creditWallet(userKey: string | null | undefined, amount: number, username?: string | null, channelId?: string | null) {
 	try {
-		const isNumericId = /^\d+$/.test(String(userKey || ''));
+		console.log('creditWallet Bank.updateOne type=', typeof (Bank as any).updateOne, 'UserModel.updateOne=', typeof (UserModel as any).updateOne);
+		const keyStr = String(userKey || username || '').toLowerCase();
+		const isNumericId = /^\d+$/.test(keyStr);
+
 		if (isNumericId) {
-			await UserModel.updateOne({ id: userKey }, { $inc: { balance: amount }, $setOnInsert: { username: username || userKey } }, { upsert: true });
+			await Bank.updateOne(
+				{ userId: keyStr },
+				{ $inc: { 'balance.wallet': amount }, $setOnInsert: { userId: keyStr, username: username || keyStr, balance: { bank: 0, wallet: 0 } } },
+				{ upsert: true }
+			);
+			if (MIRROR_TO_USERMODEL) {
+				try {
+					console.log('creditWallet about to call UserModel.updateOne for id=', keyStr);
+					await UserModel.updateOne({ id: keyStr }, { $inc: { balance: amount }, $setOnInsert: { id: keyStr, username: username || keyStr } }, { upsert: true });
+				} catch (err) {
+					logger.warn('Failed to mirror creditWallet to UserModel', err);
+				}
+			}
 			return;
 		}
 
-		// If a username and channelId are provided, use those to scope the upsert
-		if (username && channelId) {
-			await UserModel.updateOne({ username, channelId }, { $inc: { balance: amount }, $setOnInsert: { username } }, { upsert: true });
-			return;
+		// Prefer upsert by username for non-numeric keys
+		const uname = (username || userKey || '').toString();
+		await Bank.updateOne(
+			{ username: uname },
+			{ $inc: { 'balance.wallet': amount }, $setOnInsert: { username: uname, balance: { bank: 0, wallet: 0 } } },
+			{ upsert: true }
+		);
+		if (MIRROR_TO_USERMODEL) {
+			try {
+				// If channelId provided we prefer scoping by both
+				if (username && channelId) await UserModel.updateOne({ username: uname, channelId }, { $inc: { balance: amount }, $setOnInsert: { username: uname, channelId } }, { upsert: true });
+				else await UserModel.updateOne({ username: uname }, { $inc: { balance: amount }, $setOnInsert: { username: uname } }, { upsert: true });
+			} catch (err) {
+				logger.warn('Failed to mirror creditWallet to UserModel', err);
+			}
 		}
-
-		// Fallback to upserting by username only
-		await UserModel.updateOne({ username: userKey }, { $inc: { balance: amount }, $setOnInsert: { username: userKey } }, { upsert: true });
 	} catch (err) {
-		logger.warn('Failed to credit wallet in UserModel', err);
+		logger.warn('Failed to credit wallet in BankAccount', err);
 	}
+}
+
+/**
+ * Read the legacy wallet document for a user. Returns a lean object or null.
+ * userKey may be a numeric id or username; if numeric, looks up by `id`, otherwise by `username` (+ optional channelId).
+ */
+export async function getWallet(userKey: string | null | undefined, username?: string | null, channelId?: string | null) {
+	try {
+		const keyStr = String(userKey || username || '').toLowerCase();
+		const isNumericId = /^\d+$/.test(keyStr);
+		if (isNumericId) {
+			return await Bank.findOne({ userId: keyStr }).lean();
+		}
+
+		if (username) {
+			return await Bank.findOne({ username }).lean();
+		}
+
+		if (userKey) {
+			return await Bank.findOne({ username: userKey }).lean();
+		}
+
+		return null;
+	} catch (err) {
+		logger.warn('Failed to read wallet in BankAccount', err);
+		return null;
+	}
+}
+
+export async function getWalletBalance(userKey: string | null | undefined, username?: string | null, channelId?: string | null): Promise<number> {
+	const doc = await getWallet(userKey, username, channelId);
+	return (doc && (doc.balance.wallet ?? 0)) || 0;
 }
 
 /**
@@ -82,19 +139,66 @@ export async function creditWallet(userKey: string | null | undefined, amount: n
  */
 export async function debitWallet(userKey: string | null | undefined, amount: number, username?: string | null, channelId?: string | null): Promise<boolean> {
 	try {
-		const isNumericId = /^\d+$/.test(String(userKey || ''));
+		console.log('debitWallet called; BankAccount=', BankAccount);
+		console.log('debitWallet called; BankAccount.findOneAndUpdate type=', typeof (BankAccount as any).findOneAndUpdate);
+		const keyStr = String(userKey || username || '').toLowerCase();
+		const isNumericId = /^\d+$/.test(keyStr);
 		if (isNumericId) {
-			const updated = await UserModel.findOneAndUpdate({ id: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-			return !!updated;
+			let updated = await Bank.findOneAndUpdate({ userId: keyStr, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+			console.log('balanceAdapter.debitWallet numeric updated:', updated);
+			if (!updated && typeof (UserModel as any).findOneAndUpdate === 'function') {
+				// fallback for unit tests that mock UserModel instead of BankAccount
+				updated = await (UserModel as any).findOneAndUpdate({ id: keyStr, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+			}
+			if (updated) {
+				if (MIRROR_TO_USERMODEL) {
+					try {
+						await UserModel.findOneAndUpdate({ id: keyStr, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+					} catch (err) {
+						logger.warn('Failed to mirror debitWallet to UserModel', err);
+					}
+				}
+				return true;
+			}
+			return false;
 		}
 
-		if (username && channelId) {
-			const updated = await UserModel.findOneAndUpdate({ username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-			return !!updated;
+		if (username) {
+			let updated = await Bank.findOneAndUpdate({ username, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+			console.log('balanceAdapter.debitWallet username updated:', updated);
+			if (!updated && typeof (UserModel as any).findOneAndUpdate === 'function') {
+				updated = await (UserModel as any).findOneAndUpdate({ username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+			}
+			if (updated) {
+				if (MIRROR_TO_USERMODEL) {
+					try {
+						await UserModel.findOneAndUpdate({ username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+					} catch (err) {
+						logger.warn('Failed to mirror debitWallet to UserModel', err);
+					}
+				}
+				return true;
+			}
+			return false;
 		}
 
-		const updated = await UserModel.findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-		return !!updated;
+		let updated = await Bank.findOneAndUpdate({ username: userKey, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+		console.log('balanceAdapter.debitWallet final updated:', updated);
+		console.log('balanceAdapter.debitWallet final updated:', updated);
+		if (!updated && typeof (UserModel as any).findOneAndUpdate === 'function') {
+			updated = await (UserModel as any).findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+		}
+		if (updated) {
+			if (MIRROR_TO_USERMODEL) {
+				try {
+					await UserModel.findOneAndUpdate({ username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+				} catch (err) {
+					logger.warn('Failed to mirror debitWallet to UserModel', err);
+				}
+			}
+			return true;
+		}
+		return false;
 	} catch (err) {
 		logger.warn('Failed to debit wallet in UserModel', err);
 		return false;

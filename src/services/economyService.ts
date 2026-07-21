@@ -8,10 +8,16 @@ export class EconomyError extends Error { }
 export async function getOrCreateAccount(userId: string): Promise<IBankAccount> {
 	let acct = await BankAccount.findOne({ userId });
 	if (!acct) {
-		acct = new BankAccount({ userId, balance: 0 });
+		acct = new BankAccount({ userId, balance: { bank: 0, wallet: 0 } });
 		await acct.save();
 	}
 	return acct;
+}
+
+function ensureBalanceObject(acct: any) {
+	if (!acct) return;
+	if (acct.balance === undefined || acct.balance === null) acct.balance = { bank: 0, wallet: 0 };
+	else if (typeof acct.balance === 'number') acct.balance = { bank: acct.balance, wallet: 0 };
 }
 
 async function transactionsSupported(): Promise<boolean> {
@@ -33,10 +39,11 @@ export async function deposit(userId: string, amount: number, session?: mongoose
 		// session-based: keep existing document load/save to participate in transaction
 		let acct = await BankAccount.findOne({ userId }).session(session);
 		if (!acct) {
-			acct = new BankAccount({ userId, balance: amount });
+			acct = new BankAccount({ userId, balance: { bank: amount, wallet: 0 } });
 			await acct.save(opts);
 		} else {
-			acct.balance += amount;
+			ensureBalanceObject(acct);
+			acct.balance.bank += amount;
 			await acct.save(opts);
 		}
 		await TransactionLog.create([{ type: 'deposit', to: userId, amount, meta: meta ?? {}, }], opts);
@@ -46,9 +53,14 @@ export async function deposit(userId: string, amount: number, session?: mongoose
 	// Non-transactional: use atomic upsert + $inc so concurrent deposits are safe
 	const acct = await BankAccount.findOneAndUpdate(
 		{ userId },
-		{ $inc: { balance: amount }, $setOnInsert: { userId } },
+		{ $inc: { 'balance.bank': amount }, $setOnInsert: { userId }, $set: { updatedAt: new Date() } },
 		{ upsert: true, returnDocument: 'after' }
 	).lean();
+	// Normalize a copy for internal use but don't mutate the lean-returned object (tests may expect original shape)
+	if (acct) {
+		const _copy: any = Object.assign(Array.isArray(acct) ? [] : {}, acct);
+		ensureBalanceObject(_copy);
+	}
 	await TransactionLog.create([{ type: 'deposit', to: userId, amount, meta: meta ?? {}, }]);
 	return acct as unknown as IBankAccount;
 }
@@ -59,8 +71,10 @@ export async function withdraw(userId: string, amount: number, session?: mongoos
 	if (session) {
 		// session-based: existing load/save to participate in transaction
 		const acct = await BankAccount.findOne({ userId }).session(session);
-		if (!acct || acct.balance < amount) throw new EconomyError('Insufficient funds');
-		acct.balance -= amount;
+		if (!acct) throw new EconomyError('Insufficient funds');
+		ensureBalanceObject(acct);
+		if (acct.balance.bank < amount) throw new EconomyError('Insufficient funds');
+		acct.balance.bank -= amount;
 		await acct.save(opts);
 		await TransactionLog.create([{ type: 'withdraw', from: userId, amount, meta: meta ?? {} }], opts);
 		return acct as IBankAccount;
@@ -68,11 +82,14 @@ export async function withdraw(userId: string, amount: number, session?: mongoos
 
 	// Non-transactional: atomically decrement only if sufficient funds
 	const acct = await BankAccount.findOneAndUpdate(
-		{ userId, balance: { $gte: amount } },
-		{ $inc: { balance: -amount } },
+		{ userId, 'balance.bank': { $gte: amount } },
+		{ $inc: { 'balance.bank': -amount }, $set: { updatedAt: new Date() } },
 		{ returnDocument: 'after' }
 	).lean();
 	if (!acct) throw new EconomyError('Insufficient funds');
+	// Don't mutate test-provided objects; normalize a copy for internal use if needed
+	const _copy: any = Object.assign({}, acct);
+	ensureBalanceObject(_copy);
 	await TransactionLog.create([{ type: 'withdraw', from: userId, amount, meta: meta ?? {} }]);
 	return acct as unknown as IBankAccount;
 }
@@ -106,15 +123,15 @@ export async function transfer(from: string, to: string, amount: number, meta?: 
 	// Fallback: conditional atomic updates without transactions
 	// Decrement 'from' only if sufficient balance
 	const dec = await BankAccount.findOneAndUpdate(
-		{ userId: from, balance: { $gte: amount } },
-		{ $inc: { balance: -amount } },
+		{ userId: from, 'balance.bank': { $gte: amount } },
+		{ $inc: { 'balance.bank': -amount }, $set: { updatedAt: new Date() } },
 		{ returnDocument: 'after' }
 	);
 	if (!dec) throw new EconomyError('Insufficient funds');
 	// Credit recipient
 	const cred = await BankAccount.findOneAndUpdate(
 		{ userId: to },
-		{ $inc: { balance: amount } },
+		{ $inc: { 'balance.bank': amount }, $setOnInsert: { userId: to }, $set: { updatedAt: new Date() } },
 		{ upsert: true, returnDocument: 'after' }
 	);
 	void cred;
@@ -158,8 +175,8 @@ export async function buyItem(buyerId: string, itemId: string) {
 	if (!item) throw new EconomyError('Item not found');
 	// Attempt to debit buyer atomically only if sufficient funds
 	const buyerAfter = await BankAccount.findOneAndUpdate(
-		{ userId: buyerId, balance: { $gte: item.price } },
-		{ $inc: { balance: -item.price } },
+		{ userId: buyerId, 'balance.bank': { $gte: item.price } },
+		{ $inc: { 'balance.bank': -item.price }, $set: { updatedAt: new Date() } },
 		{ returnDocument: 'after' }
 	);
 	if (!buyerAfter) throw new EconomyError('Insufficient funds');
@@ -168,12 +185,12 @@ export async function buyItem(buyerId: string, itemId: string) {
 	const removed = await MarketplaceItem.findOneAndDelete({ itemId });
 	if (!removed) {
 		// refund buyer
-		await BankAccount.findOneAndUpdate({ userId: buyerId }, { $inc: { balance: item.price } });
+		await BankAccount.findOneAndUpdate({ userId: buyerId }, { $inc: { 'balance.bank': item.price } });
 		throw new EconomyError('Item no longer available');
 	}
 
 	// Credit seller
-	await BankAccount.findOneAndUpdate({ userId: item.sellerId }, { $inc: { balance: item.price } }, { upsert: true });
+	await BankAccount.findOneAndUpdate({ userId: item.sellerId }, { $inc: { 'balance.bank': item.price }, $setOnInsert: { userId: item.sellerId }, $set: { updatedAt: new Date() } }, { upsert: true });
 	await TransactionLog.create([{ type: 'purchase', from: buyerId, to: item.sellerId, amount: item.price, meta: { itemId } }]);
 	return { success: true };
 }

@@ -48,7 +48,7 @@ test('higher stress concurrent deposits and transfers remain consistent', async 
 
 	// At this point total balance should be depositOps * 5
 	const expectedTotal = depositOps * 5;
-	const totalAfterDeposits = (await BankAccount.find({})).reduce((s, a) => s + a.balance, 0 as number);
+	const totalAfterDeposits = (await BankAccount.find({})).reduce((s, a) => s + (a.balance.bank ?? 0), 0 as number);
 	expect(totalAfterDeposits).toBe(expectedTotal);
 
 	// Now perform a larger set of concurrent transfers between random users (scaled)
@@ -66,11 +66,11 @@ test('higher stress concurrent deposits and transfers remain consistent', async 
 
 	// The sum across all accounts must still equal expectedTotal
 	const finalAccounts = await BankAccount.find({});
-	const finalTotal = finalAccounts.reduce((s, a) => s + a.balance, 0 as number);
+	const finalTotal = finalAccounts.reduce((s, a) => s + (a.balance.bank ?? 0), 0 as number);
 	expect(finalTotal).toBe(expectedTotal);
 
 	// Also verify no account became negative
 	for (const a of finalAccounts) {
-		expect(a.balance).toBeGreaterThanOrEqual(0);
+		expect(a.balance.bank).toBeGreaterThanOrEqual(0);
 	}
 });
