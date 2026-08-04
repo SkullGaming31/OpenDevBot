@@ -23,7 +23,7 @@
     "@twurple/auth": "^8.1.4",
     "@twurple/chat": "^8.1.4",
     "@twurple/eventsub-ws": "^8.1.4",
-    "axios": "^1.16.1",
+    "axios": "^1.18.0",
     "countdown": "^2.6.0",
     "discord-api-types": "^0.38.47",
     "discord.js": "^14.27.0",
