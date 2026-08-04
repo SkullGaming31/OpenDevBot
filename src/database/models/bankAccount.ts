@@ -11,12 +11,21 @@ export interface IBankAccount extends Document {
 	updatedAt: Date;
 }
 
+const balanceDefault = { bank: 0, wallet: 0 };
+
 const bankAccountSchema = new Schema<IBankAccount>({
 	userId: { type: String, required: true, unique: true },
 	username: { type: String, required: false },
+	// Accept legacy numeric balance values by normalizing them into { bank, wallet }
 	balance: {
-		bank: { type: Number, required: true, default: 0 },
-		wallet: { type: Number, required: true, default: 0 },
+		type: Schema.Types.Mixed,
+		required: true,
+		default: balanceDefault,
+		set: (v: unknown) => {
+			if (typeof v === 'number') return { bank: v, wallet: 0 };
+			if (v == null) return balanceDefault;
+			return v as unknown as Record<string, unknown>;
+		}
 	},
 }, { timestamps: true });
 
