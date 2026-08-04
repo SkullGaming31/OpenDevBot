@@ -35,13 +35,15 @@ const dig: Command = {
 		const adapter = await import('../../services/balanceAdapter');
 		let currentBalance = 0;
 		// Prefer using a mocked adapter.getWalletBalance in unit tests (jest.fn exposes .mock).
-		if (typeof adapter.getWalletBalance === 'function' && (adapter.getWalletBalance as any).mock) {
+		if (typeof adapter.getWalletBalance === 'function' && ((adapter.getWalletBalance as unknown) as { mock?: unknown }).mock) {
 			currentBalance = await adapter.getWalletBalance(msg.userInfo?.userId ?? username, username, channelId);
 		} else {
 			// Fallback to UserModel; handle test mocks that return plain object (no .lean())
-			const maybe = await UserModel.findOne({ username } as any);
-			const u = maybe && typeof (maybe as any).lean === 'function' ? await (maybe as any).lean() : maybe;
-			currentBalance = (u && (u.balance ?? 0)) || 0;
+			const maybe = await UserModel.findOne({ username });
+			const maybeDoc = maybe as unknown;
+			const leanFn = (maybeDoc as { lean?: (...args: unknown[]) => unknown }).lean;
+			const u = leanFn && typeof leanFn === 'function' ? await (leanFn as (...args: unknown[]) => Promise<unknown>)(/* no args */) : maybe;
+			currentBalance = Number((u && ((u as { balance?: number }).balance)) ?? 0);
 		}
 		if (currentBalance < digAmount) return chatClient.say(channel, 'You don\'t have enough balance to dig.');
 

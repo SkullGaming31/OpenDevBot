@@ -11,6 +11,13 @@ contextBridge.exposeInMainWorld('adminApi', {
 		ipcRenderer.invoke('admin:fetch', path, opts)
 });
 
+contextBridge.exposeInMainWorld('monitorApi', {
+	onEvent: (callback: (entry: { event: string; payload: unknown; timestamp: string }) => void) =>
+		ipcRenderer.on('monitor:new', (_event, entry) => callback(entry))
+	,
+	setVisibility: (map: Record<string, boolean>) => ipcRenderer.send('monitor:visibilityUpdate', map)
+});
+
 contextBridge.exposeInMainWorld('logsApi', {
 	openWindow: () => ipcRenderer.send('logs:open'),
 	getHistory: () => ipcRenderer.invoke('logs:getHistory'),

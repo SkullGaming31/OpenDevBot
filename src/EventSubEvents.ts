@@ -18,6 +18,7 @@ import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
 import subscriptionLimiter from './EventSub/subscriptionLimiter';
 import FollowMessage from './database/models/followMessages';
+import { broadcast } from './util/monitorBroadcaster';
 
 
 export async function initializeTwitchEventSub(): Promise<void> {
@@ -55,11 +56,13 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 				try {
 					await sleep(2000);
+					try { broadcast('eventsub:streamOnline', { broadcaster: info.name, displayName }); } catch { }
 					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'green',
 						message: `${displayName} has Begun the stream — thank you for Hanging out`,
 					});
 					await sleep(2000);
+					try { broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }); } catch { }
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` });
@@ -222,6 +225,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					})
 					.setTimestamp();
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [giftedSubs] });
+				try { broadcast('eventsub:gift', { broadcaster: info.name, gifter: gift.gifterDisplayName, amount: gift.amount }); } catch { }
 			},
 		);
 		void eventSubListener.onChannelSubscriptionMessage(
@@ -262,6 +266,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					.setTimestamp();
 				void resubEmbed;
 				try {
+					try { broadcast('eventsub:resub', { broadcaster: info.name, user: s.userDisplayName, months: s.cumulativeMonths }); } catch { }
 					// await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [resubEmbed] });
 					await chatClient.say(
 						userInfo.name,
@@ -357,6 +362,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 					await chatClient.say(info.name, `${randomMessage}`);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [followEmbed] });
+					try { broadcast('eventsub:follow', { broadcaster: info.name, user: userInfo.displayName }); } catch { }
 				} catch (error) {
 					logger.error(
 						'An error occurred in the follower event handler:',
@@ -406,6 +412,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`,
 					);
 					// await twitchActivity.send({ embeds: [subEmbed] });
+					try { broadcast('eventsub:subscription', { broadcaster: info.name, user: s.userName, tier: s.tier }); } catch { }
 				} catch (error) {
 					logger.error(error);
 				}
@@ -454,6 +461,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							`${cheer.userDisplayName} has cheered ${cheer.bits} bits in ${info.name}`,
 						);
 						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [cheerEmbed] });
+						try { broadcast('eventsub:cheer', { broadcaster: info.name, user: cheer.userDisplayName, bits: cheer.bits, message: cheer.message }); } catch { }
 					} catch (error) {
 						logger.error(error);
 					}
@@ -499,6 +507,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
 					await chatClient.say(info.name, raidMessage);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
+					try { broadcast('eventsub:raid', { broadcaster: info.name, raider: raidingBroadcaster.displayName, viewers: raidToEvent.viewers }); } catch { }
 
 					await sleep(1000);
 
@@ -539,6 +548,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						.setTimestamp();
 
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
+					try { broadcast('eventsub:raid_outgoing', { broadcaster: info.name, target: raidedBroadcaster.displayName, viewers: raidEvent.viewers }); } catch { }
 				} catch (error) {
 					logger.error(error);
 				}
@@ -572,6 +582,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						).catch((err) => {
 							logger.error(err);
 						});
+						try { broadcast('eventsub:goal_begin', { broadcaster: info.name, type: gb.type, current: gb.currentAmount, target: gb.targetAmount }); } catch { }
 						break;
 					case 'subscription':
 						logger.info(
@@ -620,6 +631,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					userInfo.name,
 					`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`,
 				);
+				try { broadcast('eventsub:goal_progress', { broadcaster: info.name, type: gp.type, current: gp.currentAmount, target: gp.targetAmount }); } catch { }
 			},
 		);
 		void eventSubListener.onChannelGoalEnd(
@@ -635,6 +647,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 					);
 				}
+				try { broadcast('eventsub:goal_end', { broadcaster: info.name, type: ge.type, current: ge.currentAmount, target: ge.targetAmount, start: ge.startDate, end: ge.endDate }); } catch { }
 			},
 		);
 		void eventSubListener.onChannelWarningSend(info.id as UserIdResolvable, info.id as UserIdResolvable, async (warning) => {
@@ -718,6 +731,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 								.setTimestamp();
 							// enqueue to the activity webhook
 							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [embed] });
+							try { broadcast('eventsub:redemption', { broadcaster: info.name, user: userDisplayName, reward: rewardTitle, cost, message: userMessage }); } catch { }
 							// if this channel has channelPointsEnabled in DB, credit the user's wallet
 							try {
 								const channelDoc = await ChannelModel.findOne({ user_id: info.id });

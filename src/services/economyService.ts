@@ -14,10 +14,11 @@ export async function getOrCreateAccount(userId: string): Promise<IBankAccount> 
 	return acct;
 }
 
-function ensureBalanceObject(acct: any) {
+function ensureBalanceObject(acct: unknown) {
 	if (!acct) return;
-	if (acct.balance === undefined || acct.balance === null) acct.balance = { bank: 0, wallet: 0 };
-	else if (typeof acct.balance === 'number') acct.balance = { bank: acct.balance, wallet: 0 };
+	const a = acct as { balance?: unknown };
+	if (a.balance === undefined || a.balance === null) a.balance = { bank: 0, wallet: 0 };
+	else if (typeof a.balance === 'number') a.balance = { bank: a.balance as number, wallet: 0 };
 }
 
 async function transactionsSupported(): Promise<boolean> {
@@ -58,7 +59,7 @@ export async function deposit(userId: string, amount: number, session?: mongoose
 	).lean();
 	// Normalize a copy for internal use but don't mutate the lean-returned object (tests may expect original shape)
 	if (acct) {
-		const _copy: any = Object.assign(Array.isArray(acct) ? [] : {}, acct);
+		const _copy = Object.assign(Array.isArray(acct) ? [] : {}, acct) as unknown;
 		ensureBalanceObject(_copy);
 	}
 	await TransactionLog.create([{ type: 'deposit', to: userId, amount, meta: meta ?? {}, }]);
@@ -88,7 +89,7 @@ export async function withdraw(userId: string, amount: number, session?: mongoos
 	).lean();
 	if (!acct) throw new EconomyError('Insufficient funds');
 	// Don't mutate test-provided objects; normalize a copy for internal use if needed
-	const _copy: any = Object.assign({}, acct);
+	const _copy = Object.assign({}, acct) as unknown;
 	ensureBalanceObject(_copy);
 	await TransactionLog.create([{ type: 'withdraw', from: userId, amount, meta: meta ?? {} }]);
 	return acct as unknown as IBankAccount;

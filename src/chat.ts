@@ -19,6 +19,7 @@ import { UserModel } from './database/models/userModel';
 import type { IUser } from './database/models/userModel';
 import { creditWallet } from './services/balanceAdapter';
 import { parseCommandText, getCooldownRemaining, checkCommandPermission } from './util/commandHelpers';
+import { broadcast } from './util/monitorBroadcaster';
 import { getUsernamesFromDatabase } from './database/tokenStore';
 import { randomInt } from 'crypto';
 import { lurkingUsers } from './Commands/Information/lurk';
@@ -269,6 +270,9 @@ export async function initializeChat(): Promise<void> {
 	// Handle commands
 	const commandCooldowns: Map<string, Map<string, number>> = new Map();
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
+
+		// Emit a monitor event for the dashboard UI (if connected)
+		try { broadcast('chat:message', { channel, user, text, id: msg.id, displayName: msg.userInfo?.displayName }); } catch { /* ignore */ }
 
 		const lowerText = text.toLowerCase();
 

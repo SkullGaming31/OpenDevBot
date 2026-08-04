@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { config } from 'dotenv';
 
@@ -14,6 +14,7 @@ import { initializeConstants } from '../src/util/constants';
 import { initializeTwitchEventSub } from '../src/EventSubEvents';
 import { startRetryWorker } from '../src/EventSub/retryWorker';
 import { initializeChat } from '../src/chat';
+import { setBroadcaster } from '../src/util/monitorBroadcaster';
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu');
@@ -36,6 +37,16 @@ app.commandLine.appendSwitch('no-sandbox');
 
 let mainWindow: BrowserWindow | null = null;
 const PORT = Number(process.env.PORT) || 3000;
+// runtime visibility map controlled by renderer
+let monitorVisibility: Record<string, boolean> = {};
+
+ipcMain.on('monitor:visibilityUpdate', (_event, map: Record<string, boolean>) => {
+	try {
+		monitorVisibility = Object.assign({}, monitorVisibility, map || {});
+	} catch (err) {
+		// ignore
+	}
+});
 
 /**
  * Resolves the Mongo URI the same way `src/index.ts` does, then connects
@@ -121,6 +132,31 @@ app.whenReady().then(async () => {
 	registerTwitchSignupHandler(PORT);
 	registerLogsBridge();
 	createMainWindow();
+
+	// Wire monitor broadcaster to send events to any open renderer windows
+	setBroadcaster((event, payload) => {
+		try {
+			const windows = BrowserWindow.getAllWindows();
+			// determine normalized event type
+			const eventType = (ev?: string) => {
+				const s = String(ev || '');
+				const parts = s.split(':');
+				if (parts.length === 1) return parts[0] || 'unknown';
+				if (parts[0] === 'chat') return 'chat';
+				if (parts[0].startsWith('eventsub')) return parts[1] || parts[0];
+				return parts[1] || parts[0];
+			};
+
+			const key = eventType(event);
+			if (monitorVisibility && monitorVisibility[key] === false) return; // filtered
+
+			for (const w of windows) {
+				w.webContents.send('monitor:new', { event, payload, timestamp: new Date().toISOString() });
+			}
+		} catch (err) {
+			logger.warn('Failed to broadcast monitor event to renderer', err as Error);
+		}
+	});
 
 	app.on('activate', () => {
 		if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
