@@ -5,6 +5,10 @@
 const { MongoClient } = require('mongodb');
 const uri = process.env.MONGO_URI || process.env.DOCKER_URI || 'mongodb://localhost:27017/opendevbot';
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function main() {
   const args = process.argv.slice(2);
   if (args.length < 1) {
@@ -23,7 +27,8 @@ async function main() {
 
     // Find matching subscriptions (either authUserId matches or subscriptionId ends with .<id>)
     const byAuth = { authUserId: String(authUserId) };
-    const bySuffix = { subscriptionId: new RegExp(`\\.${authUserId}$`) };
+    const safeAuthUserId = escapeRegExp(authUserId);
+    const bySuffix = { subscriptionId: new RegExp(`\\.${safeAuthUserId}$`) };
 
     const subsToDelete = await subsCol.find({ $or: [byAuth, bySuffix] }).toArray();
     console.log(`Found ${subsToDelete.length} subscription(s) matching authUserId=${authUserId}`);
