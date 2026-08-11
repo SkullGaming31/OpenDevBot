@@ -82,14 +82,14 @@ const dig: Command = {
 				`you avoid digging up the cache to follow a modvlog to a shed which he drops a grenade on you, you lost ${digAmount}`
 			];
 
-			const randomIndex = Math.floor(Math.random() * badLuckMessages.length);
+			const randomIndex = randomInt(0, badLuckMessages.length);
 			const randomMessage = badLuckMessages[randomIndex];
 
 			return chatClient.say(channel, randomMessage);
 		}
 
 		// If the user didn't dig up a bomb, award them with a prize
-		const prizeAmount = Math.floor(Math.random() * (digAmount * 2)) + digAmount;
+		const prizeAmount = randomInt(0, digAmount * 2) + digAmount;
 		// Award prize to wallet (legacy) via adapter
 		const userIdKey2 = typeof msg.userInfo?.userId === 'string' ? msg.userInfo.userId : undefined;
 		await (await import('../../services/balanceAdapter')).creditWallet(userIdKey2 ?? username, prizeAmount, username, channelId);

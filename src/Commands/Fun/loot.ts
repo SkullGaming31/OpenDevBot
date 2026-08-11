@@ -93,10 +93,14 @@ const robber: Command = {
 				const houseValue = Object.values(houseItems).reduce((total, value) => total + value, 0);
 				void houseValue;
 
-				// Randomly select 1-4 items without introducing new variables
-				stolenItems = Object.keys(houseItems)
-					.sort(() => Math.random() - 0.5) // Randomize order
-					.slice(0, Math.floor(Math.random() * 4) + 1); // Select up to 4 items
+				// Randomly select 1-4 items using a Fisher-Yates shuffle with crypto randomness
+				const houseKeys = Object.keys(houseItems);
+				for (let i = houseKeys.length - 1; i > 0; i--) {
+					const j = randomInt(0, i + 1);
+					[houseKeys[i], houseKeys[j]] = [houseKeys[j], houseKeys[i]];
+				}
+				const take = randomInt(1, Math.min(4, houseKeys.length) + 1);
+				stolenItems = houseKeys.slice(0, take);
 
 				// Check if any items were stolen
 				if (stolenItems.length === 0) {
@@ -130,21 +134,21 @@ const robber: Command = {
 				}
 
 				// Select a random bot user from the list (safe index)
-				const randomIndex = Math.floor(Math.random() * botUsers.length);
+				const randomIndex = randomInt(0, botUsers.length);
 				const randomBotUser = botUsers[randomIndex];
 
 				// Get the username or identifier of the random bot user
 				const botUserName = randomBotUser.username; // Replace with the actual property name
 
 				// Calculate the percentage to take from the bot user (random number from 1 to 15)
-				const percentageToTake = randomInt(1, 15);
+				const percentageToTake = randomInt(1, 16);
 				void percentageToTake;
 
 				// Calculate the robbery amount, ensuring it doesn't exceed 15% of the bot's balance
 				const botKey = randomBotUser.id ?? randomBotUser.username;
 				const botUserBalance = await (await import('../../services/balanceAdapter')).getWalletBalance(botKey, randomBotUser.username, msg.channelId);
 				const maxRobberyAmount = Math.floor(botUserBalance * 0.15); // 15% of the balance
-				robberyAmount = Math.min(randomInt(1, 15), maxRobberyAmount); // Take a random percentage between 1-15%
+				robberyAmount = Math.min(randomInt(1, 16), maxRobberyAmount); // Take a random percentage between 1-15%
 
 				if (robberyAmount === 0) {
 					// If the chosen bot has no funds, inform the looter specifically
@@ -175,7 +179,8 @@ const robber: Command = {
 
 				if (stolenItems.length === 0) {
 					// Use random range if no items are stolen
-					finalSuccessRate = Math.random() * (maxSuccessRate - startingSuccessRate) + startingSuccessRate;
+					const r = randomInt(0, 1000000) / 1000000;
+					finalSuccessRate = r * (maxSuccessRate - startingSuccessRate) + startingSuccessRate;
 				} else {
 					// Apply success odds multiplier and limit the final rate
 					finalSuccessRate = Math.min(startingSuccessRate * successOddsMultiplier, maxSuccessRate);
@@ -207,7 +212,7 @@ const robber: Command = {
 						'Seems like the bot is feeling generous today. Try robbing someone else!',
 					];
 
-					const randomIndex = Math.floor(Math.random() * failedRobberyMessages.length);
+					const randomIndex = randomInt(0, failedRobberyMessages.length);
 					const randomMessage = failedRobberyMessages[randomIndex];
 					await chatClient.say(channel, randomMessage);
 					logger.debug('Robbery: failure', { user, target: botUserName });
@@ -235,14 +240,14 @@ const robber: Command = {
 
 						// Loop for guaranteed 1 item selection
 						for (let i = 0; i < Math.min(1, numItemsToSteal); i++) {
-							const randomItemIndex = randomInt(0, itemsToSteal.length - 1);
+							const randomItemIndex = randomInt(0, itemsToSteal.length);
 							const randomItem = itemsToSteal.splice(randomItemIndex, 1)[0]; // Remove selected item from the array
 							stolenItems.push(randomItem);
 						}
 
 						// Optional loop for additional random items (up to 2)
 						for (let i = 1; i < numItemsToSteal; i++) {
-							const randomItemIndex = randomInt(0, itemsToSteal.length - 1);
+							const randomItemIndex = randomInt(0, itemsToSteal.length);
 							const randomItem = itemsToSteal.splice(randomItemIndex, 1)[0]; // Remove selected item from the array
 							stolenItems.push(randomItem);
 						}

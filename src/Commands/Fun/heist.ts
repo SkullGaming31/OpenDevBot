@@ -380,9 +380,9 @@ const heist: Command = {
 					loot = 0;
 					stolenItems = [];
 				} else {
-					// shuffle candidates
+					// shuffle candidates using crypto-random Fisher-Yates
 					for (let i = candidates.length - 1; i > 0; i--) {
-						const j = Math.floor(Math.random() * (i + 1));
+						const j = randomInt(0, i + 1);
 						[candidates[i], candidates[j]] = [candidates[j], candidates[i]];
 					}
 					const donors = candidates.slice(0, donorSampleSize);
@@ -450,8 +450,13 @@ const heist: Command = {
 		//
 		const numWinners = randomInt(1, participants.length + 1);
 		const winningAmount = Math.floor(loot / numWinners);
-		// Randomly select the winners
-		const winners = participants.sort(() => 0.5 - Math.random()).slice(0, numWinners);
+		// Randomly select the winners using Fisher-Yates shuffle
+		const participantsShuffled = participants.slice();
+		for (let i = participantsShuffled.length - 1; i > 0; i--) {
+			const j = randomInt(0, i + 1);
+			[participantsShuffled[i], participantsShuffled[j]] = [participantsShuffled[j], participantsShuffled[i]];
+		}
+		const winners = participantsShuffled.slice(0, numWinners);
 
 		// Construct the result message
 		let resultMessage = `Heist initiated by ${user}.`;
@@ -502,8 +507,8 @@ const heist: Command = {
 			resultMessage += ' The heist failed. Better luck next time!';
 			// Loop through each participant
 			for (const participant of participants) {
-				// Check for 50/50 chance of injury
-				if (Math.random() <= 0.9) {
+				// Check for injury chance (90%)
+				if (randomInt(0, 100) < 90) {
 					const injurySeverity = determineInjurySeverity();
 
 					// Assign the injury and get the injury details
@@ -675,7 +680,7 @@ function getRandomDescription(severity: string): string {
 
 	// If descriptions are available, choose a random one
 	if (descriptions.length > 0) {
-		const randomIndex = Math.floor(Math.random() * descriptions.length);
+		const randomIndex = randomInt(0, descriptions.length);
 		return descriptions[randomIndex];
 	} else {
 		// Handle cases where no descriptions are available (optional: return default message)
@@ -717,7 +722,7 @@ function getInjuryProbability(severity: string, /* difficulty: number */): numbe
  * @returns The determined severity of the injury ('minor', 'moderate', or 'severe').
  */
 function determineInjurySeverity(/* difficulty: number */): string {
-	const randomValue = Math.random();
+	const randomValue = randomInt(0, 1000000) / 1000000;
 
 	// Calculate cumulative probabilities for each severity
 	let cumulativeProbability = 0;
