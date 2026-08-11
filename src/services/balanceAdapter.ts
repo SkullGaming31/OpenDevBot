@@ -7,6 +7,9 @@ const MIRROR_TO_USERMODEL = true;
 
 type AnyFn = (...args: unknown[]) => unknown;
 
+function safeStr(v: unknown) {
+	return v == null ? '' : String(v);
+}
 export async function getOrCreate(userId: string): Promise<IBankAccount> {
 	return economyService.getOrCreateAccount(userId);
 }
@@ -50,7 +53,7 @@ export async function creditWallet(userKey: string | null | undefined, amount: n
 	try {
 		const BankModule = require('../database/models/bankAccount');
 		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
-		const keyStr = String(userKey || username || '').toLowerCase();
+		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
 
 		if (isNumericId) {
@@ -71,7 +74,7 @@ export async function creditWallet(userKey: string | null | undefined, amount: n
 			return;
 		}
 
-		const uname = (username || userKey || '').toString();
+		const uname = safeStr(username || userKey);
 		await Bank.updateOne(
 			{ username: uname },
 			{ $inc: { 'balance.wallet': amount }, $setOnInsert: { username: uname, balance: { bank: 0, wallet: 0 } } },
@@ -94,13 +97,13 @@ export async function creditWallet(userKey: string | null | undefined, amount: n
 
 export async function getWallet(userKey: string | null | undefined, username?: string | null, channelId?: string | null) {
 	try {
-		const keyStr = String(userKey || username || '').toLowerCase();
+		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
 		const BankModule = require('../database/models/bankAccount');
 		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
 		if (isNumericId) return await Bank.findOne({ userId: keyStr }).lean();
-		if (username) return await Bank.findOne({ username }).lean();
-		if (userKey) return await Bank.findOne({ username: userKey }).lean();
+		const uname = safeStr(username || userKey);
+		if (uname) return await Bank.findOne({ username: uname }).lean();
 		return null;
 	} catch (err) {
 		logger.warn('Failed to read wallet in BankAccount', err);
@@ -120,7 +123,7 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 		const { UserModel } = (() => { try { return require('../database/models/userModel'); } catch { return { UserModel: undefined }; } })();
 		const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>> | undefined;
 
-		const keyStr = String(userKey || username || '').toLowerCase();
+		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
 		if (isNumericId) {
 			let updatedNumeric: unknown = null;
@@ -150,15 +153,16 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 		}
 
 		if (username) {
-			let updatedByUsername: unknown = await Bank.findOneAndUpdate({ username, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+			const uname = safeStr(username);
+			let updatedByUsername: unknown = await Bank.findOneAndUpdate({ username: uname, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
 			const findFn = UM && (UM as unknown as Record<string, unknown>)['findOneAndUpdate'];
 			if (!updatedByUsername && findFn && typeof findFn === 'function') {
-				updatedByUsername = await (findFn as AnyFn).call(UM, { username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+				updatedByUsername = await (findFn as AnyFn).call(UM, { username: uname, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 			}
 			if (updatedByUsername) {
 				if (MIRROR_TO_USERMODEL && findFn && typeof findFn === 'function') {
 					try {
-						await (findFn as AnyFn).call(UM, { username, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+						await (findFn as AnyFn).call(UM, { username: uname, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 					} catch (err) {
 						logger.warn('Failed to mirror debitWallet to UserModel', err);
 					}
@@ -168,15 +172,16 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 			return false;
 		}
 
-		let updatedFinal: unknown = await Bank.findOneAndUpdate({ username: userKey, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+		const unameKey = safeStr(userKey);
+		let updatedFinal: unknown = await Bank.findOneAndUpdate({ username: unameKey, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
 		const findFn = UM && (UM as unknown as Record<string, unknown>)['findOneAndUpdate'];
 		if (!updatedFinal && findFn && typeof findFn === 'function') {
-			updatedFinal = await (findFn as AnyFn).call(UM, { username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+			updatedFinal = await (findFn as AnyFn).call(UM, { username: unameKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 		}
 		if (updatedFinal) {
 			if (MIRROR_TO_USERMODEL && findFn && typeof findFn === 'function') {
 				try {
-					await (findFn as AnyFn).call(UM, { username: userKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
+					await (findFn as AnyFn).call(UM, { username: unameKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
 				} catch (err) {
 					logger.warn('Failed to mirror debitWallet to UserModel', err);
 				}
@@ -196,13 +201,15 @@ export async function transfer(from: string, to: string, amount: number) {
 		try {
 			const { UserModel } = require('../database/models/userModel');
 			const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-			const fromIsNumeric = /^\d+$/.test(from);
-			if (fromIsNumeric) await UM.updateOne({ id: from }, { $inc: { balance: -amount } }, { upsert: true });
-			else await UM.updateOne({ username: from }, { $inc: { balance: -amount } });
+			const fromStr = safeStr(from);
+			const toStr = safeStr(to);
+			const fromIsNumeric = /^\d+$/.test(fromStr);
+			if (fromIsNumeric) await UM.updateOne({ id: fromStr }, { $inc: { balance: -amount } }, { upsert: true });
+			else await UM.updateOne({ username: fromStr }, { $inc: { balance: -amount } });
 
-			const toIsNumeric = /^\d+$/.test(to);
-			if (toIsNumeric) await UM.updateOne({ id: to }, { $inc: { balance: amount } }, { upsert: true });
-			else await UM.updateOne({ username: to }, { $setOnInsert: { username: to }, $inc: { balance: amount } }, { upsert: true });
+			const toIsNumeric = /^\d+$/.test(toStr);
+			if (toIsNumeric) await UM.updateOne({ id: toStr }, { $inc: { balance: amount } }, { upsert: true });
+			else await UM.updateOne({ username: toStr }, { $setOnInsert: { username: toStr }, $inc: { balance: amount } }, { upsert: true });
 		} catch (err) {
 			logger.warn('Failed to mirror transfer to UserModel', err);
 		}

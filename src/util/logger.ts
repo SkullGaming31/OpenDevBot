@@ -36,7 +36,8 @@ try {
 }
 
 function formatForLog(args: unknown[]): string {
-	return args
+	const sanitized = args.map(a => sanitizeValue(a));
+	return sanitized
 		.map(a => {
 			if (a instanceof Error) {
 				return `${a.name}: ${a.message}\n${a.stack ?? ''}`;
@@ -48,6 +49,67 @@ function formatForLog(args: unknown[]): string {
 			}
 		})
 		.join(' ');
+}
+
+// Collect likely sensitive values from environment (tokens, secrets, keys, passwords)
+const SENSITIVE_ENV_VALUES: string[] = (() => {
+	const keys = Object.keys(process.env || {});
+	const found = new Set<string>();
+	const secretPattern = /TOKEN|SECRET|PASSWORD|API_KEY|KEY|CLIENT_SECRET/i;
+	for (const k of keys) {
+		if (secretPattern.test(k) || k === 'ADMIN_API_TOKEN') {
+			const v = process.env[k];
+			if (v) found.add(String(v));
+		}
+	}
+	return Array.from(found).filter(s => s.length > 0);
+})();
+
+function escapeRegExp(s: string) {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function sanitizeString(s: string): string {
+	if (!s || SENSITIVE_ENV_VALUES.length === 0) return s;
+	let out = s;
+	for (const secret of SENSITIVE_ENV_VALUES) {
+		if (!secret) continue;
+		const re = new RegExp(escapeRegExp(secret), 'g');
+		out = out.replace(re, '[REDACTED]');
+	}
+	return out;
+}
+
+function sanitizeValue(v: unknown, depth = 0, seen = new WeakSet()): unknown {
+	if (depth > 6) return '[Truncated]';
+	if (v == null) return v;
+	if (typeof v === 'string') return sanitizeString(v);
+	if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'symbol' || typeof v === 'bigint') return v;
+	if (v instanceof Error) {
+		// sanitize stack/message
+		const err = v as Error;
+		const msg = sanitizeString(err.message ?? '');
+		const stack = sanitizeString(err.stack ?? '');
+		const copy = new Error(msg);
+		copy.stack = stack;
+		return copy;
+	}
+	if (Array.isArray(v)) return v.map(i => sanitizeValue(i, depth + 1, seen));
+	if (typeof v === 'object') {
+		try {
+			if (seen.has(v as object)) return '[Circular]';
+			seen.add(v as object);
+			const out: Record<string, unknown> = {};
+			for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+				if (typeof val === 'string') out[k] = sanitizeString(val);
+				else out[k] = sanitizeValue(val, depth + 1, seen);
+			}
+			return out;
+		} catch (e) {
+			return '[Unserializable]';
+		}
+	}
+	return String(v);
 }
 
 // Logging level support: debug < info < warn < error
@@ -78,33 +140,37 @@ export const debug: LogFn = (...args: unknown[]) => {
 	const shouldDebug = initialEnvLevel === 'debug' || env === 'debug' || levelEnabled('debug');
 	if (shouldDebug) {
 		try {
-			if (typeof console.debug === 'function') console.debug('[debug]', ...args);
-			else console.log('[debug]', ...args);
+			const san = args.map(a => sanitizeValue(a));
+			if (typeof console.debug === 'function') console.debug('[debug]', ...san);
+			else console.log('[debug]', ...san);
 		} catch (e) {
 			/* ignore */
 		}
-		emitLog('debug', args);
+		emitLog('debug', args.map(a => sanitizeValue(a) as unknown));
 	}
 };
 
 export const info: LogFn = (...args: unknown[]) => {
 	if (levelEnabled('info')) {
-		console.log('[info]', ...args);
-		emitLog('info', args);
+		const san = args.map(a => sanitizeValue(a));
+		console.log('[info]', ...san);
+		emitLog('info', san as unknown[]);
 	}
 };
 
 export const warn: LogFn = (...args: unknown[]) => {
 	if (levelEnabled('warn')) {
-		console.warn('[warn]', ...args);
-		emitLog('warn', args);
+		const san = args.map(a => sanitizeValue(a));
+		console.warn('[warn]', ...san);
+		emitLog('warn', san as unknown[]);
 	}
 };
 
 export const error: LogFn = (...args: unknown[]) => {
 	// Always output to console for visibility
-	console.error('[error]', ...args);
-	emitLog('error', args);
+	const san = args.map(a => sanitizeValue(a));
+	console.error('[error]', ...san);
+	emitLog('error', san as unknown[]);
 
 	// Also append to the error log file asynchronously to avoid blocking
 	const timestamp = new Date().toISOString();

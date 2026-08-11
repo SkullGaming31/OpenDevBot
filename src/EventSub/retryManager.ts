@@ -1,4 +1,5 @@
 import { RetryModel, IRetryRecord } from './retryModel';
+import { randomInt } from 'crypto';
 
 const BASE_DELAY_MS = 1000; // base backoff 1s
 const MAX_ATTEMPTS = 6;
@@ -54,7 +55,7 @@ export class RetryManager {
 	computeDelay(attempts: number): number {
 		// exponential backoff with jitter
 		const exp = Math.pow(2, attempts);
-		const jitter = Math.floor(Math.random() * 1000);
+		const jitter = randomInt(0, 1000);
 		return BASE_DELAY_MS * exp + jitter;
 	}
 
