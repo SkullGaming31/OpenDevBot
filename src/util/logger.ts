@@ -85,6 +85,13 @@ function sanitizeString(s: string): string {
 		const re = new RegExp(escapeRegExp(secret), 'g');
 		out = out.replace(re, '[REDACTED]');
 	}
+
+	// Also redact explicit ADMIN_API_TOKEN mentions or assignments (e.g. "ADMIN_API_TOKEN=..." or "ADMIN_API_TOKEN: ...")
+	out = out.replace(/ADMIN_API_TOKEN\s*[:=]\s*\S*/gi, 'ADMIN_API_TOKEN=[REDACTED]');
+
+	// Redact literal occurrences of the key name to avoid accidental exposure
+	out = out.replace(/\bADMIN_API_TOKEN\b/gi, '[REDACTED]');
+
 	return out;
 }
 
