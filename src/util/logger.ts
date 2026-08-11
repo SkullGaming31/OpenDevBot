@@ -78,7 +78,7 @@ function escapeRegExp(s: string) {
 }
 
 function sanitizeString(s: string): string {
-	if (!s || SENSITIVE_ENV_VALUES.length === 0) return s;
+	if (!s) return s;
 	let out = s;
 	for (const secret of SENSITIVE_ENV_VALUES) {
 		if (!secret) continue;
