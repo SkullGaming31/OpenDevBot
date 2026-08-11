@@ -13,8 +13,7 @@ interface AdminFetchOptions {
  */
 export function registerAdminProxy(port: number): void {
 	const token = process.env.ADMIN_API_TOKEN || '';
-	const masked = token ? (token.length > 4 ? `${token.slice(0, 2)}...${token.slice(-2)}` : '***') : '<none>';
-	logger.info(`[electron] adminProxy configured, ADMIN_API_TOKEN=${masked}`);
+	logger.info('[electron] adminProxy configured');
 
 	ipcMain.handle('admin:fetch', async (_event, path: string, opts: AdminFetchOptions = {}) => {
 		const maxAttempts = 3;
