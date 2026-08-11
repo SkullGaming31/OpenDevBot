@@ -36,16 +36,24 @@ try {
 }
 
 function formatForLog(args: unknown[]): string {
-	const sanitized = args.map(a => sanitizeValue(a));
-	return sanitized
+	return args
 		.map(a => {
+			// Errors get special formatting including stack
 			if (a instanceof Error) {
-				return `${a.name}: ${a.message}\n${a.stack ?? ''}`;
+				const err = a as Error;
+				const raw = `${err.name}: ${err.message}\n${err.stack ?? ''}`;
+				return sanitizeString(raw);
 			}
+
+			// Try to produce a JSON representation first. If that fails
+			// (e.g., circular structures), fall back to String(a) which
+			// tests expect to contain '[object Object]'. After obtaining
+			// a string, redact any sensitive env values.
 			try {
-				return typeof a === 'string' ? a : JSON.stringify(a);
+				const s = typeof a === 'string' ? a : JSON.stringify(a);
+				return sanitizeString(s);
 			} catch (e) {
-				return String(a);
+				return sanitizeString(String(a));
 			}
 		})
 		.join(' ');
