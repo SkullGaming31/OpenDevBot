@@ -22,11 +22,11 @@ test('deposit and withdraw basic', async () => {
 	await deposit('user1', 100);
 	const acct = await BankAccount.findOne({ userId: 'user1' });
 	expect(acct).not.toBeNull();
-	expect(acct!.balance).toBe(100);
+	expect(acct!.balance.bank).toBe(100);
 
 	await withdraw('user1', 40);
 	const acct2 = await BankAccount.findOne({ userId: 'user1' });
-	expect(acct2!.balance).toBe(60);
+	expect(acct2!.balance.bank).toBe(60);
 });
 
 test('transfer succeeds and is atomic', async () => {
@@ -35,8 +35,8 @@ test('transfer succeeds and is atomic', async () => {
 	await transfer('a', 'b', 120);
 	const a = await BankAccount.findOne({ userId: 'a' });
 	const b = await BankAccount.findOne({ userId: 'b' });
-	expect(a!.balance).toBe(80);
-	expect(b!.balance).toBe(170);
+	expect(a!.balance.bank).toBe(80);
+	expect(b!.balance.bank).toBe(170);
 });
 
 test('buy item marketplace flow', async () => {
@@ -48,6 +48,6 @@ test('buy item marketplace flow', async () => {
 	expect(res.success).toBe(true);
 	const buyer = await BankAccount.findOne({ userId: 'buyer1' });
 	const seller = await BankAccount.findOne({ userId: 'seller1' });
-	expect(buyer!.balance).toBe(70);
-	expect(seller!.balance).toBe(30);
+	expect(buyer!.balance.bank).toBe(70);
+	expect(seller!.balance.bank).toBe(30);
 });

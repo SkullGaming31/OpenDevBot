@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — EventSub Subscriptions</title>
+  <link rel="stylesheet" href="/assets/css/admin.css" />
+  <style>
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin: 20px
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      text-align: left
+    }
+
+    th {
+      background: #f4f4f4
+    }
+
+    .small {
+      font-size: 0.9em;
+      color: #666
+    }
+
+    .status-up {
+      color: green
+    }
+
+    .status-down {
+      color: red
+    }
+  </style>
+</head>
+
+<body>
+  <h1>EventSub Subscriptions (Admin)</h1>
+  <p class="small">Shows Twitch EventSub subscriptions and retry status for resubscribe attempts.</p>
+  <div class="controls">
+    <label>Admin token: <input id="token" placeholder="x-admin-token" size="40" /></label>
+    <button id="saveToken">Save</button>
+    <button id="refresh">Refresh</button>
+  </div>
+  <div id="summary" class="small"></div>
+  <table id="items">
+    <thead>
+      <tr>
+        <th>Subscription ID</th>
+        <th>Auth User</th>
+        <th>Present</th>
+        <th>Retry Status</th>
+        <th>Attempts</th>
+        <th>Last Error</th>
+        <th>Next Retry</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script src="/assets/js/admin-eventsubs.js"></script>
+</body>
+
+</html>

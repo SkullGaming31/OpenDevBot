@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
+  <title>OpenDevBot — Control Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    :root {
+      --bg: #14121B;
+      --panel: #1B1826;
+      --panel-raised: #221E30;
+      --line: #322C42;
+      --text: #EDE9F5;
+      --text-dim: #9A93AE;
+      --accent: #FF5D5D;
+      /* live / signal coral */
+      --accent-soft: rgba(255, 93, 93, 0.14);
+      --ok: #7FE7C4;
+      --ok-soft: rgba(127, 231, 196, 0.12);
+      --warn: #F3B95F;
+      --warn-soft: rgba(243, 185, 95, 0.12);
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Manrope', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(255, 93, 93, 0.07), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(127, 231, 196, 0.06), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+    }
+
+    ::selection {
+      background: var(--accent-soft);
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brand .mark {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      padding: 5px 9px;
+      border-radius: 6px;
+      color: var(--accent);
+    }
+
+    .brand h1 {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .brand .sub {
+      color: var(--text-dim);
+      font-size: 12.5px;
+      font-family: var(--mono);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .signal.online .dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    .signal.online {
+      color: var(--ok);
+      border-color: rgba(127, 231, 196, 0.3);
+    }
+
+    /* Health indicator */
+    .health {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text-dim);
+    }
+
+    .health .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .health.ok .dot {
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.6);
+    }
+
+    .health.err {
+      color: var(--accent);
+      border-color: rgba(255, 93, 93, 0.3);
+    }
+
+    .health.err .dot {
+      background: var(--accent);
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.45);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(127, 231, 196, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(127, 231, 196, 0);
+      }
+    }
+
+    .btn {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 13.5px;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 0.08s ease, filter 0.15s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #1A1013;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(255, 93, 93, 0.35);
+    }
+
+    .btn-danger:hover {
+      background: var(--accent-soft);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    /* ---------- Top navigation ---------- */
+    .main-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-left: 18px;
+    }
+
+    .nav-item {
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: var(--bg);
+      background: var(--text-dim);
+      font-weight: 700;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .user-chip b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ---------- Layout ---------- */
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 22px;
+      padding: 26px 32px 40px;
+      max-width: 1180px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    @media (max-width: 880px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-head .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .panel-head h2 {
+      margin: 2px 0 0;
+      font-size: 15.5px;
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 16px 18px 20px;
+    }
+
+    /* ---------- Channels ---------- */
+    .join-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .join-row input {
+      flex: 1;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+    }
+
+    .join-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .channel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    .channel-name {
+      font-family: var(--mono);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .channel-name .dot {
+      background: var(--ok);
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--mono);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .icon-btn:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .empty {
+      color: var(--text-dim);
+      font-size: 13px;
+      font-family: var(--mono);
+      padding: 18px 4px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+    }
+
+    /* ---------- Webhook queue ---------- */
+    .tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: 0.4px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+
+    .tab.active {
+      color: var(--bg);
+      background: var(--text-dim);
+    }
+
+    .tab.active.pending {
+      background: var(--warn);
+    }
+
+    .tab.active.failed {
+      background: var(--accent);
+    }
+
+    .tab.active.sent {
+      background: var(--ok);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 0 10px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tbody td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.4px;
+    }
+
+    .badge.pending {
+      color: var(--warn);
+      background: var(--warn-soft);
+    }
+
+    .badge.processing {
+      color: var(--text-dim);
+      background: rgba(154, 147, 174, 0.12);
+    }
+
+    .badge.sent {
+      color: var(--ok);
+      background: var(--ok-soft);
+    }
+
+    .badge.failed {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+
+    .mono-id {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .queue-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      margin-top: 4px;
+      border-top: 1px solid var(--line);
+    }
+
+    .page-info {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .pager {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ---------- Bot status ---------- */
+    .status-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .status-row .label {
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .status-row .value {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .status-dot-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .status-dot.up {
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(127, 231, 196, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.down {
+      background: var(--accent);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-raised);
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script>
+    const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
+
+    createApp({
+      setup() {
+        // Falls back to demo data when not running inside the Electron shell,
+        // so this page can also be opened directly for preview.
+        const hasBridge = !!(window.twitchApi && window.adminApi);
+
+        const connected = ref(false);
+        const user = ref(null);
+        const activeView = ref('dashboard');
+
+        const channels = ref(['skullgaming31', 'opendevbot']);
+        const joinInput = ref('');
+
+        const status = ref('pending');
+        const items = ref([
+          { _id: 'a1b2c3', event: 'channel.follow', status: 'pending', createdAt: new Date().toISOString() },
+          { _id: 'd4e5f6', event: 'channel.subscribe', status: 'failed', createdAt: new Date().toISOString() },
+        ]);
+        const page = ref(1);
+        const limit = 10;
+        const total = ref(items.value.length);
+        const selected = ref(new Set());
+        const toast = ref('');
+
+        // Economy panel state
+        const economyAccounts = ref([]);
+        const economyTotal = ref(0);
+        const economyPage = ref(1);
+        const economyLimit = 20;
+
+        async function loadEconomy() {
+          if (!hasBridge) {
+            // demo fallback
+            economyAccounts.value = [
+              { userId: '12345', balance: 5000, updatedAt: new Date().toISOString() },
+              { userId: 'alice', balance: 1200, updatedAt: new Date().toISOString() },
+            ];
+            economyTotal.value = economyAccounts.value.length;
+            return;
+          }
+          try {
+            const res = await window.adminApi.fetch(`/api/v1/admin/economy/accounts?page=${economyPage.value}&limit=${economyLimit}`);
+            economyAccounts.value = res.items || [];
+            economyTotal.value = res.total || economyAccounts.value.length;
+          } catch (e) {
+            console.debug('Failed to load economy', e);
+            economyAccounts.value = [];
+            economyTotal.value = 0;
+          }
+        }
+
+        function showToast(msg) {
+          toast.value = msg;
+          setTimeout(() => { toast.value = ''; }, 2400);
+        }
+
+        function signUp(type = 'user') {
+          if (!hasBridge) { showToast('Sign-up requires the Electron shell'); return; }
+          window.twitchApi.signup(type);
+        }
+
+        function openLogs() {
+          if (!hasBridge || !window.logsApi) { showToast('Logs require the Electron shell'); return; }
+          window.logsApi.openWindow();
+        }
+
+        async function loadChannels() {
+          if (!hasBridge) return;
+          channels.value = await window.adminApi.fetch('/api/v1/chat/channels').then(r => r.channels);
+        }
+
+        async function joinChannel() {
+          const name = joinInput.value.trim().toLowerCase();
+          if (!name) return;
+          if (!hasBridge) { channels.value.push(name); joinInput.value = ''; return; }
+          await window.adminApi.fetch('/api/v1/chat/join', { method: 'POST', body: JSON.stringify({ username: name }) });
+          joinInput.value = '';
+          await loadChannels();
+          showToast(`Joined #${name}`);
+        }
+
+        async function partChannel(name) {
+          if (!hasBridge) { channels.value = channels.value.filter(c => c !== name); return; }
+          await window.adminApi.fetch('/api/v1/chat/part', { method: 'POST', body: JSON.stringify({ username: name }) });
+          await loadChannels();
+          showToast(`Left #${name}`);
+        }
+
+        async function loadQueue() {
+          if (!hasBridge) return;
+          const res = await window.adminApi.fetch(`/api/v1/admin/webhooks?status=${status.value}&page=${page.value}&limit=${limit}`);
+          items.value = res.items;
+          total.value = res.total;
+        }
+
+        // ---- EventSub subscriptions panel state + loader
+        const esItems = ref([]);
+        const esTotal = ref(0);
+        const esPage = ref(1);
+        const esLimit = 10;
+        const esTotalPages = computed(() => Math.max(1, Math.ceil((esTotal.value || esItems.value.length) / esLimit)));
+        const esPageItems = computed(() => {
+          const start = (esPage.value - 1) * esLimit;
+          return esItems.value.slice(start, start + esLimit);
+        });
+
+        async function loadEventSubs() {
+          if (!hasBridge) return;
+          try {
+            const res = await window.adminApi.fetch('/api/v1/admin/eventsubs');
+            esItems.value = res.items || [];
+            esTotal.value = res.total || esItems.value.length;
+            esPage.value = 1;
+          } catch (e) {
+            // ignore; keep previous state
+            console.debug('Failed to load eventsubs', e);
+          }
+        }
+
+        // Live monitor feed state
+        const monitorFeed = ref([]);
+
+        const defaultMonitorSettings = {
+          bitsThreshold: 50,
+          totalMax: 500,
+          perEventMax: {
+            chat: 200,
+            follow: 100,
+            subscription: 100,
+            resub: 100,
+            gift: 100,
+            cheer: 100,
+            raid: 50,
+            redemption: 100,
+            goal: 50,
+            warning: 100,
+          }
+          ,
+          perEventVisible: {
+            chat: true,
+            follow: true,
+            subscription: true,
+            resub: true,
+            gift: true,
+            cheer: true,
+            raid: true,
+            redemption: true,
+            goal: true,
+            warning: true,
+            streamOnline: true,
+            streamOffline: true
+          }
+        };
+
+        const monitorSettings = ref((() => {
+          try {
+            const raw = localStorage.getItem('odb.monitorSettings');
+            if (raw) {
+              const parsed = JSON.parse(raw) || {};
+              // merge shallow defaults for missing nested maps to avoid template errors
+              parsed.perEventMax = Object.assign({}, defaultMonitorSettings.perEventMax, parsed.perEventMax || {});
+              parsed.perEventVisible = Object.assign({}, defaultMonitorSettings.perEventVisible, parsed.perEventVisible || {});
+              parsed.bitsThreshold = (parsed.bitsThreshold ?? defaultMonitorSettings.bitsThreshold);
+              parsed.totalMax = (parsed.totalMax ?? defaultMonitorSettings.totalMax);
+              return parsed;
+            }
+          } catch (e) { /* ignore */ }
+          return JSON.parse(JSON.stringify(defaultMonitorSettings));
+        })());
+
+        function saveMonitorSettings() {
+          try { localStorage.setItem('odb.monitorSettings', JSON.stringify(monitorSettings.value)); showToast('Monitor settings saved'); } catch (e) { showToast('Failed to save settings'); }
+          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(monitorSettings.value.perEventVisible || {}); } catch (e) { /* ignore */ }
+        }
+
+        function showAllEvents() {
+          if (!monitorSettings.value.perEventVisible) monitorSettings.value.perEventVisible = {};
+          Object.keys(monitorSettings.value.perEventVisible).forEach(k => { monitorSettings.value.perEventVisible[k] = true; });
+        }
+
+        function hideAllEvents() {
+          if (!monitorSettings.value.perEventVisible) monitorSettings.value.perEventVisible = {};
+          Object.keys(monitorSettings.value.perEventVisible).forEach(k => { monitorSettings.value.perEventVisible[k] = false; });
+        }
+
+        function resetMonitorSettings() {
+          monitorSettings.value = JSON.parse(JSON.stringify(defaultMonitorSettings));
+          saveMonitorSettings();
+        }
+
+        function eventKey(ev) { try { return String(ev).split(':').pop() || String(ev); } catch { return String(ev); } }
+        // derive a normalized event type key used for visibility and per-event limits
+        function eventTypeKey(ev) { try { return eventType(ev); } catch { return eventKey(ev); } }
+
+        function pushMonitor(entry) {
+          const key = eventTypeKey(entry.event);
+          // skip if this event type is hidden
+          try {
+            if (monitorSettings.value && monitorSettings.value.perEventVisible && monitorSettings.value.perEventVisible[key] === false) return;
+          } catch { }
+          // bits threshold for cheers
+          try {
+            if (key === 'cheer') {
+              const bits = Number((entry.payload && (entry.payload.bits ?? entry.payload.bitAmount)) || entry.bits || 0) || 0;
+              if (bits < (monitorSettings.value.bitsThreshold || 0)) return;
+            }
+          } catch { /* ignore */ }
+
+          // enforce per-event max (remove oldest matching entries)
+          const limit = (monitorSettings.value.perEventMax && (monitorSettings.value.perEventMax[key] ?? monitorSettings.value.perEventMax['default'])) ?? 200;
+          if (typeof limit === 'number' && limit >= 0) {
+            let count = monitorFeed.value.filter(m => eventKey(m.event) === key).length;
+            while (count >= limit) {
+              let removed = false;
+              for (let i = monitorFeed.value.length - 1; i >= 0; i--) {
+                if (eventKey(monitorFeed.value[i].event) === key) { monitorFeed.value.splice(i, 1); removed = true; count--; break; }
+              }
+              if (!removed) break;
+            }
+          }
+
+          monitorFeed.value.unshift(entry);
+
+          // enforce total max
+          const totalMax = Number(monitorSettings.value.totalMax || 500) || 500;
+          while (monitorFeed.value.length > totalMax) monitorFeed.value.pop();
+        }
+
+        if (hasBridge && window.monitorApi) {
+          window.monitorApi.onEvent((entry) => {
+            // Friendly summaries for common events
+            let summary = '';
+            try {
+              if (entry && entry.event === 'chat:message' && entry.payload) {
+                const p = entry.payload || {};
+                const name = p.displayName || p.user || p.username || 'unknown';
+                const text = (p.text ?? p.message ?? '').toString();
+                summary = `${name}: ${text}`;
+              } else if (entry && typeof entry.payload === 'object') {
+                summary = `${entry.timestamp} · ${entry.event} · ${JSON.stringify(entry.payload)}`;
+              } else {
+                summary = `${entry.timestamp} · ${entry.event} · ${String(entry.payload ?? '')}`;
+              }
+            } catch (e) {
+              summary = `${entry.timestamp} · ${entry.event} · ${JSON.stringify(entry.payload)}`;
+            }
+            pushMonitor({ text: summary, ts: entry.timestamp, event: entry.event, payload: entry.payload });
+          });
+        }
+
+        function clearMonitor() { monitorFeed.value = []; showToast('Monitor cleared'); }
+
+        function eventType(ev) {
+          const s = String(ev || '');
+          const parts = s.split(':');
+          if (parts.length === 1) return parts[0] || 'unknown';
+          if (parts[0] === 'chat') return 'chat';
+          if (parts[0].startsWith('eventsub')) return parts[1] || parts[0];
+          return parts[1] || parts[0];
+        }
+
+        function eventIcon(ev) {
+          const k = eventType(ev);
+          const map = {
+            chat: '💬', follow: '➕', subscription: '⭐', resub: '🔁', gift: '🎁', cheer: '✨', raid: '🚩',
+            redemption: '🎯', goal: '🏆', warning: '⚠️', streamOnline: '🟢', streamOffline: '⚫️', default: '•'
+          };
+          return map[k] || map.default;
+        }
+
+        function eventColor(ev) {
+          const k = eventType(ev);
+          const map = {
+            chat: '#f5f7fa', follow: '#e8f5e9', subscription: '#fff8e1', resub: '#fff3e0', gift: '#f3e5f5',
+            cheer: '#fff0f6', raid: '#e3f2fd', redemption: '#e8f5e9', goal: '#fff3e0', warning: '#fff3e0',
+            streamOnline: '#e8f5e9', streamOffline: '#fce4ec', default: '#ffffff'
+          };
+          return map[k] || map.default;
+        }
+
+        function esPrevPage() { if (esPage.value > 1) { esPage.value--; } }
+        function esNextPage() { if (esPage.value < esTotalPages.value) { esPage.value++; } }
+
+        function setStatus(s) { status.value = s; page.value = 1; selected.value = new Set(); loadQueue(); }
+
+        function toggleSelect(id) {
+          selected.value.has(id) ? selected.value.delete(id) : selected.value.add(id);
+          selected.value = new Set(selected.value);
+        }
+
+        async function requeue(ids) {
+          if (!hasBridge) { showToast('Requeue requires the Electron shell'); return; }
+          await window.adminApi.fetch('/api/v1/admin/webhooks/requeue', { method: 'POST', body: JSON.stringify({ ids }) });
+          showToast(`Requeued ${ids.length} item${ids.length > 1 ? 's' : ''}`);
+          selected.value = new Set();
+          await loadQueue();
+        }
+
+        async function remove(ids) {
+          if (!hasBridge) { showToast('Delete requires the Electron shell'); return; }
+          await window.adminApi.fetch('/api/v1/admin/webhooks', { method: 'DELETE', body: JSON.stringify({ ids }) });
+          showToast(`Deleted ${ids.length} item${ids.length > 1 ? 's' : ''}`);
+          selected.value = new Set();
+          await loadQueue();
+        }
+
+        const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)));
+
+        function fmtTime(iso) {
+          return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        // API health is now part of the botStatus object and checked in loadStatus
+
+        // ---- Bot status panel ----
+        const botStatus = ref({ pid: null, startedAt: null, dbConnected: false, chatConnected: false });
+        const liveUptimeSeconds = ref(0);
+
+        function formatUptime(totalSeconds) {
+          const s = Math.max(0, Math.floor(totalSeconds));
+          const d = Math.floor(s / 86400);
+          const h = Math.floor((s % 86400) / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          if (d > 0) return `${d}d ${h}h ${m}m`;
+          if (h > 0) return `${h}h ${m}m`;
+          if (m > 0) return `${m}m ${sec}s`;
+          return `${sec}s`;
+        }
+
+        async function loadStatus() {
+          if (!hasBridge) {
+            // demo fallback so this is still previewable outside Electron
+            botStatus.value = {
+              pid: 12345,
+              startedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+              dbConnected: true,
+              chatConnected: true,
+              api: true
+            };
+            liveUptimeSeconds.value = 3 * 3600;
+            return;
+          }
+          try {
+            const res = await window.adminApi.fetch('/api/v1/admin/status');
+            botStatus.value = res;
+            liveUptimeSeconds.value = res.uptimeSeconds;
+          } catch (err) {
+            botStatus.value = { ...botStatus.value, dbConnected: false, chatConnected: false };
+          }
+        }
+
+        let refreshInterval = null;
+        onMounted(() => {
+          if (hasBridge) {
+            window.twitchApi.onSignupComplete((result) => {
+              connected.value = true;
+              user.value = result;
+              showToast(`Signed up as ${result.username}`);
+              loadChannels();
+            });
+            loadChannels();
+            loadQueue();
+            loadEventSubs();
+            // health is checked as part of loadStatus; no separate header health polling
+          }
+
+          loadStatus();
+          setInterval(loadStatus, 120000);
+          setInterval(() => { liveUptimeSeconds.value += 1; }, 1000);
+
+          // inform main process of initial visibility preferences so it can filter upstream
+          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(monitorSettings.value.perEventVisible || {}); } catch (e) { /* ignore */ }
+
+          // Auto-refresh every minute: refresh Economy if active, otherwise refresh dashboard panels
+          refreshInterval = window.setInterval(() => {
+            try {
+              if (activeView.value === 'economy') {
+                loadEconomy();
+              } else {
+                // Dashboard view: refresh webhooks and eventsubs
+                loadQueue();
+                loadEventSubs();
+              }
+            } catch (e) { console.debug('Auto-refresh error', e); }
+          }, 60 * 1000);
+        });
+
+        onUnmounted(() => {
+          if (refreshInterval) clearInterval(refreshInterval);
+        });
+
+        return {
+          connected, user, activeView, channels, joinInput, status, items, page, total, totalPages,
+          selected, toast, signUp, joinChannel, partChannel, setStatus, toggleSelect,
+          requeue, remove, fmtTime, limit, botStatus, liveUptimeSeconds, formatUptime, openLogs,
+          // Live monitor
+          monitorFeed, monitorSettings, saveMonitorSettings, resetMonitorSettings, clearMonitor, eventType, eventIcon, eventColor, showAllEvents, hideAllEvents,
+          // EventSub panel bindings
+          esItems, esTotal, esPage, esPageItems, esTotalPages, loadEventSubs, esPrevPage, esNextPage,
+          // Economy
+          economyAccounts, economyTotal, economyPage, economyLimit, loadEconomy,
+          prevPage: () => { if (page.value > 1) { page.value--; loadQueue(); } },
+          nextPage: () => { if (page.value < totalPages.value) { page.value++; loadQueue(); } },
+        };
+      },
+      template: `
+    <header>
+      <div class="brand">
+        <span class="mark">ODB</span>
+        <div>
+          <h1>OpenDevBot Control Room</h1>
+          <div class="sub">local admin · localhost</div>
+        </div>
+      </div>
+      <div class="main-nav">
+        <button class="nav-item" :class="{ active: activeView === 'dashboard' }" @click="activeView='dashboard'">Dashboard</button>
+        <button class="nav-item" :class="{ active: activeView === 'live' }" @click="activeView='live'">Live</button>
+        <button class="nav-item" :class="{ active: activeView === 'economy' }" @click="(activeView='economy', loadEconomy())">Economy</button>
+        <button class="nav-item" :class="{ active: activeView === 'settings' }" @click="activeView='settings'">Settings</button>
+      </div>
+      <div class="header-right">
+        <!-- signup/user area -->
+        <div v-if="connected" class="user-chip">
+          streamer&nbsp;<b>{{ user?.username }}</b>
+        </div>
+        <button class="btn btn-primary" v-if="!connected" @click="signUp('user')">Sign Up (User)</button>
+        <button class="btn btn-ghost" @click="signUp('bot')">Sign Up Bot</button>
+        <button class="btn btn-ghost" @click="openLogs">Logs</button>
+      </div>
+    </header>
+
+    <main v-if="activeView === 'dashboard'">
+      <div class="col-left">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Health</div>
+            <h2>Bot Status</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="status-grid">
+            <div class="status-row">
+              <span class="label">Chat connection</span>
+              <span class="status-dot-row">
+                <span class="status-dot" :class="botStatus.chatConnected ? 'up' : 'down'"></span>
+                <span class="value">{{ botStatus.chatConnected ? 'connected' : 'disconnected' }}</span>
+              </span>
+            </div>
+            <div class="status-row">
+              <span class="label">Database</span>
+              <span class="status-dot-row">
+                <span class="status-dot" :class="botStatus.dbConnected ? 'up' : 'down'"></span>
+                <span class="value">{{ botStatus.dbConnected ? 'connected' : 'disconnected' }}</span>
+              </span>
+            </div>
+            <!-- API status removed: /api/v1/admin/status indicates API reachability -->
+            <div class="status-row">
+              <span class="label">Uptime</span>
+              <span class="value">{{ formatUptime(liveUptimeSeconds) }}</span>
+            </div>
+            <div class="status-row">
+              <span class="label">Last restart</span>
+              <span class="value">{{ botStatus.startedAt ? fmtTime(botStatus.startedAt) : '—' }}</span>
+            </div>
+            <div class="status-row">
+              <span class="label">Process PID</span>
+              <span class="value">{{ botStatus.pid ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Presence</div>
+            <h2>Joined Channels</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="join-row">
+            <input v-model="joinInput" placeholder="channel name" @keyup.enter="joinChannel" />
+            <button class="btn btn-ghost" @click="joinChannel">Join</button>
+          </div>
+          <div v-if="channels.length" class="channel-list">
+            <div class="channel-row" v-for="c in channels" :key="c">
+              <span class="channel-name"><span class="dot" style="width:6px;height:6px;border-radius:50%;"></span>#{{ c }}</span>
+              <button class="icon-btn" @click="partChannel(c)">part</button>
+            </div>
+          </div>
+          <div v-else class="empty">No channels joined yet</div>
+        </div>
+      </section>
+      </div>
+
+      <div class="col-right">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Discord</div>
+            <h2>Webhook Queue</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab" :class="{ active: status==='pending', pending: status==='pending' }" @click="setStatus('pending')">pending</button>
+            <button class="tab" :class="{ active: status==='processing' }" @click="setStatus('processing')">processing</button>
+            <button class="tab" :class="{ active: status==='sent', sent: status==='sent' }" @click="setStatus('sent')">sent</button>
+            <button class="tab" :class="{ active: status==='failed', failed: status==='failed' }" @click="setStatus('failed')">failed</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table v-if="items.length">
+            <thead>
+              <tr>
+                <th style="width:24px"></th>
+                <th>Event</th>
+                <th>Status</th>
+                <th>Received</th>
+                <th style="text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="it in items" :key="it._id">
+                <td><input type="checkbox" :checked="selected.has(it._id)" @change="toggleSelect(it._id)" /></td>
+                <td>
+                  {{ it.event }}<br/>
+                  <span class="mono-id">{{ it._id }}</span>
+                </td>
+                <td><span class="badge" :class="it.status">{{ it.status }}</span></td>
+                <td class="mono-id">{{ fmtTime(it.createdAt) }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" @click="requeue([it._id])">requeue</button>
+                    <button class="btn btn-danger" style="padding:6px 10px;font-size:12px" @click="remove([it._id])">delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty">No {{ status }} items</div>
+
+          <div class="queue-foot">
+            <span class="page-info">page {{ page }} / {{ totalPages }} · {{ total }} total</span>
+            <div class="pager">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="page<=1" @click="prevPage">prev</button>
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="page>=totalPages" @click="nextPage">next</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- EventSub Subscriptions panel (separate section under Discord Webhook Queue) -->
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="eyebrow">Twitch</div>
+            <h2>EventSub Subscriptions</h2>
+          </div>
+          <div class="tabs">
+            <button class="tab" @click="loadEventSubs">refresh</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <table v-if="esPageItems.length">
+            <thead>
+              <tr>
+                <th>Subscription ID</th>
+                <th>Auth User</th>
+                <th>Present</th>
+                <th>Retry Status</th>
+                <th>Attempts</th>
+                <th>Last Error</th>
+                <th>Next Retry</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="it in esPageItems" :key="it.subscriptionId + ':' + it.authUserId">
+                <td class="mono-id">{{ it.subscriptionId }}</td>
+                <td class="mono-id">{{ it.authUserId }}</td>
+                <td><span :class="it.present ? 'status-dot up' : 'status-dot down'"> </span> {{ it.present ? 'active' : 'missing' }}</td>
+                <td>{{ it.retryStatus }}</td>
+                <td class="mono-id">{{ it.attempts }}</td>
+                <td class="mono-id">{{ it.lastError || '' }}</td>
+                <td class="mono-id">{{ it.nextRetryAt ? new Date(it.nextRetryAt).toLocaleString() : '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty">No subscriptions found</div>
+          <div class="queue-foot">
+            <span class="page-info">page {{ esPage }} / {{ esTotalPages }} · {{ esTotal }} total</span>
+            <div class="pager">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="esPage<=1" @click="esPrevPage">prev</button>
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px" :disabled="esPage>=esTotalPages" @click="esNextPage">next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+
+    </main>
+
+    <!-- Live monitor view -->
+    <main v-if="activeView === 'live'">
+      <div style="max-width:1180px;margin:0 auto;padding:26px 32px 40px;">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">Live</div>
+              <h2>Event & Chat Monitor</h2>
+            </div>
+            <div class="tabs">
+              <button class="tab">live</button>
+            </div>
+          </div>
+          <div class="panel-body" style="max-height:70vh;overflow:auto;padding:12px;">
+            <div v-if="monitorFeed && monitorFeed.length">
+              <div v-for="(m, idx) in monitorFeed" :key="idx">
+                <template v-if="eventType(m.event) === 'chat'">
+                  <div :style="{background: 'rgba(255,255,255,0.02)', padding: '10px 12px', marginBottom: '6px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)'}">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
+                      <div style="flex:1;line-height:1.1">
+                        <div style="font-weight:600;color:#ffffff;font-size:13px">{{ (m.text.split(':')[0]) || '' }} <span style="font-weight:400;color:#9aa0a6;margin-left:8px;font-size:11px">{{ m.ts }}</span></div>
+                        <div style="margin-top:6px;color:#e6e6e6;font-size:13px;white-space:pre-wrap">{{ (m.text.split(':').slice(1).join(':')).trim() }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <div :style="{background: eventColor(m.event), padding: '10px 12px', marginBottom: '6px', borderRadius: '4px'}">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                      <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
+                      <div style="flex:1"><strong style="color:var(--text)">{{ eventType(m.event) }}</strong> <span style="margin-left:8px;color:var(--text-dim)">{{ m.ts }}</span></div>
+                    </div>
+                    <div style="font-size:13px;color:var(--text);white-space:pre-wrap">{{ m.text }}</div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div v-else class="empty">No events yet</div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Settings view -->
+    <main v-if="activeView === 'settings'">
+      <div style="max-width:820px;margin:0 auto;padding:26px 32px 40px;">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">Settings</div>
+              <h2>Monitor Filters</h2>
+            </div>
+            <div class="tabs">
+              <button class="tab">monitor</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div style="display:flex;gap:18px;align-items:flex-start;">
+              <div style="flex:1">
+                <label>Bits threshold (min bits to show)</label>
+                <input type="number" v-model.number="monitorSettings.bitsThreshold" style="width:120px;margin-top:8px;display:block" />
+                <label style="margin-top:12px;display:block">Total monitor items limit</label>
+                <input type="number" v-model.number="monitorSettings.totalMax" style="width:120px;margin-top:8px;display:block" />
+              </div>
+              <div style="flex:2">
+                <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+                  <strong>Per-event limits</strong>
+                  <div>
+                    <button class="btn btn-ghost" @click="showAllEvents">Show all</button>
+                    <button class="btn btn-ghost" @click="hideAllEvents">Hide all</button>
+                  </div>
+                </div>
+                <div v-for="(val, key) in monitorSettings.perEventMax" :key="key" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <div style="width:140px;text-transform:capitalize">{{ key }}</div>
+                  <input type="number" v-model.number="monitorSettings.perEventMax[key]" style="width:100px" />
+                  <div style="margin-left:12px;display:flex;align-items:center;gap:6px">
+                    <label style="font-size:12px;color:var(--text-dim)">show</label>
+                    <input type="checkbox" v-model="monitorSettings.perEventVisible[key]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+              <div style="margin-top:18px;display:flex;gap:8px;align-items:center">
+                <button class="btn btn-primary" @click="saveMonitorSettings">Save</button>
+                <button class="btn btn-ghost" @click="resetMonitorSettings">Reset</button>
+                <button class="btn btn-ghost" @click="clearMonitor">Clear Monitor</button>
+              </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Economy view -->
+    <main v-if="activeView === 'economy'">
+      <div style="max-width:1180px;margin:0 auto;padding:26px 32px 40px;">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="eyebrow">Economy</div>
+              <h2>Accounts</h2>
+            </div>
+            <div class="tabs">
+              <button class="tab" @click="loadEconomy">refresh</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <table v-if="economyAccounts.length">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Balance</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="acc in economyAccounts" :key="acc.userId">
+                  <td class="mono-id">{{ acc.userId }}</td>
+                  <td>{{ acc.balance }}</td>
+                  <td class="mono-id">{{ new Date(acc.updatedAt).toLocaleString() }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div v-else class="empty">No economy data available. Ensure the admin API exposes /api/v1/admin/economy/accounts</div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" v-if="toast">{{ toast }}</div>
+  `
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

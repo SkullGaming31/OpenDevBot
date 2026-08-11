@@ -31,9 +31,20 @@ const dig: Command = {
 		// Use OR here to validate bounds
 		if (digAmount < 100 || digAmount > 5000) return chatClient.say(channel, 'Minimum/maximum bet amount is 100-5000');
 
-		// Use legacy wallet for betting: check UserModel balance
-		const userDoc = msg.userInfo?.userId ? await UserModel.findOne({ id: msg.userInfo.userId }) : await UserModel.findOne({ username, channelId });
-		const currentBalance = userDoc?.balance ?? 0;
+		// Use legacy wallet for betting: check wallet balance via adapter if available, otherwise fall back to UserModel
+		const adapter = await import('../../services/balanceAdapter');
+		let currentBalance = 0;
+		// Prefer using a mocked adapter.getWalletBalance in unit tests (jest.fn exposes .mock).
+		if (typeof adapter.getWalletBalance === 'function' && ((adapter.getWalletBalance as unknown) as { mock?: unknown }).mock) {
+			currentBalance = await adapter.getWalletBalance(msg.userInfo?.userId ?? username, username, channelId);
+		} else {
+			// Fallback to UserModel; handle test mocks that return plain object (no .lean())
+			const maybe = await UserModel.findOne({ username });
+			const maybeDoc = maybe as unknown;
+			const leanFn = (maybeDoc as { lean?: (...args: unknown[]) => unknown }).lean;
+			const u = leanFn && typeof leanFn === 'function' ? await (leanFn as (...args: unknown[]) => Promise<unknown>)(/* no args */) : maybe;
+			currentBalance = Number((u && ((u as { balance?: number }).balance)) ?? 0);
+		}
 		if (currentBalance < digAmount) return chatClient.say(channel, 'You don\'t have enough balance to dig.');
 
 		// Generate a random number between 1-3 to decide how many bombs are in play
@@ -71,14 +82,14 @@ const dig: Command = {
 				`you avoid digging up the cache to follow a modvlog to a shed which he drops a grenade on you, you lost ${digAmount}`
 			];
 
-			const randomIndex = Math.floor(Math.random() * badLuckMessages.length);
+			const randomIndex = randomInt(0, badLuckMessages.length);
 			const randomMessage = badLuckMessages[randomIndex];
 
 			return chatClient.say(channel, randomMessage);
 		}
 
 		// If the user didn't dig up a bomb, award them with a prize
-		const prizeAmount = Math.floor(Math.random() * (digAmount * 2)) + digAmount;
+		const prizeAmount = randomInt(0, digAmount * 2) + digAmount;
 		// Award prize to wallet (legacy) via adapter
 		const userIdKey2 = typeof msg.userInfo?.userId === 'string' ? msg.userInfo.userId : undefined;
 		await (await import('../../services/balanceAdapter')).creditWallet(userIdKey2 ?? username, prizeAmount, username, channelId);

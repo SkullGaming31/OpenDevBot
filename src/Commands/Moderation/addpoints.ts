@@ -111,13 +111,13 @@ const addpoints: Command = {
 							: []
 					),
 					{ name: 'Balance Added', value: `${amountToAdd}`, inline: false },
-					{ name: 'New Balance', value: `${acct.balance}`, inline: true },
+					{ name: 'New Balance', value: `${acct.balance?.bank ?? 0}`, inline: true },
 				])
 				.setFooter({ text: `${msg.userInfo.displayName} just added points to ${args[0].replace('@', '')} in ${channel}'s twitch channel` })
 				.setTimestamp();
 
 			// Send a message to the chat confirming the points added
-			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${acct.balance}`);
+			await chatClient.say(channel, `Added ${amountToAdd} points to ${targetUser}. New balance: ${acct.balance?.bank ?? 0}`);
 			await commandUsage.send({ embeds: [addPointsEmbed] });
 		} catch (err: unknown) {
 			if (err instanceof Error) {

@@ -58,9 +58,11 @@ describe('migrated command unit tests (beg, dig, roulette)', () => {
 
 		const debitMock = jest.fn().mockResolvedValue(true);
 		const creditMock = jest.fn().mockResolvedValue(undefined);
+		const getWalletBalanceMock = jest.fn().mockResolvedValue(100);
 		jest.doMock('../../services/balanceAdapter', () => ({
 			debitWallet: debitMock,
-			creditWallet: creditMock
+			creditWallet: creditMock,
+			getWalletBalance: getWalletBalanceMock
 		}));
 
 		// Mock UserModel.findOne to show sufficient balance
@@ -97,9 +99,11 @@ describe('migrated command unit tests (beg, dig, roulette)', () => {
 
 		const debitMock = jest.fn().mockResolvedValue(true);
 		const creditMock = jest.fn().mockResolvedValue(undefined);
+		const getWalletBalanceMock2 = jest.fn().mockResolvedValue(100);
 		jest.doMock('../../services/balanceAdapter', () => ({
 			debitWallet: debitMock,
-			creditWallet: creditMock
+			creditWallet: creditMock,
+			getWalletBalance: getWalletBalanceMock2
 		}));
 
 		jest.doMock('../../database/models/userModel', () => ({

@@ -1,7 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
-import { UserModel } from '../../database/models/userModel';
 import logger from '../../util/logger';
 
 const CHOICES = ['rock', 'paper', 'scissors'];
@@ -35,12 +34,10 @@ const rockPaperScissors: Command = {
 				return;
 			}
 
-			const user = await UserModel.findOne({ username: userName });
-			if (!user) {
-				await chatClient.say(channelName, `${userName}, you don't have an account, please run the !begin to start earning coins`);
-				return;
-			}
-			if (user.balance === undefined || user.balance < betAmount) {
+			const userKey = message.userInfo?.userId ?? userName;
+			// Attempt to debit the bet from the user's wallet first
+			const debited = await (await import('../../services/balanceAdapter')).debitWallet(userKey, betAmount, userName, undefined);
+			if (!debited) {
 				await chatClient.say(channelName, `${userName}, you don't have enough balance to place this bet.`);
 				return;
 			}
@@ -51,15 +48,16 @@ const rockPaperScissors: Command = {
 			const result = determineWinner(userChoice, botChoice);
 
 			if (result.startsWith('You win')) {
-				user.balance += betAmount * 1.5;
-				await user.save();
-				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result} Your new balance is ${user.balance}.`);
+				const winnings = Math.floor(betAmount * 1.5);
+				await (await import('../../services/balanceAdapter')).creditWallet(userKey, winnings, userName, undefined);
+				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result} You won ${winnings} coins.`);
 			} else if (result.startsWith('You lose')) {
-				user.balance -= betAmount;
-				await user.save();
-				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result} Your new balance is ${user.balance}.`);
+				// bet was already debited
+				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result} You lost ${betAmount} coins.`);
 			} else {
-				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result}`);
+				// tie — refund the bet
+				await (await import('../../services/balanceAdapter')).creditWallet(userKey, betAmount, userName, undefined);
+				await chatClient.say(channelName, `${userName}, you chose ${userChoice}, I chose ${botChoice}. ${result} Your bet has been refunded.`);
 			}
 		} catch (error) {
 			logger.error(error);

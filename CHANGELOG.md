@@ -38,6 +38,13 @@
 
 All notable changes to this project are documented in this file.
 
+### 2026-07-15 — Electron / Admin dashboard
+
+- Added: Electron admin shell support improvements — masked `ADMIN_API_TOKEN` is now logged in the main process for diagnostics (masked, not the full secret). File: `electron/adminProxy.ts`.
+- Added: Health indicator to the local admin dashboard UI at the top header. The dashboard now polls `/health` and shows a green "API OK" badge on 200 responses and a red "API ERROR" badge for failures. File: `public/admin/dashboard.html`.
+- Changed: Built and pushed these changes to the `feature/electron-setup` branch for further testing; no PR opened.
+
+
 ## 2025-12-09 — Test hygiene & Jest/TypeScript fixes
 
 - Re-enabled strict TypeScript unused checks (`noUnusedLocals` / `noUnusedParameters`) and fixed the resulting errors across the codebase to restore strict type hygiene.

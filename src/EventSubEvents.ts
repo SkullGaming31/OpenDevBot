@@ -16,7 +16,9 @@ import { broadcasterInfo, moderatorIDs, openDevBotID, PromoteWebhookID, PromoteW
 import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
+import subscriptionLimiter from './EventSub/subscriptionLimiter';
 import FollowMessage from './database/models/followMessages';
+import { broadcast } from './util/monitorBroadcaster';
 
 
 export async function initializeTwitchEventSub(): Promise<void> {
@@ -54,11 +56,13 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 				try {
 					await sleep(2000);
+					try { broadcast('eventsub:streamOnline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
 					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'green',
 						message: `${displayName} has Begun the stream — thank you for Hanging out`,
 					});
 					await sleep(2000);
+					try { broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` });
@@ -221,6 +225,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					})
 					.setTimestamp();
 				await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [giftedSubs] });
+				try { broadcast('eventsub:gift', { broadcaster: info.name, gifter: gift.gifterDisplayName, amount: gift.amount }); } catch (e) { void e; }
 			},
 		);
 		void eventSubListener.onChannelSubscriptionMessage(
@@ -261,6 +266,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					.setTimestamp();
 				void resubEmbed;
 				try {
+					try { broadcast('eventsub:resub', { broadcaster: info.name, user: s.userDisplayName, months: s.cumulativeMonths }); } catch (e) { void e; }
 					// await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [resubEmbed] });
 					await chatClient.say(
 						userInfo.name,
@@ -356,6 +362,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 					await chatClient.say(info.name, `${randomMessage}`);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [followEmbed] });
+					try { broadcast('eventsub:follow', { broadcaster: info.name, user: userInfo.displayName }); } catch (e) { void e; }
 				} catch (error) {
 					logger.error(
 						'An error occurred in the follower event handler:',
@@ -405,6 +412,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`,
 					);
 					// await twitchActivity.send({ embeds: [subEmbed] });
+					try { broadcast('eventsub:subscription', { broadcaster: info.name, user: s.userName, tier: s.tier }); } catch (e) { void e; }
 				} catch (error) {
 					logger.error(error);
 				}
@@ -453,6 +461,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 							`${cheer.userDisplayName} has cheered ${cheer.bits} bits in ${info.name}`,
 						);
 						await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [cheerEmbed] });
+						try { broadcast('eventsub:cheer', { broadcaster: info.name, user: cheer.userDisplayName, bits: cheer.bits, message: cheer.message }); } catch (e) { void e; }
 					} catch (error) {
 						logger.error(error);
 					}
@@ -498,6 +507,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
 					await chatClient.say(info.name, raidMessage);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
+					try { broadcast('eventsub:raid', { broadcaster: info.name, raider: raidingBroadcaster.displayName, viewers: raidToEvent.viewers }); } catch (e) { void e; }
 
 					await sleep(1000);
 
@@ -538,6 +548,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						.setTimestamp();
 
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
+					try { broadcast('eventsub:raid_outgoing', { broadcaster: info.name, target: raidedBroadcaster.displayName, viewers: raidEvent.viewers }); } catch (e) { void e; }
 				} catch (error) {
 					logger.error(error);
 				}
@@ -571,6 +582,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						).catch((err) => {
 							logger.error(err);
 						});
+						try { broadcast('eventsub:goal_begin', { broadcaster: info.name, type: gb.type, current: gb.currentAmount, target: gb.targetAmount }); } catch (e) { void e; }
 						break;
 					case 'subscription':
 						logger.info(
@@ -619,6 +631,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					userInfo.name,
 					`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`,
 				);
+				try { broadcast('eventsub:goal_progress', { broadcaster: info.name, type: gp.type, current: gp.currentAmount, target: gp.targetAmount }); } catch (e) { void e; }
 			},
 		);
 		void eventSubListener.onChannelGoalEnd(
@@ -634,6 +647,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 					);
 				}
+				try { broadcast('eventsub:goal_end', { broadcaster: info.name, type: ge.type, current: ge.currentAmount, target: ge.targetAmount, start: ge.startDate, end: ge.endDate }); } catch (e) { void e; }
 			},
 		);
 		void eventSubListener.onChannelWarningSend(info.id as UserIdResolvable, info.id as UserIdResolvable, async (warning) => {
@@ -717,6 +731,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 								.setTimestamp();
 							// enqueue to the activity webhook
 							await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [embed] });
+							try { broadcast('eventsub:redemption', { broadcaster: info.name, user: userDisplayName, reward: rewardTitle, cost, message: userMessage }); } catch (e) { void e; }
 							// if this channel has channelPointsEnabled in DB, credit the user's wallet
 							try {
 								const channelDoc = await ChannelModel.findOne({ user_id: info.id });
@@ -824,9 +839,19 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 
 			// Save subscription details to MongoDB using upsert to avoid races
 			try {
+				const subRec = subscription as unknown as Record<string, unknown>;
+				const toSet = {
+					subscriptionId: subscription.id,
+					authUserId: subscription.authUserId,
+					type: String(subRec['type'] ?? ''),
+					version: String(subRec['version'] ?? ''),
+					condition: subRec['condition'] ?? {},
+					status: String(subRec['status'] ?? ''),
+					transport: subRec['transport'] ?? {},
+				};
 				await SubscriptionModel.updateOne(
 					{ subscriptionId: subscription.id, authUserId: subscription.authUserId },
-					{ $setOnInsert: { subscriptionId: subscription.id, authUserId: subscription.authUserId } },
+					{ $set: toSet },
 					{ upsert: true }
 				).exec();
 				logger.debug(`New subscription upserted to database: SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`);
@@ -969,9 +994,8 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 	const clientId = process.env.TWITCH_CLIENT_ID as string;
 	if (!clientId) throw new Error('TWITCH_CLIENT_ID not set');
 
-	// Reuse the existing ApiClient from `getUserApi()` which is already
-	// configured for the broadcaster (handles refresh/persistence correctly).
-	const apiClient: ApiClient = await getUserApi();
+	// Note: we do not create a temporary ApiClient here; the persistent
+	// EventSub listener will be used to register handlers below.
 
 	// Prefer reusing the persistent EventSub websocket listener to avoid creating
 	// many short-lived transports (which can hit Twitch limits). Register the
@@ -987,17 +1011,19 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 		const existing = await SubscriptionModel.find({ authUserId: authUserId }).lean();
 		const existingTypes = new Set<string>();
 		for (const ex of existing) {
-			if (!ex || !ex.subscriptionId) continue;
-			const parts = String(ex.subscriptionId).split('.');
-			// If the stored subscriptionId includes the broadcaster id as the
-			// last segment (e.g. 'channel.raid.to.31124455'), treat the type as
-			// everything except the trailing id ('channel.raid.to'). Otherwise
-			// fall back to the whole value.
-			if (parts.length >= 2) {
-				const typePart = parts.length > 2 ? parts.slice(0, -1).join('.') : parts.join('.');
-				existingTypes.add(typePart);
-			} else {
-				existingTypes.add(String(ex.subscriptionId));
+			if (!ex) continue;
+			if (ex.type && typeof ex.type === 'string') {
+				existingTypes.add(ex.type);
+				continue;
+			}
+			if (ex.subscriptionId) {
+				const parts = String(ex.subscriptionId).split('.');
+				if (parts.length >= 2) {
+					const typePart = parts.length > 2 ? parts.slice(0, -1).join('.') : parts.join('.');
+					existingTypes.add(typePart);
+				} else {
+					existingTypes.add(String(ex.subscriptionId));
+				}
 			}
 		}
 
@@ -1005,6 +1031,10 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 		// broadcaster but may not yet be recorded in our DB (for example after
 		// a previous run). Use the provided accessToken to list subscriptions
 		// scoped to that user and merge types into existingTypes.
+		// Counters for enabled websocket subscriptions and their total cost.
+		let enabledCount = 0;
+		let currentCost = 0;
+
 		try {
 			const axios = await import('axios');
 			const resp = await axios.default.get('https://api.twitch.tv/helix/eventsub/subscriptions', {
@@ -1015,6 +1045,7 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 				params: { first: 100 },
 			});
 			const rows = Array.isArray(resp?.data?.data) ? resp.data.data : [];
+			// Compute existing types and enforce websocket limits/costs
 			for (const row of rows) {
 				try {
 					const cond = row?.condition as Record<string, unknown> | undefined;
@@ -1022,10 +1053,21 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 						const t = String(row.type ?? '');
 						if (t) existingTypes.add(t);
 					}
+					const transport = row?.transport as Record<string, unknown> | undefined;
+					const status = String(row?.status ?? '').toLowerCase();
+					if (transport && String(transport['method'] ?? '').toLowerCase() === 'websocket' && status === 'enabled') {
+						enabledCount++;
+						const c = Number(row?.cost ?? 0) || 0;
+						currentCost += c;
+					}
 				} catch (_e) {
 					// ignore malformed rows
 				}
 			}
+
+			// Keep counts in variables for use by registration logic below
+			// (avoids using `any` on `existingTypes`).
+			// `enabledCount` and `currentCost` are captured by `safeRegister`.
 		} catch (e) {
 			logger.debug('Failed to fetch existing Twitch subscriptions for user, continuing', e);
 		}
@@ -1035,10 +1077,41 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 				logger.debug(`Skipping registration for ${type} - already present for ${authUserId}`);
 				return;
 			}
+
+			// Read the counts we computed earlier; default to zero when missing
+			const usedEnabledCount = Number(enabledCount ?? 0);
+			const usedCurrentCost = Number(currentCost ?? 0);
+
+			const MAX_ENABLED = process.env.EVENTSUB_MAX_ENABLED ? Number(process.env.EVENTSUB_MAX_ENABLED) : 300;
+			const MAX_TOTAL_COST = process.env.EVENTSUB_MAX_TOTAL_COST ? Number(process.env.EVENTSUB_MAX_TOTAL_COST) : 10;
+
+			// If we've already reached the enabled websocket subscription count, skip
+			if (usedEnabledCount >= MAX_ENABLED) {
+				logger.warn(`Skipping registration for ${type} for authUser ${authUserId}: enabled websocket subscriptions limit reached (${usedEnabledCount} >= ${MAX_ENABLED})`);
+				return;
+			}
+
+			// Conservatively assume each new subscription has cost 1. If adding one
+			// would exceed the max_total_cost, skip and log for operator review.
+			if ((usedCurrentCost + 1) > MAX_TOTAL_COST) {
+				logger.warn(`Skipping registration for ${type} for authUser ${authUserId}: would exceed max_total_cost (${usedCurrentCost} + 1 > ${MAX_TOTAL_COST})`);
+				return;
+			}
+
 			try {
-				registerFn(authUserId as string, noOpHandler);
+				// Schedule registration through limiter to avoid bursting subscription POSTs
+				void subscriptionLimiter.schedule(async () => {
+					try {
+						registerFn(authUserId as string, noOpHandler);
+						// update in-memory counters to account for this scheduled create
+						enabledCount = Number(enabledCount ?? 0) + 1;
+						currentCost = Number(currentCost ?? 0) + 1;
+					} catch (e) {
+						logger.debug(`Failed to register handler for ${type} on persistent listener`, e);
+					}
+				});
 			} catch (e) {
-				logger.debug(`Failed to register handler for ${type} on persistent listener`, e);
+				logger.debug(`Failed to schedule handler registration for ${type} on persistent listener`, e);
 			}
 		};
 
@@ -1080,43 +1153,10 @@ export async function createSubscriptionsForAuthUser(authUserId: string, accessT
 		// Give Twitch some time to create the subscriptions
 		await sleep(2000);
 	} catch (e) {
-		// As a last resort, fall back to the previous temporary listener approach
-		logger.warn('Failed to register handlers on persistent EventSub listener, falling back to temporary listener', e);
-		const _es = await import('@twurple/eventsub-ws');
-		if (!('EventSubWsListener' in _es)) throw new Error('EventSubWsListener not found in @twurple/eventsub-ws');
-		const TempEventSubWsListener = (_es as unknown as { EventSubWsListener: new (opts: { apiClient: unknown; logger?: unknown }) => EventSubWsListener }).EventSubWsListener;
-		const tempListener = new TempEventSubWsListener({ apiClient, logger: { minLevel: 'ERROR' } });
-		try {
-			tempListener.start();
-			tempListener.onStreamOnline(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onStreamOffline(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelFollow(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelSubscription(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelSubscriptionMessage(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelCheer(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelRaidFrom(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelRaidTo(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelGoalBegin(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelGoalProgress(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelGoalEnd(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelWarningSend(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelWarningAcknowledge(authUserId as UserIdResolvable, authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelVipAdd(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelVipRemove(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelModeratorAdd(authUserId as UserIdResolvable, async () => undefined);
-			tempListener.onChannelModeratorRemove(authUserId as UserIdResolvable, async () => undefined);
-			await sleep(5000);
-		} finally {
-			try {
-				const stopProp = (tempListener as unknown as Record<string, unknown>)['stop'];
-				if (typeof stopProp === 'function') {
-					const fn = stopProp as (...args: unknown[]) => unknown;
-					const res = fn.call(tempListener);
-					if (res && typeof (res as Promise<unknown>).then === 'function') await res as Promise<unknown>;
-				}
-			} catch (err) {
-				logger.debug('Failed to stop temp EventSub listener', (err as Error).message);
-			}
-		}
+		// Removed temporary listener fallback to prevent creating many short-lived
+		// websocket transports which can hit Twitch limits. Log the error so an
+		// operator can investigate why handler registration on the persistent
+		// listener failed.
+		logger.warn('Failed to register handlers on persistent EventSub listener; temporary listener fallback is disabled. Investigate and restart the listener if necessary.', e as Error);
 	}
 }

@@ -51,7 +51,8 @@ async function main() {
 			const session = await mongoose.startSession();
 			try {
 				session.startTransaction();
-				await BankAccount.create([{ userId: targetId, balance: b.balance }], { session });
+				const balanceObj = typeof b.balance === 'number' ? { bank: b.balance, wallet: 0 } : (b.balance || { bank: 0, wallet: 0 });
+				await BankAccount.create([{ userId: targetId, balance: balanceObj }], { session });
 				await BankAccount.deleteOne({ _id: b._id }).session(session);
 				await session.commitTransaction();
 				logger.info('  applied');

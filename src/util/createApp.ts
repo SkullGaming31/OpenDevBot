@@ -6,7 +6,16 @@ import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
 import mongoose from 'mongoose';
 import { limiter } from './util';
 import logger from './logger';
-import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
+import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
+
+// Captured once when this module first loads (i.e. once per process
+// lifetime), not per createApp() call — that's what "uptime"/"last restart"
+// should be measured against.
+const BOOT_TIME = new Date();
+
+// Mirror of retry cap used by retry manager so the admin UI can show a
+// human-friendly capped attempt count without changing DB state.
+const EVENTSUB_MAX_ATTEMPTS = 6;
 
 /**
  * Creates an Express.js app that handles the OAuth2 flow for getting an access token from Twitch.
@@ -87,10 +96,49 @@ export default function createApp(): express.Application {
 	app.get('/api/v1/chat/channels', requireAdmin, async (_req, res) => {
 		try {
 			const { joinedChannels } = await import('../chat');
+			// If the in-memory cache is empty (e.g., chat subsystem not initialized
+			// yet), fall back to returning usernames from the token store so the
+			// admin UI still shows configured channels.
+			if (!joinedChannels || joinedChannels.size === 0) {
+				try {
+					const { getUsernamesFromDatabase } = await import('../database/tokenStore');
+					const users = await getUsernamesFromDatabase();
+					return res.json({ channels: users });
+				} catch (err) {
+					// fallback to empty list if DB read fails
+					logger.debug('Failed to load usernames from DB for channels fallback', err as Error);
+					return res.json({ channels: [] });
+				}
+			}
 			return res.json({ channels: Array.from(joinedChannels) });
 		} catch (e) {
 			logger.error('Failed to list joined channels', e as Error);
 			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: bot status for the dashboard's status panel (pid, uptime, connectivity)
+	app.get('/api/v1/admin/status', requireAdmin, async (_req, res) => {
+		try {
+			const { getChatClient } = await import('../chat');
+			let chatConnected = false;
+			try {
+				const client = await getChatClient();
+				chatConnected = !!(client as unknown as { isConnected?: boolean } | undefined)?.isConnected;
+			} catch {
+				// chat client not initialized yet — treated as disconnected, not an error
+			}
+
+			return res.json({
+				pid: process.pid,
+				startedAt: BOOT_TIME.toISOString(),
+				uptimeSeconds: Math.floor(process.uptime()),
+				dbConnected: await getDbHealth(),
+				chatConnected
+			});
+		} catch (e) {
+			logger.error('Admin status failed', e as Error);
+			return res.status(500).json({ error: 'failed to get status' });
 		}
 	});
 
@@ -178,6 +226,143 @@ export default function createApp(): express.Application {
 			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'webhooks.html'));
 		} catch (e) {
 			logger.error('Failed to serve admin webhooks UI', e as Error);
+			return res.status(500).send('failed to load admin UI');
+		}
+	});
+
+	// Admin: list EventSub subscriptions and retry status
+	app.get('/api/v1/admin/eventsubs', requireAdmin, async (req, res) => {
+		try {
+			const { SubscriptionModel } = await import('../database/models/eventSubscriptions');
+			const { RetryModel } = await import('../EventSub/retryModel');
+			// Fetch subscriptions and retry records
+			const subs = await SubscriptionModel.find({}).lean();
+			const retries = await RetryModel.find({}).lean();
+			// Build a map for quick lookup
+			type RetryRecord = { attempts?: number; status?: string; lastError?: string | null; nextRetryAt?: Date | null };
+			const retryMap = new Map<string, RetryRecord | null>();
+			for (const r of retries) retryMap.set(`${r.subscriptionId}:${r.authUserId}`, r);
+			// Collect unique keys from both sets
+			const keys = new Map<string, { subscriptionId: string; authUserId: string }>();
+			for (const s of subs) keys.set(`${s.subscriptionId}:${s.authUserId}`, { subscriptionId: s.subscriptionId, authUserId: s.authUserId });
+			for (const r of retries) keys.set(`${r.subscriptionId}:${r.authUserId}`, { subscriptionId: r.subscriptionId, authUserId: r.authUserId });
+			const items: Array<Record<string, unknown>> = [];
+			for (const [k, v] of keys) {
+				const present = subs.some(s => s.subscriptionId === v.subscriptionId && s.authUserId === v.authUserId);
+				const retry = retryMap.get(k) || null;
+				const r = retry as RetryRecord | null;
+				const rawAttempts = r && typeof r.attempts === 'number' ? r.attempts : 0;
+				const attempts = Math.min(rawAttempts, EVENTSUB_MAX_ATTEMPTS);
+				items.push({ subscriptionId: v.subscriptionId, authUserId: v.authUserId, present, retryStatus: r ? r.status : 'none', attempts, rawAttempts, lastError: r ? r.lastError : null, nextRetryAt: r ? r.nextRetryAt : null });
+			}
+			return res.json({ total: items.length, items });
+		} catch (e) {
+			logger.error('Failed to list EventSub subscriptions', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: list economy bank accounts (paginated)
+	app.get('/api/v1/admin/economy/accounts', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 20 : 20;
+			if (limit < 1) limit = 1;
+			if (limit > 500) limit = 500;
+			const total = await BankAccount.countDocuments({});
+			const items = await BankAccount.find({}, { __v: 0 }).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			return res.json({ total, page, limit, items });
+		} catch (e) {
+			logger.error('Failed to list economy accounts', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: get single account details (bank + legacy wallet when available)
+	app.get('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const { UserModel } = await import('../database/models/userModel');
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			const bank = await BankAccount.findOne({ userId }).lean();
+			const legacy = await UserModel.findOne({ $or: [{ id: userId }, { username: userId }] }).lean();
+			return res.json({ bank, legacy });
+		} catch (e) {
+			logger.error('Failed to get economy account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: list transactions (optionally filter by userId)
+	app.get('/api/v1/admin/economy/transactions', requireAdmin, async (req, res) => {
+		try {
+			const TransactionLog = (await import('../database/models/transactionLog')).default;
+			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 50 : 50;
+			if (limit < 1) limit = 1;
+			if (limit > 1000) limit = 1000;
+			const userId = typeof req.query.userId === 'string' ? req.query.userId.trim() : undefined;
+			const filter: Record<string, unknown> = {};
+			if (userId) filter.$or = [{ from: userId }, { to: userId }];
+			const total = await TransactionLog.countDocuments(filter);
+			const items = await TransactionLog.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			return res.json({ total, page, limit, items });
+		} catch (e) {
+			logger.error('Failed to list transactions', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: adjust account balance (deposit if amount>0, withdraw if amount<0). If `force` is true, perform blind $inc (no insufficient funds check).
+	app.post('/api/v1/admin/economy/account/:userId/adjust', requireAdmin, async (req, res) => {
+		try {
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			const amountRaw = req.body?.amount ?? req.query.amount;
+			const amount = Number(amountRaw);
+			if (!Number.isFinite(amount) || amount === 0) return res.status(400).json({ error: 'amount must be non-zero number' });
+			const force = !!req.body?.force || req.query.force === '1' || req.query.force === 'true';
+			const reason = req.body?.reason || req.query.reason || 'admin_adjust';
+			const economyService = await import('../services/economyService');
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			if (amount > 0) {
+				// deposit via service so TransactionLog is written and mirroring happens
+				await economyService.deposit(userId, amount, undefined, { admin: true, reason });
+				const bank = await BankAccount.findOne({ userId }).lean();
+				return res.json({ ok: true, bank });
+			} else {
+				// negative amount -> withdraw
+				if (force) {
+					// blind decrement (force)
+					const acct = await BankAccount.findOneAndUpdate({ userId }, { $inc: { balance: amount } }, { upsert: true, returnDocument: 'after' }).lean();
+					// create a transaction log entry to record the admin action
+					const TransactionLog = (await import('../database/models/transactionLog')).default;
+					await TransactionLog.create([{ type: 'withdraw', from: userId, amount: Math.abs(amount), meta: { admin: true, reason } }]);
+					return res.json({ ok: true, bank: acct });
+				} else {
+					try {
+						await economyService.withdraw(userId, Math.abs(amount));
+						const bank = await BankAccount.findOne({ userId }).lean();
+						return res.json({ ok: true, bank });
+					} catch (err) {
+						return res.status(400).json({ error: (err instanceof Error) ? err.message : String(err) });
+					}
+				}
+			}
+		} catch (e) {
+			logger.error('Failed to adjust account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Serve admin EventSub UI
+	app.get('/admin/eventsubs', requireAdmin, (_req: express.Request, res: express.Response) => {
+		try {
+			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'eventsubs.html'));
+		} catch (e) {
+			logger.error('Failed to serve admin eventsubs UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
 		}
 	});
@@ -317,6 +502,7 @@ export default function createApp(): express.Application {
 		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
 		try {
+
 			const { getChatClient, joinedChannels } = await import('../chat');
 			const client = await getChatClient();
 			const normalized = username.startsWith('#') ? username.slice(1) : username;
@@ -324,11 +510,11 @@ export default function createApp(): express.Application {
 			// `part` or `quit` as non-callable values in different versions.
 			// Use a small typed interface to avoid `any` and silence ESLint warnings.
 			if (typeof ((client as unknown as ChatClientLike).part) === 'function') {
-				const fn = (client as unknown as ChatClientLike).part as unknown as (channel: string) => Promise<unknown> | void;
-				await fn(normalized);
+				const fn = (client as unknown as ChatClientLike).part as ((channel: string) => Promise<unknown> | void) | undefined;
+				if (fn) await fn.call(client, normalized);
 			} else if (typeof ((client as unknown as ChatClientLike).quit) === 'function') {
-				const fn = (client as unknown as ChatClientLike).quit as unknown as (channel: string) => Promise<unknown> | void;
-				await fn(normalized);
+				const fn = (client as unknown as ChatClientLike).quit as ((channel: string) => Promise<unknown> | void) | undefined;
+				if (fn) await fn.call(client, normalized);
 			}
 			try { joinedChannels.delete(normalized); } catch (e) { /* ignore */ }
 			return res.json({ ok: true, parted: normalized });
@@ -356,6 +542,7 @@ export default function createApp(): express.Application {
 					<li><a href="/admin/webhooks">Admin UI — Webhook Queue</a></li>
 					<li><a href="/api/v1/admin/webhooks?status=pending&page=1&limit=50">API: List webhooks (GET)</a></li>
 					<li>API: Requeue (POST) — <code>/api/v1/admin/webhooks/requeue</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
+					<li><a href="/api/v1/admin/economy/accounts?page=1&limit=20">API: List economy accounts (GET)</a></li>
 					<li>API: Delete (DELETE) — <code>/api/v1/admin/webhooks</code> (JSON body: <code>{"ids":["id1"]}</code>)</li>
 				</ul>
 				<p class="small">Note: the UI will store the token in your browser's localStorage and send it as <code>x-admin-token</code>.</p>

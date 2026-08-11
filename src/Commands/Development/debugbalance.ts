@@ -27,7 +27,7 @@ const debugbalance: Command = {
 
 			const wallet = walletById || walletByName;
 
-			const bankMsg = bank ? `bank(${key}): ${bank.balance}` : 'bank: <none>';
+			const bankMsg = bank ? `bank(${key}): ${bank.balance?.bank ?? 0}` : 'bank: <none>';
 			const walletMsg = wallet ? `wallet(${wallet.id || wallet.username}): ${wallet.balance ?? 0}` : 'wallet: <none>';
 
 			await chatClient.say(channel, `DEBUG ${target} -> ${bankMsg} | ${walletMsg}`);

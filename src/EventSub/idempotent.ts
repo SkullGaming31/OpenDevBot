@@ -1,15 +1,17 @@
+import { randomInt } from 'crypto';
+
 type SubscriptionKey = string;
 
 interface CreateResult {
-    status: 'created' | 'existing' | 'queued' | 'failed';
-    id?: string;
-    attempts?: number;
+	status: 'created' | 'existing' | 'queued' | 'failed';
+	id?: string;
+	attempts?: number;
 }
 
 interface SubRecord {
-    id: string;
-    attempts: number;
-    lastError?: string;
+	id: string;
+	attempts: number;
+	lastError?: string;
 }
 
 /**
@@ -24,10 +26,10 @@ export class SubscriptionManager {
 	}
 
 	/**
-     * Create or ensure a subscription exists. This method is idempotent: repeated
-     * calls for the same broadcaster/type will return the same subscription id.
-     * For scaffolding we immediately succeed and return a generated id.
-     */
+		 * Create or ensure a subscription exists. This method is idempotent: repeated
+		 * calls for the same broadcaster/type will return the same subscription id.
+		 * For scaffolding we immediately succeed and return a generated id.
+		 */
 	async createOrEnsureSubscription(broadcasterId: string, type: string): Promise<CreateResult> {
 		const key = this.makeKey(broadcasterId, type);
 		const existing = this.subs.get(key);
@@ -36,22 +38,22 @@ export class SubscriptionManager {
 		}
 
 		// Create a new subscription record
-		const id = `sub_${Date.now().toString(36)}_${Math.floor(Math.random() * 1000)}`;
+		const id = `sub_${Date.now().toString(36)}_${randomInt(0, 1000)}`;
 		const rec: SubRecord = { id, attempts: 0 };
 		this.subs.set(key, rec);
 		return { status: 'created', id: rec.id, attempts: rec.attempts };
 	}
 
 	/**
-     * Simulate a failed create attempt for testing backoff logic. Increments
-     * attempts counter and records the last error message.
-     */
+		 * Simulate a failed create attempt for testing backoff logic. Increments
+		 * attempts counter and records the last error message.
+		 */
 	async markCreateFailed(broadcasterId: string, type: string, errMsg: string): Promise<void> {
 		const key = this.makeKey(broadcasterId, type);
 		const rec = this.subs.get(key);
 		if (!rec) {
 			// initialize failed record (no id assigned yet)
-			const id = `sub_pending_${Date.now().toString(36)}_${Math.floor(Math.random() * 1000)}`;
+			const id = `sub_pending_${Date.now().toString(36)}_${randomInt(0, 1000)}`;
 			this.subs.set(key, { id, attempts: 1, lastError: errMsg });
 			return;
 		}

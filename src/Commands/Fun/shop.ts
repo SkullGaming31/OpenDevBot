@@ -55,7 +55,8 @@ const shop: Command = {
 			return chatClient.say(channel, 'User not found');
 		}
 
-		const balance = existingUser.balance ?? 0; // keep for inventory logic; wallet ops use adapter
+		// Read wallet balance explicitly via adapter so wallet vs bank semantics are clear
+		const balance = await (await import('../../services/balanceAdapter')).getWalletBalance(userId, user, msg.channelId);
 
 
 		switch (action) {

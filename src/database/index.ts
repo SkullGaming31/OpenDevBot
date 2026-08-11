@@ -30,7 +30,7 @@ class Database {
 
 			switch (connectionState) {
 				case 0:
-					logger.info('Database Disconnected');
+					logger.error('Database Disconnected');
 					break;
 				case 1:
 					logger.info('Database Connected Successfully');
@@ -39,10 +39,10 @@ class Database {
 					logger.info('Database Connecting');
 					break;
 				case 3:
-					logger.info('Database Disconnecting');
+					logger.warn('Database Disconnecting');
 					break;
 				default:
-					logger.info('Unknown Database Connection State');
+					logger.warn('Unknown Database Connection State');
 					break;
 			}
 			await mongoose.connection.db?.command({ ping: 1 });

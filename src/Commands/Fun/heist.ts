@@ -224,7 +224,7 @@ const heist: Command = {
 		// Check if the amount is within the allowed range
 		// if (betAmount < 100 || betAmount > 5000) { return chatClient.say(channel, 'The heist minimum/maximum should be between 100 and 5000.'); }
 
-		const zonesFilePath = path.resolve(process.cwd(), 'data', 'zones.json');
+		const zonesFilePath = path.resolve(process.cwd(), 'src', 'data', 'zones.json');
 		if (!fs.existsSync(zonesFilePath)) {
 			logger.error('zones.json not found in data folder', { path: zonesFilePath });
 			return chatClient.say(channel, 'Configuration error: zones.json not found in data/.');
@@ -374,15 +374,15 @@ const heist: Command = {
 				const needed = amount;
 
 				// Fetch candidate donors (limit to a few times sample size to randomize)
-				const candidates = await BankAccount.find({ balance: { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();
+				const candidates = await BankAccount.find({ 'balance.bank': { $gte: donorMinBalance } }).limit(donorSampleSize * 5).lean();
 				if (!candidates || candidates.length === 0) {
 					// No eligible donors — heist fails
 					loot = 0;
 					stolenItems = [];
 				} else {
-					// shuffle candidates
+					// shuffle candidates using crypto-random Fisher-Yates
 					for (let i = candidates.length - 1; i > 0; i--) {
-						const j = Math.floor(Math.random() * (i + 1));
+						const j = randomInt(0, i + 1);
 						[candidates[i], candidates[j]] = [candidates[j], candidates[i]];
 					}
 					const donors = candidates.slice(0, donorSampleSize);
@@ -396,7 +396,7 @@ const heist: Command = {
 						session.startTransaction();
 						for (const donor of donors) {
 							if (collected >= needed) break;
-							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
 							const take = Math.min(maxFromDonor, needed - collected);
 							if (take <= 0) continue;
 							await economyService.withdraw(donor.userId, take, session);
@@ -421,7 +421,7 @@ const heist: Command = {
 						// Non-transactional fallback: attempt to withdraw from each donor individually
 						for (const donor of donors) {
 							if (collected >= needed) break;
-							const maxFromDonor = Math.min(Math.floor((donor.balance || 0) * donorMaxPercent), donorMaxAbsolute);
+							const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
 							const take = Math.min(maxFromDonor, needed - collected);
 							if (take <= 0) continue;
 							try {
@@ -450,8 +450,13 @@ const heist: Command = {
 		//
 		const numWinners = randomInt(1, participants.length + 1);
 		const winningAmount = Math.floor(loot / numWinners);
-		// Randomly select the winners
-		const winners = participants.sort(() => 0.5 - Math.random()).slice(0, numWinners);
+		// Randomly select the winners using Fisher-Yates shuffle
+		const participantsShuffled = participants.slice();
+		for (let i = participantsShuffled.length - 1; i > 0; i--) {
+			const j = randomInt(0, i + 1);
+			[participantsShuffled[i], participantsShuffled[j]] = [participantsShuffled[j], participantsShuffled[i]];
+		}
+		const winners = participantsShuffled.slice(0, numWinners);
 
 		// Construct the result message
 		let resultMessage = `Heist initiated by ${user}.`;
@@ -502,8 +507,8 @@ const heist: Command = {
 			resultMessage += ' The heist failed. Better luck next time!';
 			// Loop through each participant
 			for (const participant of participants) {
-				// Check for 50/50 chance of injury
-				if (Math.random() <= 0.9) {
+				// Check for injury chance (90%)
+				if (randomInt(0, 100) < 90) {
 					const injurySeverity = determineInjurySeverity();
 
 					// Assign the injury and get the injury details
@@ -675,7 +680,7 @@ function getRandomDescription(severity: string): string {
 
 	// If descriptions are available, choose a random one
 	if (descriptions.length > 0) {
-		const randomIndex = Math.floor(Math.random() * descriptions.length);
+		const randomIndex = randomInt(0, descriptions.length);
 		return descriptions[randomIndex];
 	} else {
 		// Handle cases where no descriptions are available (optional: return default message)
@@ -717,7 +722,7 @@ function getInjuryProbability(severity: string, /* difficulty: number */): numbe
  * @returns The determined severity of the injury ('minor', 'moderate', or 'severe').
  */
 function determineInjurySeverity(/* difficulty: number */): string {
-	const randomValue = Math.random();
+	const randomValue = randomInt(0, 1000000) / 1000000;
 
 	// Calculate cumulative probabilities for each severity
 	let cumulativeProbability = 0;
