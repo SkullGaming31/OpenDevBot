@@ -2,10 +2,7 @@ import { IBankAccount } from '../database/models/bankAccount';
 import logger from '../util/logger';
 import * as economyService from './economyService';
 
-// Mirror flag during migration
-const MIRROR_TO_USERMODEL = true;
-
-type AnyFn = (...args: unknown[]) => unknown;
+// Legacy mirroring to `UserModel.balance` has been removed.
 
 function safeStr(v: unknown) {
 	return v == null ? '' : String(v);
@@ -16,82 +13,102 @@ export async function getOrCreate(userId: string): Promise<IBankAccount> {
 
 export async function deposit(userId: string, amount: number) {
 	const acct = await economyService.deposit(userId, amount);
-	if (MIRROR_TO_USERMODEL) {
-		try {
-			const { UserModel } = require('../database/models/userModel');
-			const isNumericId = /^\d+$/.test(userId);
-			const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-			if (isNumericId) {
-				await UM.updateOne({ id: userId }, { $inc: { balance: amount }, $setOnInsert: { id: userId } }, { upsert: true });
-			} else {
-				await UM.updateOne({ username: userId }, { $setOnInsert: { username: userId }, $inc: { balance: amount } }, { upsert: true });
-			}
-		} catch (err) {
-			logger.warn('Failed to mirror deposit to UserModel', err);
-		}
-	}
+	// mirroring removed
 	return acct;
 }
 
 export async function withdraw(userId: string, amount: number) {
 	const acct = await economyService.withdraw(userId, amount);
-	if (MIRROR_TO_USERMODEL) {
-		try {
-			const { UserModel } = require('../database/models/userModel');
-			const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-			const isNumericId = /^\d+$/.test(userId);
-			if (isNumericId) await UM.updateOne({ id: userId }, { $inc: { balance: -amount } }, { upsert: true });
-			else await UM.updateOne({ username: userId }, { $inc: { balance: -amount } });
-		} catch (err) {
-			logger.warn('Failed to mirror withdraw to UserModel', err);
-		}
-	}
+	// mirroring removed
 	return acct;
 }
 
 export async function creditWallet(userKey: string | null | undefined, amount: number, username?: string | null, channelId?: string | null) {
-	try {
-		const BankModule = require('../database/models/bankAccount');
-		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
-		const keyStr = safeStr(userKey || username).toLowerCase();
-		const isNumericId = /^\d+$/.test(keyStr);
+	const BankModule = require('../database/models/bankAccount');
+	const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
+	const keyStr = safeStr(userKey || username).toLowerCase();
+	const isNumericId = /^\d+$/.test(keyStr);
 
-		if (isNumericId) {
-			await Bank.updateOne(
-				{ userId: keyStr },
-				{ $inc: { 'balance.wallet': amount }, $setOnInsert: { userId: keyStr, username: username || keyStr, balance: { bank: 0, wallet: 0 } } },
-				{ upsert: true }
-			);
-			if (MIRROR_TO_USERMODEL) {
+	// Helper: ensure existing legacy numeric `balance` fields are normalized
+	const ensureBalanceObject = async (query: Record<string, unknown>) => {
+		try {
+			const existing = await Bank.findOne(query).lean();
+			if (!existing) return false;
+			const b = (existing as Partial<IBankAccount>).balance as unknown;
+			if (typeof b === 'number' || b == null) {
+				const normalized = typeof b === 'number' ? { bank: b, wallet: 0 } : { bank: 0, wallet: 0 };
 				try {
-					const { UserModel } = require('../database/models/userModel');
-					const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-					await UM.updateOne({ id: keyStr }, { $inc: { balance: amount }, $setOnInsert: { id: keyStr, username: username || keyStr } }, { upsert: true });
-				} catch (err) {
-					logger.warn('Failed to mirror creditWallet to UserModel', err);
+					// Use replaceOne to ensure the field is an object (avoids nested-path conflicts)
+					await Bank.replaceOne({ _id: (existing as Partial<IBankAccount>)._id }, Object.assign({}, existing, { balance: normalized }));
+					return true;
+				} catch (rerr) {
+					// If replace fails, fallback to updateOne
+					try {
+						await Bank.updateOne({ _id: (existing as Partial<IBankAccount>)._id }, { $set: { balance: normalized } });
+						return true;
+					} catch (uerr) {
+						logger.warn('Failed to set normalized balance via updateOne', uerr);
+						return false;
+					}
 				}
 			}
-			return;
+			return false;
+		} catch (e) {
+			logger.warn('Failed to normalize legacy balance field', e);
+			return false;
+		}
+	};
+
+	try {
+		if (isNumericId) {
+			// Prefer safe path: read-then-update to avoid upsert nested-path conflicts
+			try {
+				const existing = await Bank.findOne({ userId: keyStr }).lean();
+				if (!existing) {
+					// create a new account with initial wallet amount
+					const created = await Bank.create({ userId: keyStr, username: username || keyStr, balance: { bank: 0, wallet: amount } });
+					const newWallet = (created as Partial<IBankAccount>).balance?.wallet ?? amount;
+					// created new BankAccount with initial wallet
+					return newWallet;
+				}
+
+				// Ensure balance is normalized to object form
+				await ensureBalanceObject({ userId: keyStr });
+				// Use _id-targeted update (no upsert) to avoid nested-path conflict
+				const updated = await Bank.findOneAndUpdate({ _id: (existing as Partial<IBankAccount>)._id }, { $inc: { 'balance.wallet': amount }, $set: { updatedAt: new Date() } }, { returnDocument: 'after' }).lean();
+				const bal = (updated as Partial<IBankAccount> | null)?.balance;
+				const newWallet = bal && typeof bal === 'object' ? (bal as { wallet?: number }).wallet ?? 0 : null;
+				// updated existing BankAccount wallet
+				return newWallet;
+			} catch (err) {
+				logger.warn('creditWallet numeric id fallback failed', err);
+				return null;
+			}
 		}
 
+		// Non-numeric username path: similar safe read-then-update approach
 		const uname = safeStr(username || userKey);
-		await Bank.updateOne(
-			{ username: uname },
-			{ $inc: { 'balance.wallet': amount }, $setOnInsert: { username: uname, balance: { bank: 0, wallet: 0 } } },
-			{ upsert: true }
-		);
-		if (MIRROR_TO_USERMODEL) {
-			try {
-				const { UserModel } = require('../database/models/userModel');
-				const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-				if (username && channelId) await UM.updateOne({ username: uname, channelId }, { $inc: { balance: amount }, $setOnInsert: { username: uname, channelId } }, { upsert: true });
-				else await UM.updateOne({ username: uname }, { $inc: { balance: amount }, $setOnInsert: { username: uname } }, { upsert: true });
-			} catch (err) {
-				logger.warn('Failed to mirror creditWallet to UserModel', err);
+		try {
+			const existing = await Bank.findOne({ username: uname }).lean();
+			if (!existing) {
+				const created = await Bank.create({ username: uname, balance: { bank: 0, wallet: amount } });
+				const newWallet = (created as Partial<IBankAccount>).balance?.wallet ?? amount;
+				// created new BankAccount with initial wallet
+				return newWallet;
 			}
+			await ensureBalanceObject({ username: uname });
+			const updated = await Bank.findOneAndUpdate({ _id: (existing as Partial<IBankAccount>)._id }, { $inc: { 'balance.wallet': amount }, $set: { updatedAt: new Date() } }, { returnDocument: 'after' }).lean();
+			const bal = (updated as Partial<IBankAccount> | null)?.balance;
+			const newWallet = bal && typeof bal === 'object' ? (bal as { wallet?: number }).wallet ?? 0 : null;
+			// updated existing BankAccount wallet
+			return newWallet;
+		} catch (err) {
+			logger.warn('creditWallet username path failed', err);
+			return null;
 		}
 	} catch (err) {
 		logger.warn('Failed to credit wallet in BankAccount', err);
+		return null;
 	}
 }
 
@@ -120,100 +137,51 @@ export async function debitWallet(userKey: string | null | undefined, amount: nu
 	try {
 		const BankModule = require('../database/models/bankAccount');
 		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
-		const { UserModel } = (() => { try { return require('../database/models/userModel'); } catch { return { UserModel: undefined }; } })();
-		const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>> | undefined;
 
 		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
-		if (isNumericId) {
-			let updatedNumeric: unknown = null;
-			const findFn = UM && (UM as unknown as Record<string, unknown>)['findOneAndUpdate'];
-			if (findFn && typeof findFn === 'function') {
-				// call mocked or real findOneAndUpdate via function reference
-				updatedNumeric = await (findFn as AnyFn).call(UM, { id: keyStr, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-				const isMock = !!((findFn as unknown as Record<string, unknown>)['_isMockFunction']);
-				if (isMock) {
-					if (!updatedNumeric) return false;
-				} else if (!updatedNumeric) {
-					updatedNumeric = await Bank.findOneAndUpdate({ userId: keyStr, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+		// Helper: ensure legacy numeric `balance` fields are normalized (best-effort)
+		const ensureBalanceObject = async (query: Record<string, unknown>) => {
+			try {
+				const existing = await Bank.findOne(query).lean();
+				if (!existing) return;
+				const b = (existing as Partial<IBankAccount>).balance as unknown;
+				if (typeof b === 'number') {
+					await Bank.updateOne(query, { $set: { balance: { bank: b, wallet: 0 } } });
+				} else if (b == null) {
+					await Bank.updateOne(query, { $set: { balance: { bank: 0, wallet: 0 } } });
 				}
-			} else {
-				updatedNumeric = await Bank.findOneAndUpdate({ userId: keyStr, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+			} catch (e) {
+				logger.warn('Failed to normalize legacy balance field (debit)', e);
 			}
+		};
 
-			if (updatedNumeric && MIRROR_TO_USERMODEL && UM) {
-				try {
-					const upd = (UM as unknown as Record<string, unknown>)['updateOne'];
-					if (typeof upd === 'function') await (upd as AnyFn).call(UM, { id: keyStr }, { $inc: { balance: -amount }, $setOnInsert: { id: keyStr } }, { upsert: true });
-				} catch (err) {
-					logger.warn('Failed to mirror debitWallet to UserModel', err);
-				}
-			}
+		if (isNumericId) {
+			await ensureBalanceObject({ userId: keyStr });
+			const updatedNumeric = await Bank.findOneAndUpdate({ userId: keyStr, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
 			return !!updatedNumeric;
 		}
 
 		if (username) {
 			const uname = safeStr(username);
-			let updatedByUsername: unknown = await Bank.findOneAndUpdate({ username: uname, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
-			const findFn = UM && (UM as unknown as Record<string, unknown>)['findOneAndUpdate'];
-			if (!updatedByUsername && findFn && typeof findFn === 'function') {
-				updatedByUsername = await (findFn as AnyFn).call(UM, { username: uname, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-			}
-			if (updatedByUsername) {
-				if (MIRROR_TO_USERMODEL && findFn && typeof findFn === 'function') {
-					try {
-						await (findFn as AnyFn).call(UM, { username: uname, channelId, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-					} catch (err) {
-						logger.warn('Failed to mirror debitWallet to UserModel', err);
-					}
-				}
-				return true;
-			}
-			return false;
+			await ensureBalanceObject({ username: uname });
+			const updatedByUsername = await Bank.findOneAndUpdate({ username: uname, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+			return !!updatedByUsername;
 		}
 
 		const unameKey = safeStr(userKey);
-		let updatedFinal: unknown = await Bank.findOneAndUpdate({ username: unameKey, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
-		const findFn = UM && (UM as unknown as Record<string, unknown>)['findOneAndUpdate'];
-		if (!updatedFinal && findFn && typeof findFn === 'function') {
-			updatedFinal = await (findFn as AnyFn).call(UM, { username: unameKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-		}
-		if (updatedFinal) {
-			if (MIRROR_TO_USERMODEL && findFn && typeof findFn === 'function') {
-				try {
-					await (findFn as AnyFn).call(UM, { username: unameKey, balance: { $gte: amount } }, { $inc: { balance: -amount } }, { returnDocument: 'after' });
-				} catch (err) {
-					logger.warn('Failed to mirror debitWallet to UserModel', err);
-				}
-			}
-			return true;
-		}
-		return false;
+		await ensureBalanceObject({ username: unameKey });
+		const updatedFinal = await Bank.findOneAndUpdate({ username: unameKey, 'balance.wallet': { $gte: amount } }, { $inc: { 'balance.wallet': -amount } }, { returnDocument: 'after' });
+		return !!updatedFinal;
 	} catch (err) {
-		logger.warn('Failed to debit wallet in UserModel', err);
+		logger.warn('Failed to debit wallet in BankAccount', err);
 		return false;
 	}
 }
 
 export async function transfer(from: string, to: string, amount: number) {
 	const res = await economyService.transfer(from, to, amount);
-	if (MIRROR_TO_USERMODEL) {
-		try {
-			const { UserModel } = require('../database/models/userModel');
-			const UM = UserModel as unknown as import('mongoose').Model<Record<string, unknown>>;
-			const fromStr = safeStr(from);
-			const toStr = safeStr(to);
-			const fromIsNumeric = /^\d+$/.test(fromStr);
-			if (fromIsNumeric) await UM.updateOne({ id: fromStr }, { $inc: { balance: -amount } }, { upsert: true });
-			else await UM.updateOne({ username: fromStr }, { $inc: { balance: -amount } });
-
-			const toIsNumeric = /^\d+$/.test(toStr);
-			if (toIsNumeric) await UM.updateOne({ id: toStr }, { $inc: { balance: amount } }, { upsert: true });
-			else await UM.updateOne({ username: toStr }, { $setOnInsert: { username: toStr }, $inc: { balance: amount } }, { upsert: true });
-		} catch (err) {
-			logger.warn('Failed to mirror transfer to UserModel', err);
-		}
-	}
+	// No mirroring to UserModel; operate on BankAccount via economyService
 	return res;
 }
 

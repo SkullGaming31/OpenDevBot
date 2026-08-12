@@ -33,4 +33,7 @@ export default {
 	dig: './dig',
 	marker: './marker',
 	loot: './loot'
+	,
+	debugbalance: './Development/debugbalance',
+	fixbalance: './Development/fixbalance',
 };

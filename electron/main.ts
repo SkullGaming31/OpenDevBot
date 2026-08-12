@@ -54,19 +54,28 @@ ipcMain.on('monitor:visibilityUpdate', (_event, map: Record<string, boolean>) =>
  * dashboard has something local to talk to.
  */
 async function bootstrap(): Promise<void> {
-	const environment = process.env.ENVIRONMENT as string;
-	let mongoURI = '';
+	// Default to 'dev' when ENVIRONMENT isn't set in the packaged app.
+	// Packaging and installers often run without user env vars; prefer a sensible default
+	// but log a warning so packagers/operators can set it explicitly for production.
+	const environment = (process.env.ENVIRONMENT as string) || 'dev';
+	if (!process.env.ENVIRONMENT) {
+		// eslint-disable-next-line no-console
+		console.warn('[electron] ENVIRONMENT not set — defaulting to "dev"');
+	}
 
-	switch (environment) {
-		case 'prod':
-			mongoURI = process.env.DOCKER_URI || '';
-			break;
-		case 'debug':
-		case 'dev':
-			mongoURI = process.env.DOCKER_URI || '';
-			break;
-		default:
-			throw new Error(`Unknown environment: ${environment}`);
+	let mongoURI = '';
+	if (environment === 'prod') {
+		mongoURI = process.env.DOCKER_URI || '';
+	} else {
+		// dev/debug and any other non-prod values use DOCKER_URI when present
+		mongoURI = process.env.DOCKER_URI || '';
+	}
+
+	// Fallback to a sensible local MongoDB URI when none provided in packaged builds.
+	if (!mongoURI) {
+		// eslint-disable-next-line no-console
+		console.warn('[electron] DOCKER_URI / Mongo URI not set — defaulting to mongodb://127.0.0.1:27017/opendevbot');
+		mongoURI = 'mongodb://127.0.0.1:27017/opendevbot';
 	}
 
 	const database = new Database(mongoURI);
@@ -109,6 +118,7 @@ function createMainWindow(): void {
 		minHeight: 600,
 		backgroundColor: '#14121B',
 		title: 'OpenDevBot Control Room',
+		icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'),
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),
 			contextIsolation: true,

@@ -96,13 +96,13 @@ describe('heist integration (replica-set transactions)', () => {
 		const heistModule: any = await import('../Commands/Fun/heist');
 
 		// Start the heist: use an initiator who has enough in wallet
-		// Ensure initiator UserModel has balance for debitWallet path (balanceAdapter uses UserModel.balance)
-		await UserModel.create({ id: 'initiator', username: 'initiator', channelId: 'chan', balance: 5100 } as any);
+		// Ensure initiator has wallet funds via BankAccount so adapter paths work
+		await BankAccountModel.create({ userId: 'initiator', username: 'initiator', channelId: 'chan', balance: { bank: 0, wallet: 5100 } } as any);
 
-		// compute user balances before executing heist
-		const usersBefore = await UserModel.find({}).lean();
+		// compute user balances before executing heist (from BankAccount)
+		const usersBefore = await BankAccountModel.find({}).lean();
 		const userBalancesBefore: Record<string, number> = {};
-		usersBefore.forEach((u: any) => { userBalancesBefore[u.id || u.username] = u.balance || 0; });
+		usersBefore.forEach((u: any) => { userBalancesBefore[u.userId || u.username] = (u.balance && typeof u.balance === 'object') ? (u.balance.wallet ?? u.balance.bank ?? 0) : (u.balance || 0); });
 
 		const msg: any = { channelId: 'chan', userInfo: { userId: 'initiator', userName: 'initiator' } };
 

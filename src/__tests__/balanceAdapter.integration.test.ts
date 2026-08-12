@@ -42,19 +42,14 @@ beforeEach(async () => {
 test('deposit mirrors to UserModel and creates BankAccount via economyService', async () => {
   // deposit into bank which should also mirror to UserModel
   await adapter.deposit('12345', 50);
-
-  const user = await UserModel.findOne({ id: '12345' }).lean();
-  expect(user).not.toBeNull();
-  expect(user!.balance).toBe(50);
-
   const acct = await BankAccount.findOne({ userId: '12345' }).lean();
   expect(acct).not.toBeNull();
   expect(acct!.balance.bank).toBe(50);
 });
 
 test('debitWallet fails when insufficient funds and succeeds when enough', async () => {
-  // create a user with 20 balance
-  await UserModel.create({ id: 'u1', username: 'u1', channelId: 'c1', balance: 20 });
+  // create a BankAccount with wallet 20
+  await BankAccount.create({ userId: 'u1', username: 'u1', channelId: 'c1', balance: { bank: 0, wallet: 20 } });
 
   // attempt to debit more than balance
   const fail = await adapter.debitWallet('u1', 30, 'u1', 'c1');
@@ -64,6 +59,6 @@ test('debitWallet fails when insufficient funds and succeeds when enough', async
   const ok = await adapter.debitWallet('u1', 15, 'u1', 'c1');
   expect(ok).toBe(true);
 
-  const user = await UserModel.findOne({ id: 'u1' }).lean();
-  expect(user!.balance).toBe(5);
+  const acct = await BankAccount.findOne({ userId: 'u1' }).lean();
+  expect((acct as any).balance.wallet).toBe(5);
 });

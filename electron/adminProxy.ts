@@ -12,15 +12,27 @@ interface AdminFetchOptions {
  * renderer (and dashboard.html) never sees the token.
  */
 export function registerAdminProxy(port: number): void {
-	const token = process.env.ADMIN_API_TOKEN || '';
 	logger.info('[electron] adminProxy configured');
+
+	// In-memory override token that can be set from the renderer via IPC.
+	let overrideAdminToken: string | undefined;
+
+	ipcMain.handle('admin:setToken', async (_event, token: string | undefined) => {
+		overrideAdminToken = token && token.length ? String(token) : undefined;
+		logger.info('[electron] admin token updated from renderer (in-memory)');
+		return true;
+	});
+
+	ipcMain.handle('admin:getToken', async () => {
+		return overrideAdminToken || process.env.ADMIN_API_TOKEN || '';
+	});
 
 	ipcMain.handle('admin:fetch', async (_event, path: string, opts: AdminFetchOptions = {}) => {
 		const maxAttempts = 3;
 		let attempt = 0;
 		const token = process.env.ADMIN_API_TOKEN || '';
 
-		while (true) {
+		while (attempt < maxAttempts) {
 			attempt++;
 			try {
 				const res = await fetch(`http://localhost:${port}${path}`, {
@@ -74,5 +86,10 @@ export function registerAdminProxy(port: number): void {
 				await new Promise((r) => setTimeout(r, wait));
 			}
 		}
+
+		// If we exit the retry loop without returning, surface a clear error
+		const errMsg = `admin:fetch proxy failed for ${path} after ${maxAttempts} attempts`;
+		logger.error(errMsg);
+		throw new Error(errMsg);
 	});
 }

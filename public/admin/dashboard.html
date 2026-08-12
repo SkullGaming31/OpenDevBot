@@ -649,6 +649,61 @@
           }
         }
 
+        async function editAccount(acc) {
+          if (!hasBridge) { showToast('Edit requires the Electron shell'); return; }
+          try {
+            const current = acc.balance || {};
+            // Prefer the native modal bridge when available (Electron)
+            let result = null;
+            if (window.adminModalEdit && typeof window.adminModalEdit.show === 'function') {
+              result = await window.adminModalEdit.show({ userId: acc.userId, bank: Number(current.bank ?? 0), wallet: Number(current.wallet ?? 0) });
+            } else {
+              // fallback for browser preview: use prompt()
+              const bank = prompt('Bank amount', String(current.bank ?? current ?? 0));
+              if (bank === null) return;
+              const wallet = prompt('Wallet amount', String((current.wallet ?? 0)));
+              if (wallet === null) return;
+              result = { bank: Number(bank), wallet: Number(wallet) };
+            }
+            if (!result) return; // cancelled
+            const body = { bank: Number(result.bank || 0), wallet: Number(result.wallet || 0) };
+            if (Number.isNaN(body.bank) || Number.isNaN(body.wallet)) { showToast('Invalid amounts'); return; }
+            await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'PUT', body: JSON.stringify(body) });
+            showToast('Account updated');
+            await loadEconomy();
+          } catch (e) { console.error(e); showToast('Failed to update account'); }
+        }
+
+        async function deleteAccount(userId) {
+          if (!hasBridge) { showToast('Delete requires the Electron shell'); return; }
+          // show modal confirmation
+          try {
+            const ok = await showConfirmModal(`Delete account ${userId}? This cannot be undone.`);
+            if (!ok) return;
+            await window.adminApi.fetch(`/api/v1/admin/economy/account/${userId}`, { method: 'DELETE' });
+            showToast('Account deleted');
+            await loadEconomy();
+          } catch (e) { console.error(e); showToast('Failed to delete account'); }
+        }
+
+        // Modal helpers
+        const modalVisible = ref(false);
+        const modalMessage = ref('');
+        function showModal(msg) { modalMessage.value = msg; modalVisible.value = true; }
+        function hideModal() { modalVisible.value = false; modalMessage.value = ''; }
+        function showConfirmModal(msg) {
+          return new Promise(resolve => {
+            modalMessage.value = msg;
+            modalVisible.value = true;
+            const okHandler = () => { cleanup(); resolve(true); };
+            const cancelHandler = () => { cleanup(); resolve(false); };
+            function cleanup() { hideModal(); document.removeEventListener('adminModalOk', okHandler); document.removeEventListener('adminModalCancel', cancelHandler); }
+            document.addEventListener('adminModalOk', okHandler);
+            document.addEventListener('adminModalCancel', cancelHandler);
+          });
+        }
+
+
         function showToast(msg) {
           toast.value = msg;
           setTimeout(() => { toast.value = ''; }, 2400);
@@ -666,7 +721,13 @@
 
         async function loadChannels() {
           if (!hasBridge) return;
-          channels.value = await window.adminApi.fetch('/api/v1/chat/channels').then(r => r.channels);
+          try {
+            const res = await window.adminApi.fetch('/api/v1/chat/channels');
+            channels.value = res.channels || [];
+          } catch (e) {
+            console.debug('Failed to load channels', e);
+            channels.value = [];
+          }
         }
 
         async function joinChannel() {
@@ -688,9 +749,15 @@
 
         async function loadQueue() {
           if (!hasBridge) return;
-          const res = await window.adminApi.fetch(`/api/v1/admin/webhooks?status=${status.value}&page=${page.value}&limit=${limit}`);
-          items.value = res.items;
-          total.value = res.total;
+          try {
+            const res = await window.adminApi.fetch(`/api/v1/admin/webhooks?status=${status.value}&page=${page.value}&limit=${limit}`);
+            items.value = res.items || [];
+            total.value = (res.total ?? items.value.length);
+          } catch (e) {
+            console.debug('Failed to load queue', e);
+            items.value = [];
+            total.value = 0;
+          }
         }
 
         // ---- EventSub subscriptions panel state + loader
@@ -771,6 +838,38 @@
         function saveMonitorSettings() {
           try { localStorage.setItem('odb.monitorSettings', JSON.stringify(monitorSettings.value)); showToast('Monitor settings saved'); } catch (e) { showToast('Failed to save settings'); }
           try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(monitorSettings.value.perEventVisible || {}); } catch (e) { /* ignore */ }
+        }
+
+        // Admin API token settings (persisted to localStorage and sent to main process)
+        const adminToken = ref('');
+
+        async function loadAdminToken() {
+          try {
+            // Prefer token provided by main process if available
+            if (hasBridge && window.adminApi && typeof window.adminApi.getToken === 'function') {
+              const t = await window.adminApi.getToken();
+              adminToken.value = t || (localStorage.getItem('odb.adminToken') || '');
+            } else {
+              adminToken.value = localStorage.getItem('odb.adminToken') || '';
+            }
+          } catch (e) { adminToken.value = localStorage.getItem('odb.adminToken') || ''; }
+        }
+
+        async function saveAdminToken() {
+          try {
+            localStorage.setItem('odb.adminToken', adminToken.value || '');
+            if (hasBridge && window.adminApi && typeof window.adminApi.setToken === 'function') await window.adminApi.setToken(adminToken.value || '');
+            showToast('Admin token saved');
+          } catch (e) { showToast('Failed to save admin token'); }
+        }
+
+        async function clearAdminToken() {
+          adminToken.value = '';
+          try {
+            localStorage.removeItem('odb.adminToken');
+            if (hasBridge && window.adminApi && typeof window.adminApi.setToken === 'function') await window.adminApi.setToken('');
+            showToast('Admin token cleared');
+          } catch (e) { showToast('Failed to clear admin token'); }
         }
 
         function showAllEvents() {
@@ -984,6 +1083,9 @@
               }
             } catch (e) { console.debug('Auto-refresh error', e); }
           }, 60 * 1000);
+
+          // Load persisted admin token (if any)
+          try { loadAdminToken(); } catch (e) { /* ignore */ }
         });
 
         onUnmounted(() => {
@@ -1000,6 +1102,11 @@
           esItems, esTotal, esPage, esPageItems, esTotalPages, loadEventSubs, esPrevPage, esNextPage,
           // Economy
           economyAccounts, economyTotal, economyPage, economyLimit, loadEconomy,
+          editAccount, deleteAccount, // expose edit/delete handlers to template
+          // modal helpers/state
+          modalVisible, modalMessage, showModal, hideModal, showConfirmModal,
+          // Admin token controls
+          adminToken, saveAdminToken, clearAdminToken,
           prevPage: () => { if (page.value > 1) { page.value--; loadQueue(); } },
           nextPage: () => { if (page.value < totalPages.value) { page.value++; loadQueue(); } },
         };
@@ -1290,6 +1397,16 @@
                 <button class="btn btn-ghost" @click="resetMonitorSettings">Reset</button>
                 <button class="btn btn-ghost" @click="clearMonitor">Clear Monitor</button>
               </div>
+          
+              <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px;">
+                <strong style="display:block;margin-bottom:8px">Admin API Token</strong>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <input type="text" v-model="adminToken" placeholder="(leave empty for none)" style="flex:1;background:var(--panel-raised);border:1px solid var(--line);color:var(--text);padding:8px;border-radius:8px;font-family:var(--mono)" />
+                  <button class="btn btn-primary" @click="saveAdminToken">Save</button>
+                  <button class="btn btn-ghost" @click="clearAdminToken">Clear</button>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Setting this token will be used by the renderer to authenticate admin requests.</div>
+              </div>
           </div>
         </section>
       </div>
@@ -1314,13 +1431,22 @@
                 <tr>
                   <th>User</th>
                   <th>Balance</th>
+                  <th>Actions</th>
                   <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="acc in economyAccounts" :key="acc.userId">
                   <td class="mono-id">{{ acc.userId }}</td>
-                  <td>{{ acc.balance }}</td>
+                  <td>
+                    {{ (acc.balance && typeof acc.balance === 'object' && acc.balance.bank != null)
+                        ? (String(acc.balance.bank) + ' / ' + String(acc.balance.wallet ?? 0))
+                        : String(acc.balance ?? '') }}
+                  </td>
+                  <td>
+                    <button class="btn small" @click="editAccount(acc)">Edit</button>
+                    <button class="btn small danger" @click="deleteAccount(acc.userId)">Delete</button>
+                  </td>
                   <td class="mono-id">{{ new Date(acc.updatedAt).toLocaleString() }}</td>
                 </tr>
               </tbody>
@@ -1334,6 +1460,93 @@
     <div class="toast" v-if="toast">{{ toast }}</div>
   `
     }).mount('#app');
+  </script>
+
+  <!-- Simple modal markup -->
+  <div id="admin-modal"
+    style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:rgba(0,0,0,0.75); position:absolute; inset:0;"></div>
+    <div
+      style="position:relative; background:var(--panel); color:var(--text); padding:18px; width:420px; border-radius:10px; border:1px solid var(--line); box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+      <div id="admin-modal-message" style="color:var(--text-dim); font-size:14px;"></div>
+      <div style="margin-top:14px; text-align:right;">
+        <button id="admin-modal-cancel" class="btn" style="margin-right:8px;">Cancel</button>
+        <button id="admin-modal-ok" class="btn btn-primary">OK</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Simple bridge between modal DOM and Vue event flow
+    (function () {
+      const modal = document.getElementById('admin-modal');
+      const msg = document.getElementById('admin-modal-message');
+      const ok = document.getElementById('admin-modal-ok');
+      const cancel = document.getElementById('admin-modal-cancel');
+      function show(m) { msg.textContent = String(m || ''); modal.style.display = 'flex'; }
+      function hide() { modal.style.display = 'none'; msg.textContent = ''; }
+      ok.addEventListener('click', () => { document.dispatchEvent(new CustomEvent('adminModalOk')); hide(); });
+      cancel.addEventListener('click', () => { document.dispatchEvent(new CustomEvent('adminModalCancel')); hide(); });
+      // expose helpers for Vue
+      window.adminModal = { show, hide };
+      // wire to Vue reactive modal state
+      document.addEventListener('DOMContentLoaded', () => {
+        const observer = new MutationObserver(() => { });
+      });
+    })();
+  </script>
+  <!-- Edit modal markup -->
+  <div id="admin-edit-modal"
+    style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:rgba(0,0,0,0.75); position:absolute; inset:0;"></div>
+    <div
+      style="position:relative; background:var(--panel); color:var(--text); padding:18px; width:420px; border-radius:10px; border:1px solid var(--line); box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+      <div style="font-weight:700;margin-bottom:6px;color:var(--text-dim)">Edit Account</div>
+      <div id="admin-edit-user" style="font-size:13px;color:var(--text-dim);margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label style="width:80px;font-family:var(--mono);color:var(--text-dim)">Bank</label>
+        <input id="admin-edit-bank" type="number"
+          style="flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--panel-raised);color:var(--text)" />
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label style="width:80px;font-family:var(--mono);color:var(--text-dim)">Wallet</label>
+        <input id="admin-edit-wallet" type="number"
+          style="flex:1;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--panel-raised);color:var(--text)" />
+      </div>
+      <div style="text-align:right;margin-top:12px">
+        <button id="admin-edit-cancel" class="btn" style="margin-right:8px;">Cancel</button>
+        <button id="admin-edit-save" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const modal = document.getElementById('admin-edit-modal');
+      const userEl = document.getElementById('admin-edit-user');
+      const bankInput = document.getElementById('admin-edit-bank');
+      const walletInput = document.getElementById('admin-edit-wallet');
+      const ok = document.getElementById('admin-edit-save');
+      const cancel = document.getElementById('admin-edit-cancel');
+      let pendingResolve = null;
+      function show(opts) {
+        userEl.textContent = `User: ${opts.userId}`;
+        bankInput.value = String(opts.bank || 0);
+        walletInput.value = String(opts.wallet || 0);
+        modal.style.display = 'flex';
+        return new Promise(resolve => {
+          pendingResolve = resolve;
+        });
+      }
+      function hide() { modal.style.display = 'none'; if (pendingResolve) { pendingResolve(null); pendingResolve = null; } }
+      ok.addEventListener('click', () => {
+        const bank = Number(bankInput.value || 0);
+        const wallet = Number(walletInput.value || 0);
+        if (!Number.isFinite(bank) || !Number.isFinite(wallet)) { alert('Invalid amounts'); return; }
+        modal.style.display = 'none';
+        if (pendingResolve) { pendingResolve({ bank, wallet }); pendingResolve = null; }
+      });
+      cancel.addEventListener('click', () => { modal.style.display = 'none'; if (pendingResolve) { pendingResolve(null); pendingResolve = null; } });
+      window.adminModalEdit = { show, hide };
+    })();
   </script>
 </body>
 

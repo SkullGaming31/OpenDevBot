@@ -37,7 +37,8 @@ describe('dig command', () => {
 	test('insufficient balance rejected', async () => {
 		const say = jest.fn();
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
-		jest.doMock('../../database/models/userModel', () => ({ UserModel: { findOne: (jest.fn() as any).mockResolvedValue({ balance: 50 }) } }));
+		// mock balanceAdapter.getWalletBalance to simulate wallet balance
+		jest.doMock('../../services/balanceAdapter', () => ({ getWalletBalance: (jest.fn() as any).mockResolvedValue(50) }));
 
 		const cmd = await import('../../Commands/Fun/dig');
 		await cmd.default.execute('#chan', 'User', ['100'], '!dig 100', { channelId: 'chan', userInfo: { userName: 'user' } } as any);
@@ -50,11 +51,9 @@ describe('dig command', () => {
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
 		// user has enough balance
-		jest.doMock('../../database/models/userModel', () => ({ UserModel: { findOne: (jest.fn() as any).mockResolvedValue({ balance: 200 }) } }));
-
-		// mock balanceAdapter.debitWallet to succeed
+		// mock wallet balance and balanceAdapter.debitWallet to succeed
 		const debit = (jest.fn() as any).mockResolvedValue(true);
-		jest.doMock('../../services/balanceAdapter', () => ({ debitWallet: debit }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getWalletBalance: (jest.fn() as any).mockResolvedValue(200), debitWallet: debit }));
 
 		// randomInt: first call numBombs=1, subsequent shuffle calls return 1 to keep bomb at index 0
 		const cryptoMock = { randomInt: (jest.fn() as any).mockImplementation(() => 1) } as any;
@@ -76,11 +75,9 @@ describe('dig command', () => {
 		const say = jest.fn();
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
 
-		// user has enough balance
-		jest.doMock('../../database/models/userModel', () => ({ UserModel: { findOne: (jest.fn() as any).mockResolvedValue({ balance: 500 }) } }));
-
+		// mock wallet balance and balanceAdapter.creditWallet
 		const credit = (jest.fn() as any).mockResolvedValue(undefined);
-		jest.doMock('../../services/balanceAdapter', () => ({ creditWallet: credit }));
+		jest.doMock('../../services/balanceAdapter', () => ({ getWalletBalance: (jest.fn() as any).mockResolvedValue(500), creditWallet: credit }));
 
 		// randomInt sequence: first call numBombs=1, first shuffle call returns 0 to swap bomb away from index 0
 		const r = jest.fn()

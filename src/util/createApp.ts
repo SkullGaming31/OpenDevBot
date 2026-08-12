@@ -86,7 +86,14 @@ export default function createApp(): express.Application {
 
 	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
 		const token = process.env.ADMIN_API_TOKEN;
-		if (!token) return res.status(403).json({ error: 'Admin API not configured' });
+		// If ADMIN_API_TOKEN is not set, allow local admin access from the
+		// Electron shell for desktop packaged builds. This keeps the UX simple
+		// for end-users while preserving token-based protection when a token
+		// is configured (e.g., in server deployments).
+		if (!token) {
+			logger.warn('Admin API token not configured — allowing local admin access');
+			return next();
+		}
 		const provided = getProvidedAdminToken(req);
 		if (!provided || provided !== token) return res.status(401).json({ error: 'Unauthorized' });
 		next();
@@ -295,6 +302,50 @@ export default function createApp(): express.Application {
 		}
 	});
 
+	// Admin: update single account balance
+	app.put('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			const body = req.body || {};
+			const bank = typeof body.bank === 'number' ? body.bank : Number(body.bank || 0);
+			const wallet = typeof body.wallet === 'number' ? body.wallet : Number(body.wallet || 0);
+			if (Number.isNaN(bank) || Number.isNaN(wallet)) return res.status(400).json({ error: 'invalid amounts' });
+			await BankAccount.updateOne({ userId }, { $set: { balance: { bank, wallet } } }, { upsert: true });
+			const updated = await BankAccount.findOne({ userId }).lean();
+			// record transaction log for admin change
+			try {
+				const TransactionLog = (await import('../database/models/transactionLog')).default;
+				const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
+				await TransactionLog.create({ type: 'deposit', from: 'admin', to: userId, amount: bank + wallet, meta: { action: 'admin_update', admin: adminId } });
+			} catch (e) { /* non-fatal */ }
+			return res.json({ ok: true, bank: updated });
+		} catch (e) {
+			logger.error('Failed to update economy account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	// Admin: delete single account
+	app.delete('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
+		try {
+			const BankAccount = (await import('../database/models/bankAccount')).default;
+			const userId = String(req.params.userId || '').trim();
+			if (!userId) return res.status(400).json({ error: 'userId required' });
+			await BankAccount.deleteOne({ userId });
+			try {
+				const TransactionLog = (await import('../database/models/transactionLog')).default;
+				const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
+				await TransactionLog.create({ type: 'withdraw', from: userId, to: 'admin', amount: 0, meta: { action: 'admin_delete', admin: adminId } });
+			} catch (e) { /* non-fatal */ }
+			return res.json({ ok: true });
+		} catch (e) {
+			logger.error('Failed to delete economy account', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
 	// Admin: list transactions (optionally filter by userId)
 	app.get('/api/v1/admin/economy/transactions', requireAdmin, async (req, res) => {
 		try {
@@ -336,7 +387,7 @@ export default function createApp(): express.Application {
 				// negative amount -> withdraw
 				if (force) {
 					// blind decrement (force)
-					const acct = await BankAccount.findOneAndUpdate({ userId }, { $inc: { balance: amount } }, { upsert: true, returnDocument: 'after' }).lean();
+					const acct = await BankAccount.findOneAndUpdate({ userId }, { $inc: { 'balance.bank': amount } }, { upsert: true, returnDocument: 'after' }).lean();
 					// create a transaction log entry to record the admin action
 					const TransactionLog = (await import('../database/models/transactionLog')).default;
 					await TransactionLog.create([{ type: 'withdraw', from: userId, amount: Math.abs(amount), meta: { admin: true, reason } }]);

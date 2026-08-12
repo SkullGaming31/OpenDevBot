@@ -2,7 +2,7 @@ import { ChatMessage } from '@twurple/chat/lib';
 import { getChatClient } from '../../chat';
 import { Command } from '../../interfaces/Command';
 import logger from '../../util/logger';
-import * as economyService from '../../services/economyService';
+import BankAccount from '../../database/models/bankAccount';
 
 const debugbalance: Command = {
 	name: 'debugbalance',
@@ -21,17 +21,13 @@ const debugbalance: Command = {
 			const id = userDoc?.id || (msg.userInfo?.userName === target ? msg.userInfo?.userId : undefined) || undefined;
 			const key = id || target;
 
-			const bank = await economyService.getOrCreateAccount(key as string).catch(() => null);
-			const walletById = id ? await UserModel.findOne({ id }) : null;
-			const walletByName = !walletById ? await UserModel.findOne({ username: target }) : null;
+			// BankAccount holds normalized { bank, wallet } object. UserModel may have legacy numeric balance.
+			const bankDoc = await BankAccount.findOne({ userId: key as string }) || await BankAccount.findOne({ username: target });
+			const bankMsg = bankDoc ? `bank(${bankDoc.userId || key}): ${bankDoc.balance?.bank ?? 0} / ${bankDoc.balance?.wallet ?? 0}` : 'bank: <none>';
 
-			const wallet = walletById || walletByName;
-
-			const bankMsg = bank ? `bank(${key}): ${bank.balance?.bank ?? 0}` : 'bank: <none>';
-			const walletMsg = wallet ? `wallet(${wallet.id || wallet.username}): ${wallet.balance ?? 0}` : 'wallet: <none>';
-
-			await chatClient.say(channel, `DEBUG ${target} -> ${bankMsg} | ${walletMsg}`);
-			logger.debug('DEBUGBALANCE', { target, key, bank, wallet });
+			// UserModel numeric `balance` is deprecated — show only BankAccount normalized values
+			await chatClient.say(channel, `DEBUG ${target} -> ${bankMsg} | usermodel: deprecated`);
+			logger.debug('DEBUGBALANCE', { target, key, bankDoc });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			logger.error('debugbalance error', err as Error);

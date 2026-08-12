@@ -94,7 +94,11 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 		registerCommand(command, name);
 	}
 }
-function isAllowedFileExtension(module: string): boolean { return process.env.ENVIRONMENT === 'prod' ? module.endsWith('.js') : module.endsWith('.ts'); }
+function isAllowedFileExtension(module: string): boolean {
+	// Accept both TypeScript and JavaScript files so commands load correctly
+	// in both development (source .ts) and built (dist .js) environments.
+	return module.endsWith('.ts') || module.endsWith('.js');
+}
 
 // Helper removed: environment checks use `process.env.ENVIRONMENT` directly.
 

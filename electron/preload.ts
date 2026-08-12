@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('twitchApi', {
 contextBridge.exposeInMainWorld('adminApi', {
 	fetch: (path: string, opts?: { method?: string; body?: string }) =>
 		ipcRenderer.invoke('admin:fetch', path, opts)
+	,
+	setToken: (token?: string) => ipcRenderer.invoke('admin:setToken', token),
+	getToken: () => ipcRenderer.invoke('admin:getToken')
 });
 
 contextBridge.exposeInMainWorld('monitorApi', {

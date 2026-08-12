@@ -1,6 +1,6 @@
 {
   "name": "opendevbot",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "a twitch chatbot for multiple channels using twurple",
   "author": "SkullGaming31",
   "license": "MIT",

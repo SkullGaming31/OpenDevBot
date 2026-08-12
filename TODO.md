@@ -37,4 +37,5 @@
 * [ ] Fix remaining TypeScript/Jest issues (unused imports like in `src/Commands/Fun/rps.ts`) and run `tsc`/lint to clean up errors.
 * [ ] Update docs: `NOTES.txt`, `README.md`, and migration instructions showing `MIRROR_TO_USERMODEL` usage and rollback guidance.
 * [ ] Run formatting and prepare a tidy commit/PR with descriptive changes and test results.
+* [ ] Investigate SQlite to replace docker
 

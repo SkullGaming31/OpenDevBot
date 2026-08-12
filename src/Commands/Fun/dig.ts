@@ -1,7 +1,6 @@
 import { ChatMessage } from '@twurple/chat/lib';
 import { randomInt } from 'node:crypto';
 import { getChatClient } from '../../chat';
-import { UserModel } from '../../database/models/userModel';
 import { Command } from '../../interfaces/Command';
 
 const dig: Command = {
@@ -31,20 +30,13 @@ const dig: Command = {
 		// Use OR here to validate bounds
 		if (digAmount < 100 || digAmount > 5000) return chatClient.say(channel, 'Minimum/maximum bet amount is 100-5000');
 
-		// Use legacy wallet for betting: check wallet balance via adapter if available, otherwise fall back to UserModel
+		// Use legacy wallet for betting: check wallet balance via adapter
 		const adapter = await import('../../services/balanceAdapter');
 		let currentBalance = 0;
-		// Prefer using a mocked adapter.getWalletBalance in unit tests (jest.fn exposes .mock).
-		if (typeof adapter.getWalletBalance === 'function' && ((adapter.getWalletBalance as unknown) as { mock?: unknown }).mock) {
-			currentBalance = await adapter.getWalletBalance(msg.userInfo?.userId ?? username, username, channelId);
-		} else {
-			// Fallback to UserModel; handle test mocks that return plain object (no .lean())
-			const maybe = await UserModel.findOne({ username });
-			const maybeDoc = maybe as unknown;
-			const leanFn = (maybeDoc as { lean?: (...args: unknown[]) => unknown }).lean;
-			const u = leanFn && typeof leanFn === 'function' ? await (leanFn as (...args: unknown[]) => Promise<unknown>)(/* no args */) : maybe;
-			currentBalance = Number((u && ((u as { balance?: number }).balance)) ?? 0);
-		}
+		// Coerce numeric userId to string so adapter uses the numeric userId path consistently
+		const userIdKeyForLookup = msg.userInfo?.userId ? String(msg.userInfo.userId) : undefined;
+		// Always query the balanceAdapter for the wallet balance so BankAccount edits are respected
+		currentBalance = await adapter.getWalletBalance(userIdKeyForLookup ?? username, username, channelId);
 		if (currentBalance < digAmount) return chatClient.say(channel, 'You don\'t have enough balance to dig.');
 
 		// Generate a random number between 1-3 to decide how many bombs are in play
@@ -70,7 +62,7 @@ const dig: Command = {
 		// Check if the user dug up a bomb
 		if (holes[0] === 'bomb') {
 			// Atomically deduct from wallet only if sufficient funds (prevents pulling from bank)
-			const userIdKey = typeof msg.userInfo?.userId === 'string' ? msg.userInfo.userId : undefined;
+			const userIdKey = msg.userInfo?.userId ? String(msg.userInfo.userId) : undefined;
 			const debited = await (await import('../../services/balanceAdapter')).debitWallet(userIdKey ?? username, digAmount, username, channelId);
 			if (!debited) return chatClient.say(channel, `@${user}, you don't have enough wallet funds to place that bet.`);
 
@@ -90,10 +82,17 @@ const dig: Command = {
 
 		// If the user didn't dig up a bomb, award them with a prize
 		const prizeAmount = randomInt(0, digAmount * 2) + digAmount;
-		// Award prize to wallet (legacy) via adapter
-		const userIdKey2 = typeof msg.userInfo?.userId === 'string' ? msg.userInfo.userId : undefined;
-		await (await import('../../services/balanceAdapter')).creditWallet(userIdKey2 ?? username, prizeAmount, username, channelId);
-		return chatClient.say(channel, `You dug up the cache and won ${prizeAmount} gold! You managed to avoid ${numBombs} bombs.`);
+		// Award prize to wallet (legacy) via adapter and confirm updated wallet
+		const userIdKey2 = msg.userInfo?.userId ? String(msg.userInfo.userId) : undefined;
+		const newWallet = await (await import('../../services/balanceAdapter')).creditWallet(userIdKey2 ?? username, prizeAmount, username, channelId);
+		if (newWallet == null) {
+			// credit failed — warn and log (but still announce the prize to the user)
+			console.warn('creditWallet returned null for', userIdKey2 ?? username, 'amount', prizeAmount);
+			await chatClient.say(channel, `You dug up the cache and won ${prizeAmount} gold! (Note: failed to apply to your wallet) You managed to avoid ${numBombs} bombs.`);
+		} else {
+			await chatClient.say(channel, `You dug up the cache and won ${prizeAmount} gold! You managed to avoid ${numBombs} bombs.`);
+		}
+		return;
 	}
 };
 
