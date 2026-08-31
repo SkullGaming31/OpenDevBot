@@ -30,7 +30,7 @@ export function registerAdminProxy(port: number): void {
 	ipcMain.handle('admin:fetch', async (_event, path: string, opts: AdminFetchOptions = {}) => {
 		const maxAttempts = 3;
 		let attempt = 0;
-		const token = process.env.ADMIN_API_TOKEN || '';
+		const token = overrideAdminToken || process.env.ADMIN_API_TOKEN || '';
 
 		while (attempt < maxAttempts) {
 			attempt++;

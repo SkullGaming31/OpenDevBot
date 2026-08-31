@@ -693,6 +693,18 @@
         function hideModal() { modalVisible.value = false; modalMessage.value = ''; }
         function showConfirmModal(msg) {
           return new Promise(resolve => {
+            // Prefer the native modal bridge when available (Electron)
+            if (window.adminModal && typeof window.adminModal.show === 'function') {
+              const okHandler = () => { cleanup(); resolve(true); };
+              const cancelHandler = () => { cleanup(); resolve(false); };
+              function cleanup() { document.removeEventListener('adminModalOk', okHandler); document.removeEventListener('adminModalCancel', cancelHandler); }
+              document.addEventListener('adminModalOk', okHandler);
+              document.addEventListener('adminModalCancel', cancelHandler);
+              try { window.adminModal.show(msg); } catch (e) { cleanup(); resolve(false); }
+              return;
+            }
+
+            // Fallback to the reactive in-Vue modal (used in some previews)
             modalMessage.value = msg;
             modalVisible.value = true;
             const okHandler = () => { cleanup(); resolve(true); };

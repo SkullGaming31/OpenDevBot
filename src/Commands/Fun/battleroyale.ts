@@ -3,6 +3,7 @@ import { getChatClient } from '../../chat';
 import { ChatMessage } from '@twurple/chat/lib';
 import fs from 'fs';
 import path from 'path';
+import logger from '../../util/logger';
 import { randomInt } from 'crypto';
 import { sleep } from '../../util/util';
 import balanceAdapter from '../../services/balanceAdapter';
@@ -53,8 +54,8 @@ function loadTestBotNames(): string[] {
 			const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 			if (lines.length) return lines;
 		}
-	} catch {
-		// ignore read errors and fall back
+	} catch (err) {
+		logger.debug('[BattleRoyale] loadTestBotNames read error', err as Error);
 	}
 	return ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel', 'india', 'juliet'];
 }

@@ -75,7 +75,12 @@ async function loadCommands(commandsDir: string, commands: Record<string, Comman
 	for (const module of commandModules) {
 		const modulePath = path.join(commandsDir, module);
 
+		// Skip archived command directories (case-insensitive) to avoid loading unused/archived commands
 		if (fs.statSync(modulePath).isDirectory()) {
+			const base = path.basename(modulePath).toLowerCase();
+			if (base === 'archive') {
+				continue;
+			}
 			await loadCommands(modulePath, commands); // Recursively load commands in subdirectories
 			continue;
 		}

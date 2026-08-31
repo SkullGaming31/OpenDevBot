@@ -141,6 +141,7 @@ export default function createApp(): express.Application {
 				chatConnected = !!(client as unknown as { isConnected?: boolean } | undefined)?.isConnected;
 			} catch {
 				// chat client not initialized yet — treated as disconnected, not an error
+				logger.debug('Chat client not initialized for admin status');
 			}
 
 			return res.json({
