@@ -139,6 +139,7 @@ async function startPeriodicChatterCreditTimer(userApiClient: Awaited<ReturnType
 
 			// Fetch chatters in pages of 100 and credit them
 			let after: string | undefined = undefined;
+			/* eslint-disable no-constant-condition */
 			while (true) {
 				const resp = await userApiClient.chat.getChatters(broadcasterUserId, { after, limit: 100 });
 				const chatters = resp?.data || [];
@@ -175,6 +176,7 @@ async function startPeriodicChatterCreditTimer(userApiClient: Awaited<ReturnType
 				after = (resp as any).pagination?.cursor;
 				if (!after) break;
 			}
+			/* eslint-enable no-constant-condition */
 		} catch (error: unknown) {
 			logger.error('Periodic chatter credit timer failed', error as Error);
 		}
