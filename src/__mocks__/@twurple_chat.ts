@@ -1,13 +1,15 @@
 // Minimal manual mock for @twurple/chat used during Jest tests.
 // Exports a ChatClient class with the methods used by the codebase.
 export interface ChatMessage {
-  id: string;
-  channelId?: string;
-  userInfo: { displayName: string; isMod?: boolean; isBroadcaster?: boolean; userId?: string };
-  text: string;
+	id: string;
+	channelId?: string;
+	userInfo: { displayName: string; isMod?: boolean; isBroadcaster?: boolean; userId?: string };
+	text: string;
 }
 
 export type ChatClientOptions = Record<string, unknown>;
+
+import logger from '../util/logger';
 
 export class ChatClient {
 	public isConnected = false;
@@ -29,7 +31,7 @@ export class ChatClient {
 	emitMessage(channel: string, user: string, text: string, msg: ChatMessage) { this.callHandlers('message', channel, user, text, msg); }
 	// Accept handler functions with concrete parameter types, cast when storing so callers can use typed callbacks.
 	private addHandler<T extends unknown[]>(name: string, fn: (...args: T) => void) { (this.handlers[name] ||= []).push(fn as unknown as (...args: unknown[]) => void); }
-	private callHandlers(name: string, ...args: unknown[]) { (this.handlers[name] || []).forEach((h) => { try { h(...args); } catch { /* ignore */ } }); }
+	private callHandlers(name: string, ...args: unknown[]) { (this.handlers[name] || []).forEach((h) => { try { h(...args); } catch (e) { logger.debug('Mock handler threw', e); } }); }
 }
 
 export default { ChatClient };

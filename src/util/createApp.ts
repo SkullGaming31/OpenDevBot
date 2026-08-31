@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { limiter } from './util';
 import logger from './logger';
 import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
+import crypto from 'crypto';
 
 // Captured once when this module first loads (i.e. once per process
 // lifetime), not per createApp() call — that's what "uptime"/"last restart"
@@ -77,7 +78,6 @@ export default function createApp(): express.Application {
 	function getProvidedAdminToken(req: express.Request): string | undefined {
 		const header = req.header('x-admin-token') || undefined;
 		if (header) return header;
-		if (req.query && typeof req.query.admin_token === 'string') return req.query.admin_token as string;
 		const cookieHeader = req.headers?.cookie as string | undefined;
 		const cookieToken = parseCookie(cookieHeader, 'admin_token');
 		if (cookieToken) return cookieToken;
@@ -95,7 +95,14 @@ export default function createApp(): express.Application {
 			return next();
 		}
 		const provided = getProvidedAdminToken(req);
-		if (!provided || provided !== token) return res.status(401).json({ error: 'Unauthorized' });
+		if (!provided) return res.status(401).json({ error: 'Unauthorized' });
+		try {
+			const p = Buffer.from(String(provided), 'utf8');
+			const e = Buffer.from(String(token), 'utf8');
+			if (p.length !== e.length || !crypto.timingSafeEqual(p, e)) return res.status(401).json({ error: 'Unauthorized' });
+		} catch (_e) {
+			return res.status(401).json({ error: 'Unauthorized' });
+		}
 		next();
 	}
 
@@ -483,14 +490,36 @@ export default function createApp(): express.Application {
 	app.post('/api/v1/admin/setup', async (req: express.Request, res: express.Response) => {
 		const setupToken = process.env.ADMIN_SETUP_TOKEN;
 		if (!setupToken) return res.status(403).json({ error: 'Setup not enabled' });
-		const provided = (req.header('x-setup-token') || req.query.setup_token || '') as string;
-		if (!provided || provided !== setupToken) return res.status(401).json({ error: 'Unauthorized' });
-		const token = (req.body?.token || req.query.token) as string | undefined;
+		const provided = (req.header('x-setup-token') || '') as string;
+		if (!provided) return res.status(401).json({ error: 'Unauthorized' });
+		try {
+			const p = Buffer.from(String(provided), 'utf8');
+			const e = Buffer.from(String(setupToken), 'utf8');
+			if (p.length !== e.length || !crypto.timingSafeEqual(p, e)) return res.status(401).json({ error: 'Unauthorized' });
+		} catch (_e) {
+			return res.status(401).json({ error: 'Unauthorized' });
+		}
+		const token = (req.body?.token) as string | undefined;
 		if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
 		if (process.env.ADMIN_API_TOKEN) return res.status(400).json({ error: 'Admin API token already set' });
-		// Set in-process
+		// Set in-process only
 		process.env.ADMIN_API_TOKEN = token;
-		// Persist to .env (append or replace existing key)
+
+		// Persist to .env is disabled by default to avoid accidental secret leakage
+		// in logs or reverse proxies. To enable persistence (local/dev only), set
+		// `ALLOW_PERSIST_ADMIN_TOKEN=true` in the server environment. Persistence
+		// is explicitly disallowed in `prod` even when the flag is set.
+		const allowPersist = String(process.env.ALLOW_PERSIST_ADMIN_TOKEN).toLowerCase() === 'true';
+		if (!allowPersist) {
+			logger.info('Admin API token set in-process; persistence to disk is disabled by default');
+			return res.json({ ok: true, persisted: false });
+		}
+
+		if (process.env.ENVIRONMENT === 'prod') {
+			logger.warn('Persistence of ADMIN_API_TOKEN to disk is disabled in prod');
+			return res.json({ ok: true, persisted: false });
+		}
+
 		try {
 			const envPath = path.join(process.cwd(), '.env');
 			let content = '';
@@ -506,7 +535,8 @@ export default function createApp(): express.Application {
 			} else {
 				fs.writeFileSync(envPath, `ADMIN_API_TOKEN=${token}\n`, 'utf8');
 			}
-			return res.json({ ok: true });
+			logger.info('Persisted ADMIN_API_TOKEN to .env');
+			return res.json({ ok: true, persisted: true });
 		} catch (e) {
 			logger.error('Failed to persist admin token', e as Error);
 			return res.status(500).json({ error: 'failed to persist' });
@@ -517,11 +547,17 @@ export default function createApp(): express.Application {
 	// matches `ADMIN_API_TOKEN` sets a cookie so the dashboard can authenticate
 	// without storing tokens in localStorage. Cookie name: `admin_token`.
 	app.post('/api/v1/admin/login', async (req: express.Request, res: express.Response) => {
-		const token = (req.body?.token || req.query.token) as string | undefined;
+		const token = (req.body?.token) as string | undefined;
 		if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
 		const expected = process.env.ADMIN_API_TOKEN;
 		if (!expected) return res.status(503).json({ error: 'Admin API not configured' });
-		if (token !== expected) return res.status(401).json({ error: 'Unauthorized' });
+		try {
+			const p = Buffer.from(String(token), 'utf8');
+			const e = Buffer.from(String(expected), 'utf8');
+			if (p.length !== e.length || !crypto.timingSafeEqual(p, e)) return res.status(401).json({ error: 'Unauthorized' });
+		} catch (_e) {
+			return res.status(401).json({ error: 'Unauthorized' });
+		}
 		// Set cookie; for production set Secure as appropriate
 		const cookieOpts: Record<string, unknown> = { httpOnly: true, sameSite: 'lax' };
 		if (process.env.ENVIRONMENT === 'prod') (cookieOpts).secure = true;
@@ -588,7 +624,7 @@ export default function createApp(): express.Application {
 			<head><meta charset="utf-8"><title>OpenDevBot — Admin</title></head>
 			<body style="font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:20px">
 				<h1>OpenDevBot</h1>
-				<p>Admin links and API endpoints. Admin endpoints require the <code>x-admin-token</code> header or <code>admin_token</code> query parameter.</p>
+				<p>Admin links and API endpoints. Admin endpoints require the <code>x-admin-token</code> header or <code>admin_token</code> cookie.</p>
 				<ul>
 					<li><a href="/admin/webhooks">Admin UI — Webhook Queue</a></li>
 					<li><a href="/api/v1/admin/webhooks?status=pending&page=1&limit=50">API: List webhooks (GET)</a></li>

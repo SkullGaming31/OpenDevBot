@@ -45,6 +45,7 @@ describe('createApp admin extra branches', () => {
 
   it('POST /api/v1/admin/setup persists token to .env when not present', async () => {
     process.env.ADMIN_SETUP_TOKEN = 's2';
+    process.env.ALLOW_PERSIST_ADMIN_TOKEN = 'true';
     // mock fs
     const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
     const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined as any);

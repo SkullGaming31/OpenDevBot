@@ -71,6 +71,7 @@ describe('createApp additional uncovered branches', () => {
 
     process.env.ADMIN_SETUP_TOKEN = 'setuptoken';
     delete process.env.ADMIN_API_TOKEN;
+    process.env.ALLOW_PERSIST_ADMIN_TOKEN = 'true';
 
     const createApp = (await import('../util/createApp')).default as any;
     const request = (await import('supertest')).default;

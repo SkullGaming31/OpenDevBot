@@ -33,18 +33,23 @@ class OpenDevBot {
 	 * If the .env file cannot be read (for example, if it does not exist), the error is logged to the console.
 	 */
 	printEnvironmentVariables(): void {
-		logger.info('Environment Variables from .env file:');
+		logger.info('Environment Variables from .env file (sensitive values redacted):');
 		try {
 			const envFilePath = '.env';
 			const envFileContents = fs.readFileSync(envFilePath, 'utf8');
 			const envVariables = envFileContents.split('\n');
 
 			for (const envVariable of envVariables) {
-				const [name, value] = envVariable.split('=');
-				logger.debug(`${name}: ${value}`);
+				if (!envVariable || envVariable.trim().length === 0) continue;
+				const idx = envVariable.indexOf('=');
+				const name = idx === -1 ? envVariable.trim() : envVariable.slice(0, idx).trim();
+				const rawValue = idx === -1 ? '' : envVariable.slice(idx + 1);
+				const sensitive = /TOKEN|SECRET|PASS|KEY/i.test(name);
+				const display = sensitive ? '<REDACTED>' : rawValue;
+				logger.debug(`${name}: ${display}`);
 			}
 		} catch (error) {
-			logger.error('Failed to read .env file:', error);
+			logger.error('Failed to read .env file for printing environment variables:', error);
 		}
 	}
 	/**

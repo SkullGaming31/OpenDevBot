@@ -2,7 +2,7 @@
 import { ChatClient } from '@twurple/chat';
 import { ChatMessage } from '@twurple/chat/lib';
 
-import { HelixChatChatter, UserIdResolvable, UserNameResolvable } from '@twurple/api/lib';
+import { UserIdResolvable, UserNameResolvable } from '@twurple/api/lib';
 import fs from 'fs';
 import path from 'path';
 import { getUserApi } from './api/userApiClient';
@@ -113,126 +113,69 @@ async function startPeriodicChatterCreditTimer(userApiClient: Awaited<ReturnType
 
 	periodicChatterCreditTimerStarted = true;
 
-	try {
-		const broadcasterUserId = broadcasterInfo[0].id as UserIdResolvable;
-		const channelId = String(broadcasterInfo[0].id ?? '');
-		const cursor = '';
-		let chatters: HelixChatChatter[] = [];
+	const intervalDuration = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug'
+		? 30 * 1000
+		: 60 * 1000;
+
+	const creditCycle = async () => {
 		try {
-			const chattersResponse = await userApiClient.chat.getChatters(broadcasterUserId, { after: cursor, limit: 100 });
-			chatters = chattersResponse.data || chattersResponse || [];
-		} catch (err: unknown) {
-			const msgStr = err instanceof Error ? err.message : String(err);
-			if (msgStr.includes('Missing scope') || msgStr.includes('401') || msgStr.includes('Unauthorized')) {
-				logger.warn('getChatters failed due to missing scope or unauthorized access:', msgStr);
-				chatters = [];
-			} else {
-				logger.error('Error fetching chatters:', err);
-				throw err;
-			}
-		}
-
-		const chunkSize = 100;
-		const intervalDuration = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug'
-			? 30 * 1000
-			: 60 * 1000;
-		const requestsPerInterval = 800;
-		const totalChunks = Math.ceil(chatters.length / chunkSize);
-		let chunkIndex = 0;
-		let requestIndex = 0;
-
-		const processChatters = async (chattersToProcess: HelixChatChatter[]) => {
+			const broadcasterUserId = broadcasterInfo[0].id as UserIdResolvable;
+			// Check live status first
 			let isLive = false;
 			try {
-				const currentStream = await userApiClient.streams.getStreamByUserId(broadcasterUserId);
-				isLive = currentStream !== null;
+				const stream = await userApiClient.streams.getStreamByUserId(broadcasterUserId);
+				isLive = stream !== null;
 			} catch (err) {
-				logger.warn('Could not determine stream status; will skip crediting points for this interval', String(err));
-				isLive = false;
+				logger.warn('Could not determine stream status; skipping credit cycle', String(err));
+				return;
 			}
 
-			const start = chunkIndex * chunkSize;
-			const end = (chunkIndex + 1) * chunkSize;
-			const chattersChunk = chattersToProcess.slice(start, end);
+			if (!isLive) return;
 
-			for (const chatter of chattersChunk) {
-				try {
-					const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
-
-					const isBot = knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase();
-					const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
-
-					if (isBot || !isIgnoredUser) {
-						const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
-
-						if (existingUser) {
-							if (isLive) {
+			// Fetch chatters in pages of 100 and credit them
+			let after: string | undefined = undefined;
+			while (true) {
+				const resp = await userApiClient.chat.getChatters(broadcasterUserId, { after, limit: 100 });
+				const chatters = resp?.data || [];
+				for (const chatter of chatters) {
+					try {
+						const knownBots = await knownBotsModel.findOne<Bots>({ username: chatter.userName });
+						const isBot = knownBots && chatter.userName.toLowerCase() === knownBots.username.toLowerCase();
+						const isIgnoredUser = ['opendevbot', 'streamelements', 'streamlabs'].includes(chatter.userName.toLowerCase());
+						if (isBot || !isIgnoredUser) {
+							const channelId = String(broadcasterInfo[0].id ?? '');
+							const existingUser = await UserModel.findOne({ id: chatter.userId, channelId });
+							if (existingUser) {
+								await creditWallet(chatter.userId, 100, existingUser.username, channelId);
+							} else {
 								try {
-									await creditWallet(chatter.userId, 100, existingUser.username, channelId);
-								} catch (err: unknown) {
-									if (err instanceof Error) logger.error('Failed to credit wallet for existing user:', err);
-								}
-							}
-						} else {
-							try {
-								await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
-								if (isLive) {
-									try {
-										await creditWallet(chatter.userId, 100, chatter.userName, channelId);
-									} catch (err) {
-										logger.error('Failed to seed wallet for new user:', err);
+									await UserModel.create({ id: chatter.userId, username: chatter.userName, channelId, roles: 'User' });
+									await creditWallet(chatter.userId, 100, chatter.userName, channelId);
+								} catch (e) {
+									if (e instanceof Error && e.message.includes('E11000')) {
+										logger.warn(`Duplicate user insert race for ${chatter.userName}`);
+									} else {
+										logger.error('Error creating new user during credit cycle', e as Error);
 									}
 								}
-							} catch (err) {
-								if (err instanceof Error && err.message.includes('E11000')) {
-									logger.warn(`Duplicate user insert race for ${chatter.userName}:${channelId}`);
-								} else {
-									logger.error('Error creating new user:', err);
-								}
 							}
 						}
-					}
-				} catch (error: unknown) {
-					if (error instanceof Error) {
-						if (error.message.includes('E11000')) {
-							logger.error(`Duplicate key error for user ${chatter.userName}:${channelId}: for roles: User, Skipping insertion or update.`, error);
-						} else {
-							logger.error('Error processing chatter:', error);
-						}
+					} catch (e) {
+						logger.error('Error during crediting chatter', e as Error);
 					}
 				}
+				// Pagination: Twurple may provide cursors differently; break when fewer than limit
+				if (!resp || !resp.data || resp.data.length < 100) break;
+				// If Twurple returns pagination cursor in resp.pagination?.cursor use it (best-effort)
+				after = (resp as any).pagination?.cursor;
+				if (!after) break;
 			}
+		} catch (error: unknown) {
+			logger.error('Periodic chatter credit timer failed', error as Error);
+		}
+	};
 
-			requestIndex++;
-			chunkIndex++;
-
-			if (chunkIndex === totalChunks) {
-				chunkIndex = 0;
-			}
-		};
-
-		const intervalHandler = async () => {
-			if (requestIndex < requestsPerInterval) {
-				const stream = await userApiClient.streams.getStreamByUserId(broadcasterUserId);
-				if (stream !== null) {
-					const currentChatters = await userApiClient.chat.getChatters(broadcasterUserId, { after: cursor, limit: chunkSize });
-					await processChatters(currentChatters.data);
-					requestIndex++;
-				}
-			} else {
-				requestIndex = 0;
-			}
-		};
-
-		periodicChatterCreditIntervalId = setInterval(() => {
-			void intervalHandler().catch((error: unknown) => {
-				logger.error('Periodic chatter credit timer failed', error as Error);
-			});
-		}, intervalDuration);
-	} catch (error: unknown) {
-		periodicChatterCreditTimerStarted = false;
-		logger.error('Failed to start periodic chatter credit timer', error as Error);
-	}
+	periodicChatterCreditIntervalId = setInterval(() => void creditCycle(), intervalDuration);
 }
 
 /**
@@ -276,7 +219,7 @@ export async function initializeChat(): Promise<void> {
 	const commandHandler = async (channel: string, user: string, text: string, msg: ChatMessage) => {
 
 		// Emit a monitor event for the dashboard UI (if connected)
-		try { broadcast('chat:message', { channel, user, text, id: msg.id, displayName: msg.userInfo?.displayName }); } catch { /* ignore */ }
+		try { broadcast('chat:message', { channel, user, text, id: msg.id, displayName: msg.userInfo?.displayName }); } catch (e) { logger.debug('broadcast failed', e); }
 
 		const lowerText = text.toLowerCase();
 
@@ -604,9 +547,14 @@ export async function getChatClient(): Promise<ChatClient> {
 					}
 				}, UPDATE_INTERVAL);
 
+				// Clear any existing interval for this user to avoid leaking timers
+				const previous = viewerWatchTimes.get(user);
+				if (previous && previous.intervalId) {
+					try { clearInterval(previous.intervalId); } catch (e) { logger.debug('clearInterval failed for previous user interval', e); }
+				}
+
 				// Store viewer's data in the map
 				viewerWatchTimes.set(user, { joinedAt: Date.now(), watchTime: existingWatchTimesMap.get(channelId) || 0, intervalId });
-				if (stream === null) clearInterval(intervalId);
 
 				// Ensure bot is a moderator in the channel if required
 				if (chatClientInstance && chatClientInstance.isConnected && broadcasterInfo && broadcasterInfo[0].id) {
@@ -676,7 +624,7 @@ export async function getChatClient(): Promise<ChatClient> {
 		try {
 			joinedChannels.delete('opendevbot');
 			joinedChannels.delete(String(openDevBotID));
-		} catch { /* ignore */ }
+		} catch (e) { logger.debug('joinedChannels.delete failed', e); }
 
 		// capture a stable reference for use in timers/closures so TypeScript
 		// can narrow the value and we avoid "possibly undefined" errors
@@ -688,9 +636,9 @@ export async function getChatClient(): Promise<ChatClient> {
 			}
 			setTimeout(() => {
 				if (!clientRef) return;
-				void (clientRef.join(username) as Promise<unknown>).catch(() => { /* ignore */ });
+				void (clientRef.join(username) as Promise<unknown>).catch((e) => { logger.debug('clientRef.join failed', e); });
 				// update in-memory joinedChannels cache (best-effort)
-				try { joinedChannels.add(username); } catch { /* ignore */ }
+				try { joinedChannels.add(username); } catch (e) { logger.debug('joinedChannels.add failed', e); }
 				if (process.env.ENVIRONMENT === 'dev') {
 					logger.info(`Joined channel: ${username}`);
 				} else { return; }
@@ -795,7 +743,7 @@ export async function shutdownChat(): Promise<void> {
 
 		// clear per-user watch time intervals
 		for (const [, viewer] of viewerWatchTimes) {
-			try { clearInterval(viewer.intervalId); } catch { /* ignore */ }
+			try { clearInterval(viewer.intervalId); } catch (e) { logger.debug('clearInterval failed during shutdown', e); }
 		}
 		viewerWatchTimes.clear();
 		// periodicSocialTimerStarted = false;
@@ -856,7 +804,7 @@ export async function joinChannel(username: string): Promise<void> {
 		if (normalized.toLowerCase() === 'opendevbot') return;
 		await client.join(normalized);
 		// track joined channel locally
-		try { joinedChannels.add(normalized); } catch { /* ignore */ }
+		try { joinedChannels.add(normalized); } catch (e) { logger.debug('joinedChannels.add failed (dynamic)', e); }
 		if (process.env.ENVIRONMENT === 'dev') logger.info(`Dynamically joined channel: ${normalized}`);
 	} catch (err: unknown) {
 		if (err instanceof Error) {

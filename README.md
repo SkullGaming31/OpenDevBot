@@ -137,6 +137,26 @@ npm run electron:dev
 ```
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+## Admin token persistence & security
+
+- **Env var:** `ALLOW_PERSIST_ADMIN_TOKEN` (default: not set / false). Set to `true` only for local/dev use when you explicitly want the admin token written to the repository `.env` file.
+- **Production:** Persistence is disabled when `ENVIRONMENT` is `prod` — do not enable persistence in production. Tokens persisted to disk are sensitive and should never be stored in shared or committed files.
+- **How it works:** The app accepts admin credentials via the `x-admin-token` header or the `admin_token` cookie only (query parameters are no longer accepted). Sensitive comparisons use a timing-safe compare to reduce attack surface.
+- **Recommended workflow:** For local setup prefer manual, ephemeral methods: set `process.env.ADMIN_API_TOKEN` in your shell, or use the admin setup endpoint with `ALLOW_PERSIST_ADMIN_TOKEN=true` in a safe local `.env` copy. After testing, unset or rotate the token.
+- **If compromised:** Rotate the token immediately and remove it from any persisted `.env` files.
+
+Examples (local/dev only):
+
+```powershell
+# temporary in-process (preferred for local testing)
+setx ADMIN_API_TOKEN "your-token-value"
+
+# OR to opt-in to persistence for the setup endpoint (dev only)
+# add to your local .env: ALLOW_PERSIST_ADMIN_TOKEN=true
+```
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
 <!-- ROADMAP -->
 ## Roadmap
 
