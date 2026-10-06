@@ -67,7 +67,7 @@ const removepoints: Command = {
 			}
 
 			try {
-				const acct = await withdraw(userSearch.id, amountToRemove, undefined, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
+				const acct = await withdraw(userSearch.id, amountToRemove, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
 				// acct is returned when successful
 				const newBalance = acct.balance?.bank ?? 0;
 

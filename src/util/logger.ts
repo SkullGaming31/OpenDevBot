@@ -23,7 +23,8 @@ logEvents.setMaxListeners(50);
 // Capture initial LOG_LEVEL at module load time. Tests set this before requiring the module.
 const initialEnvLevel = process.env.LOG_LEVEL ? String(process.env.LOG_LEVEL).toLowerCase() : '';
 
-const errorLogFile = process.env.ERROR_LOG_FILE || path.join(process.cwd(), 'logs', 'errors.log');
+let errorLogFile = process.env.ERROR_LOG_FILE || path.join(process.cwd(), 'logs', 'errors.log');
+let applicationLogFile: string | null = null;
 
 // Ensure the log directory exists (best-effort, synchronous during startup is fine)
 try {
@@ -33,6 +34,16 @@ try {
 	// If we can't create the dir, we'll still attempt to write later and fallback to console.error
 	/* istanbul ignore next */
 	console.error('logger: failed to create error log directory', e);
+}
+
+export function setErrorLogFile(filePath: string): void {
+	errorLogFile = path.resolve(filePath);
+	fs.mkdirSync(path.dirname(errorLogFile), { recursive: true });
+}
+
+export function setApplicationLogFile(filePath: string): void {
+	applicationLogFile = path.resolve(filePath);
+	fs.mkdirSync(path.dirname(applicationLogFile), { recursive: true });
 }
 
 function formatForLog(args: unknown[]): string {
@@ -143,10 +154,18 @@ function levelEnabled(level: Level): boolean {
 }
 
 function emitLog(level: Level, args: unknown[]): void {
+	const timestamp = new Date().toISOString();
+	const message = formatForLog(args);
 	try {
-		logEvents.emit('log', { level, message: formatForLog(args), timestamp: new Date().toISOString() });
+		logEvents.emit('log', { level, message, timestamp });
 	} catch (e) {
 		/* never let a bad listener take down logging */
+	}
+	if (applicationLogFile) {
+		const line = `[${timestamp}] [${level.toUpperCase()}] ${message}\n`;
+		fs.promises.appendFile(applicationLogFile, line).catch(error => {
+			console.error('logger: failed to write application log file', error);
+		});
 	}
 }
 

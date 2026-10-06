@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import BankAccount from '../database/models/bankAccount';
 import { deposit, transfer } from '../services/economyService';
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 /**
  * Concurrency/stress test for non-transactional fallback paths.
@@ -11,6 +12,7 @@ import { deposit, transfer } from '../services/economyService';
  */
 
 let mongod: MongoMemoryServer;
+useInMemorySqliteDatabase();
 
 beforeAll(async () => {
 	mongod = await MongoMemoryServer.create();

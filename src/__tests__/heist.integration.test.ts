@@ -1,143 +1,67 @@
-/**
- * Integration test for bank heist using mongodb-memory-server replica-set to exercise transactions.
- * This test will:
- *  - start a mongodb-memory-server replica-set
- *  - connect mongoose
- *  - seed several BankAccount documents
- *  - run the heist command targeting the 'bank' zone
- *  - verify that donors were debited and winners were credited (via BankAccount and UserModel)
- *
- * Note: This is a slower test and increases vi timeout.
- */
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
-import mongoose from 'mongoose';
-import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import logger from '../util/logger';
-jest.setTimeout(45000); // allow up to 45s for replica-set startup and test (we set ENVIRONMENT=dev to shorten delays)
+jest.setTimeout(20000);
+useInMemorySqliteDatabase();
 
-describe('heist integration (replica-set transactions)', () => {
-	let replSet: MongoMemoryReplSet;
-	let BankAccountModel: any;
-	let UserModel: any;
-
-	beforeAll(async () => {
-		// start a replica set
-		replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: 'wiredTiger' } });
-		const uri = replSet.getUri();
-
-		// connect mongoose
-		await mongoose.connect(uri, { dbName: 'test' });
-
-		// Ensure we use real mongoose and real model implementations (in case other tests mocked them)
-		jest.unmock('mongoose');
-		jest.unmock('../database/models/bankAccount');
-		jest.unmock('../database/models/userModel');
-		// require models after unmocking
-		BankAccountModel = require('../database/models/bankAccount').default;
-		UserModel = require('../database/models/userModel').UserModel;
-	});
-
-	afterAll(async () => {
-		await mongoose.disconnect();
-		if (replSet) await replSet.stop();
-	});
-
-	beforeEach(async () => {
-		// clear collections
-		if (mongoose.connection.db) await mongoose.connection.db.dropDatabase();
-	});
-
-	test('bank heist debits donors transactionally and credits winners', async () => {
-		// seed bank accounts (donors)
-		const donors = [
-			{ userId: 'donor1', balance: 5000 },
-			{ userId: 'donor2', balance: 3000 },
-			{ userId: 'donor3', balance: 2000 },
-			{ userId: 'donor4', balance: 1500 },
-			{ userId: 'donor5', balance: 1200 }
-		];
-		await BankAccountModel.insertMany(donors);
-		const totalBankBefore = (await BankAccountModel.find({}).lean()).reduce((s: number, d: any) => {
-			const b = d.balance == null ? 0 : (typeof d.balance === 'number' ? d.balance : (d.balance.bank ?? 0));
-			return s + b;
-		}, 0);
-
-		// seed a few user models to represent winners
-		const winners = [
-			{ id: 'winner1', username: 'winner1', channelId: 'chan', balance: 0 },
-			{ id: 'winner2', username: 'winner2', channelId: 'chan', balance: 0 }
-		];
-		await UserModel.insertMany(winners as any);
-
-		// Create a real chatClient mock to capture messages
-		const chatClient = { say: jest.fn(), onMessage: jest.fn() };
-		jest.doMock('../chat', () => ({ getChatClient: jest.fn().mockResolvedValue(chatClient) }));
-
-		// Force shorter heist delay in the module
+describe('heist integration (SQLite)', () => {
+	beforeEach(() => {
 		process.env.ENVIRONMENT = 'dev';
-		// Force deterministic randomInt: always return the lower bound so calls like randomInt(min, max) -> min
-		jest.doMock('crypto', () => ({
-			randomInt: (min: number, max?: number) => {
-				// reference max to satisfy TS unused-parameter checks
-				void max;
-				// return the lower bound to force success checks where low values indicate success
-				return min;
+		jest.useFakeTimers();
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+		jest.restoreAllMocks();
+	});
+
+	test('a bank heist debits donors and credits the winner using SQLite models', async () => {
+		const BankAccount = (await import('../database/models/bankAccount')).default;
+		const TransactionLog = (await import('../database/models/transactionLog')).default;
+		await BankAccount.create({
+			userId: 'initiator',
+			username: 'initiator',
+			balance: { bank: 0, wallet: 5100 }
+		});
+		for (let i = 1; i <= 5; i++) {
+			await BankAccount.create({
+				userId: `donor${i}`,
+				username: `donor${i}`,
+				balance: { bank: 5000, wallet: 0 }
+			});
+		}
+
+		const chatClient = {
+			say: jest.fn().mockResolvedValue(undefined),
+			onMessage: jest.fn()
+		};
+		jest.doMock('../chat', () => ({ getChatClient: jest.fn().mockResolvedValue(chatClient) }));
+		jest.doMock('../database/models/injury', () => ({
+			InjuryModel: {
+				find: () => ({ lean: () => ({ exec: async () => [] }) }),
+				findOneAndUpdate: jest.fn().mockResolvedValue({})
 			}
 		}));
+		jest.doMock('crypto', () => ({
+			...jest.requireActual('crypto'),
+			randomInt: jest.fn(() => 1)
+		}));
 
-		// Ensure we use real services (balanceAdapter/economyService) by unmocking them
-		jest.unmock('../services/balanceAdapter');
-		jest.unmock('../services/economyService');
-		const balanceAdapter = require('../services/balanceAdapter');
-		const creditSpy = jest.spyOn(balanceAdapter, 'creditWallet');
-		const economyService = require('../services/economyService');
-		const depositSpy = jest.spyOn(economyService, 'deposit');
-		// Import the heist module fresh so it picks up the mocked chat and crypto and real services
-		const heistModule: any = await import('../Commands/Fun/heist');
+		const heistModule = await import('../Commands/Fun/heist');
+		const execution = heistModule.default.execute(
+			'chan',
+			'initiator',
+			['5000', 'bank'],
+			'',
+			{ channelId: 'chan', userInfo: { userId: 'initiator', userName: 'initiator' } } as any
+		);
 
-		// Start the heist: use an initiator who has enough in wallet
-		// Ensure initiator has wallet funds via BankAccount so adapter paths work
-		await BankAccountModel.create({ userId: 'initiator', username: 'initiator', channelId: 'chan', balance: { bank: 0, wallet: 5100 } } as any);
+		await jest.advanceTimersByTimeAsync(11000);
+		await execution;
 
-		// compute user balances before executing heist (from BankAccount)
-		const usersBefore = await BankAccountModel.find({}).lean();
-		const userBalancesBefore: Record<string, number> = {};
-		usersBefore.forEach((u: any) => { userBalancesBefore[u.userId || u.username] = (u.balance && typeof u.balance === 'object') ? (u.balance.wallet ?? u.balance.bank ?? 0) : (u.balance || 0); });
-
-		const msg: any = { channelId: 'chan', userInfo: { userId: 'initiator', userName: 'initiator' } };
-
-		// Execute a heist with amount 5000 targeting 'bank'
-		await heistModule.default.execute('chan', 'initiator', ['5000', 'bank'], '', msg);
-
-
-		// After heist, inspect bank account balances to ensure total bank balance decreased
-		const updatedDonors = await BankAccountModel.find({}).lean();
-		const totalBankAfter = updatedDonors.reduce((s: number, d: any) => {
-			const b = d.balance == null ? 0 : (typeof d.balance === 'number' ? d.balance : (d.balance.bank ?? 0));
-			return s + b;
-		}, 0);
-		logger.debug('totalBankBefore', totalBankBefore, 'totalBankAfter', totalBankAfter);
-		// Note: total bank change may vary depending on whether winners were credited to bank accounts
-		// or external wallets; rely on transaction logs and service calls below for correctness.
-
-		// Verify transaction logs recorded withdraws and deposits/transfers
-		const TransactionLog = require('../database/models/transactionLog').default;
-		const logs = await TransactionLog.find({}).lean();
-		const withdrawCount = logs.filter((l: { type: string; from?: string; to?: string; }) => l.type === 'withdraw').length;
-		logger.debug('transaction logs', logs);
-		expect(withdrawCount).toBeGreaterThan(0);
-		// Accept any of the following as evidence of winners being credited:
-		// - economyService.deposit was called
-		// - balanceAdapter.creditWallet was called
-		// - a deposit/transfer TransactionLog exists
-		const depositOrTransferLogCount = logs.filter((l: any) => l.type === 'deposit' || l.type === 'transfer').length;
-		const credited = depositSpy.mock.calls.length > 0 || creditSpy.mock.calls.length > 0 || depositOrTransferLogCount > 0;
-		logger.debug('creditSpy calls', creditSpy.mock.calls.length, creditSpy.mock.calls);
-		logger.debug('depositSpy calls', depositSpy.mock.calls.length);
-		logger.debug('deposit/transfer logs', depositOrTransferLogCount);
-		expect(credited).toBe(true);
-
-		// Ensure chat was spoken to with results
-		expect((chatClient.say as any).mock.calls.length).toBeGreaterThan(0);
+		const withdrawals = await TransactionLog.find({ type: 'withdraw' }).lean();
+		const deposits = await TransactionLog.find({ type: 'deposit' }).lean();
+		expect(withdrawals.length).toBeGreaterThan(0);
+		expect(deposits.length).toBeGreaterThan(0);
+		expect(chatClient.say).toHaveBeenCalledWith('chan', expect.stringContaining('The heist was successful!'));
 	});
 });

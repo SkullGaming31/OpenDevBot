@@ -1,14 +1,7 @@
-import { Document, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface IQuote extends Document {
+export interface IQuote {
 	content: string;
 }
 
-const quoteSchema = new Schema<IQuote>({
-	content: {
-		type: String,
-		required: true
-	}
-});
-
-export default model<IQuote>('Quote', quoteSchema);
+export default createSqliteModel<IQuote>('Quote');

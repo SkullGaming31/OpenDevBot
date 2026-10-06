@@ -51,15 +51,15 @@ const ping: Command = {
 			switch (mode) {
 				case 'status':
 					try {
-						const [twitchMs, discordMs, mongoMs] = await Promise.all([
+						const [twitchMs, discordMs, sqliteMs] = await Promise.all([
 							checkTwitchApiPing().catch(() => -1),
 							checkDiscordApiPing().catch(() => -1),
-							checkMongo().catch(() => -1),
+							checkSqlite().catch(() => -1),
 						]);
 						const twitchStr = twitchMs >= 0 ? `${twitchMs}ms` : 'UNREACHABLE';
 						const discordStr = discordMs >= 0 ? `${discordMs}ms` : 'UNREACHABLE';
-						const mongoStr = mongoMs >= 0 ? `${mongoMs}ms` : 'UNREACHABLE';
-						await chatClient.say(channel, `Status — Twitch API: ${twitchStr}; Discord: ${discordStr}; MongoDB: ${mongoStr}`);
+						const sqliteStr = sqliteMs >= 0 ? `${sqliteMs}ms` : 'UNREACHABLE';
+						await chatClient.say(channel, `Status — Twitch API: ${twitchStr}; Discord: ${discordStr}; SQLite: ${sqliteStr}`);
 					} catch (e) {
 						logger.error('Error running status checks', e as Error);
 						await chatClient.say(channel, 'Error running status checks');
@@ -130,7 +130,7 @@ async function checkDiscordApiPing(): Promise<number> {
 	}
 }
 
-async function checkMongo(): Promise<number> {
+async function checkSqlite(): Promise<number> {
 	const start = Date.now();
 	try {
 		// perform a lightweight query to ensure DB connectivity
@@ -138,7 +138,7 @@ async function checkMongo(): Promise<number> {
 		const end = Date.now();
 		return end - start;
 	} catch (error) {
-		logger.error('Error checking MongoDB connectivity', error as Error);
+		logger.error('Error checking SQLite connectivity', error as Error);
 		throw error;
 	}
 }

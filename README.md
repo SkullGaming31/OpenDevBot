@@ -135,6 +135,14 @@ This is an example of how to list things you need to use the software and how to
 ```sh
 npm run electron:dev
 ```
+
+Electron writes persistent application logs to the `logs` directory under its `userData` folder:
+
+- `opendevbot.log` contains the application logger output.
+- `opendevbot-errors.log` contains error-handler and logger error output.
+
+Electron uses these per-user paths regardless of `DEV_LOG_FILE`, `PROD_LOG_FILE`, or `ERROR_LOG_FILE` in `.env`. The Logs window still shows recent entries from the current session.
+
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Admin token persistence & security
@@ -243,7 +251,7 @@ Other Projects: [Projects](https://github.com/SkullGaming31?tab=repositories)
 
 ## Running in Docker (Production)
 
-Follow these steps to run OpenDevBot in production inside Docker. The compose file will start a MongoDB service and build the bot image from the repository.
+Follow these steps to run OpenDevBot in production inside Docker. Production application data is stored in SQLite; the production compose file does not start or connect to MongoDB.
 
 1. Copy the example env file and fill in secrets:
 
@@ -261,14 +269,15 @@ docker compose up --build -d
 3- Logs:
 
 ```powershell
-docker compose logs -f opendevbot
+docker compose logs -f app
 ```
 
 Notes:
 
-* The compose file sets `MONGO_URI` to `mongodb://mongo:27017/opendevbot` for the bot container.
+* The compose file persists SQLite data at `./data/opendevbot.sqlite`.
 * Make sure to provide `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and the bot OAuth token in `.env.prod`.
-* For a managed deployment, consider using secrets, a Docker registry for the built image, and external MongoDB.
+* MongoDB developer tooling is restricted to `dev` and `debug` environments. To run it locally, start only the development MongoDB service with `docker compose -f docker-compose.dev.yml up -d mongodb`, set `ENVIRONMENT=dev` and `DOCKER_URI=mongodb://localhost:27017/opendevbot` in your local `.env`, then run the bot outside the production compose file.
+* To exercise the Electron webhook queue without sending anything to Discord, set `DISCORD_WEBHOOK_DRY_RUN=true` with `ENVIRONMENT=dev` and use **Dashboard → Webhook Queue → Queue dry-run samples**. The six sample notifications remain pending in SQLite until deleted.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->

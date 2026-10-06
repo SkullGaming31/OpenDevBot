@@ -1,6 +1,6 @@
-import { Document, Model, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface ITwitchToken extends Document {
+export interface ITwitchToken {
 	user_id: string;
 	login: string;
 	access_token: string;
@@ -11,42 +11,8 @@ export interface ITwitchToken extends Document {
 	broadcaster_type: string;
 }
 
-const tokenSchema = new Schema<ITwitchToken>({
-	user_id: {
-		type: String,
-		unique: true,
-		required: true,
-		index: true
-	},
-	login: {
-		type: String,
-		required: true
-	},
-	access_token: {
-		type: String,
-		required: true
-	},
-	refresh_token: {
-		type: String,
-		required: true
-	},
-	scope: {
-		type: [String],
-		required: true
-	},
-	expires_in: {
-		type: Number,
-		required: true
-	},
-	obtainmentTimestamp: {
-		type: Number,
-		required: true
-	},
-	broadcaster_type: {
-		type: String,
-		required: true
-	}
-});
 // obtainmentTimestamp is saved in seconds same with expires_in
 
-export const TokenModel: Model<ITwitchToken> = model<ITwitchToken>('usertokens', tokenSchema);
+export const TokenModel = createSqliteModel<ITwitchToken>('usertokens', {
+	unique: [['user_id']],
+});

@@ -45,12 +45,6 @@ describe('createApp additional uncovered branches', () => {
     const getMock = jest.fn().mockResolvedValue({ data: {} });
     jest.doMock('axios', () => ({ post: postMock, get: getMock }));
 
-    const saveMock = jest.fn().mockResolvedValue(undefined);
-    const findOneMock = jest.fn().mockResolvedValue(null);
-    const TokenModelMock: any = jest.fn().mockImplementation((doc: any) => ({ ...doc, save: saveMock }));
-    TokenModelMock.findOne = findOneMock;
-    jest.doMock('../database/models/tokenModel', () => ({ TokenModel: TokenModelMock }));
-
     const createApp = (await import('../util/createApp')).default as any;
     const request = (await import('supertest')).default;
     const app = createApp();
@@ -64,6 +58,7 @@ describe('createApp additional uncovered branches', () => {
     jest.resetModules();
     jest.doMock('axios', () => ({ post: jest.fn(), get: jest.fn() }));
     jest.doMock('fs', () => ({
+      ...jest.requireActual('fs'),
       existsSync: jest.fn().mockReturnValue(true),
       readFileSync: jest.fn().mockReturnValue(''),
       writeFileSync: jest.fn(() => { throw new Error('disk write fail'); })

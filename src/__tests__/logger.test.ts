@@ -162,4 +162,32 @@ describe('logger', () => {
 		appendSpy.mockRestore();
 		errorSpy.mockRestore();
 	});
+
+	test('configured application and error log paths receive Electron logs', async () => {
+		process.env.ENVIRONMENT = 'dev';
+		jest.resetModules();
+		const fs = await import('node:fs');
+		const os = await import('node:os');
+		const path = await import('node:path');
+		const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'opendevbot-logs-'));
+		const applicationLogPath = path.join(directory, 'userData', 'logs', 'opendevbot.log');
+		const errorLogPath = path.join(directory, 'userData', 'logs', 'opendevbot-errors.log');
+
+		try {
+			jest.unmock('../util/logger');
+			const { default: logger, setApplicationLogFile, setErrorLogFile } = await import('../util/logger');
+			setApplicationLogFile(applicationLogPath);
+			setErrorLogFile(errorLogPath);
+			expect(fs.existsSync(path.dirname(applicationLogPath))).toBe(true);
+			logger.info('persistent application entry');
+			logger.error('persistent electron error');
+			await new Promise(resolve => setTimeout(resolve, 25));
+
+			expect(fs.readFileSync(applicationLogPath, 'utf8')).toContain('persistent application entry');
+			expect(fs.readFileSync(applicationLogPath, 'utf8')).toContain('persistent electron error');
+			expect(fs.readFileSync(errorLogPath, 'utf8')).toContain('persistent electron error');
+		} finally {
+			fs.rmSync(directory, { recursive: true, force: true });
+		}
+	});
 });

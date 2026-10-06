@@ -1,6 +1,6 @@
-import { Schema, model, Document } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface IMarketplaceItem extends Document {
+export interface IMarketplaceItem {
     itemId: string;
     sellerId: string;
     price: number;
@@ -8,12 +8,8 @@ export interface IMarketplaceItem extends Document {
     createdAt: Date;
 }
 
-const marketplaceItemSchema = new Schema<IMarketplaceItem>({
-	itemId: { type: String, required: true, unique: true },
-	sellerId: { type: String, required: true },
-	price: { type: Number, required: true },
-	metadata: { type: Schema.Types.Mixed },
-}, { timestamps: true });
-
-const MarketplaceItem = model<IMarketplaceItem>('MarketplaceItem', marketplaceItemSchema);
+const MarketplaceItem = createSqliteModel<IMarketplaceItem>('MarketplaceItem', {
+	timestamps: true,
+	unique: [['itemId']],
+});
 export default MarketplaceItem;

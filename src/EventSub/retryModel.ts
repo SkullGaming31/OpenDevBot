@@ -1,6 +1,6 @@
-import { model, Schema, Document } from 'mongoose';
+import { createSqliteModel } from '../database/sqliteModel';
 
-export interface IRetryRecord extends Document {
+export interface IRetryRecord {
     subscriptionId: string;
     authUserId: string;
     attempts: number;
@@ -9,15 +9,7 @@ export interface IRetryRecord extends Document {
     status: 'pending' | 'succeeded' | 'failed';
 }
 
-const RetrySchema = new Schema<IRetryRecord>({
-	subscriptionId: { type: String, required: true },
-	authUserId: { type: String, required: true },
-	attempts: { type: Number, required: true, default: 0 },
-	lastError: { type: String },
-	nextRetryAt: { type: Date, default: null },
-	status: { type: String, enum: ['pending', 'succeeded', 'failed'], default: 'pending' },
+export const RetryModel = createSqliteModel<IRetryRecord>('eventSubscriptionRetries', {
+	defaults: { attempts: 0, nextRetryAt: null, status: 'pending' },
+	unique: [['subscriptionId', 'authUserId']],
 });
-
-RetrySchema.index({ subscriptionId: 1, authUserId: 1 }, { unique: true });
-
-export const RetryModel = model<IRetryRecord>('eventSubscriptionRetries', RetrySchema);

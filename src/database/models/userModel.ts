@@ -1,29 +1,18 @@
-import { Document, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface IUser extends Document {
+export interface IUser {
 	id: string;
 	username: string;
 	channelId: string;
 	roles: string;
 	balance?: number;
-	lastBegTime?: Date;
+	lastBegTime?: Date | null;
 	challengedUser?: string;
 	duelChallengeAccepted?: boolean;
 	inventory?: string[];
 	watchTime: number;
 }
 
-const userSchema = new Schema<IUser>({
-	id: { type: String, index: true },
-	username: { type: String },
-	channelId: { type: String },
-	roles: { type: String },
-	balance: { type: Number, default: 0 },
-	lastBegTime: { type: Date, default: null },
-	challengedUser: { type: String },
-	duelChallengeAccepted: { type: Boolean },
-	inventory: { type: [String] },
-	watchTime: { type: Number, default: 0 }
+export const UserModel = createSqliteModel<IUser>('Users', {
+	defaults: { balance: 0, lastBegTime: null, watchTime: 0 },
 });
-
-export const UserModel = model<IUser>('Users', userSchema);

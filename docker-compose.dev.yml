@@ -1,0 +1,18 @@
+services:
+  mongodb:
+    image: mongo:7-alpine
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-dev-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=opendevbot
+    healthcheck:
+      test: mongosh --eval "db.adminCommand('ping')"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongodb-dev-data:

@@ -1,13 +1,11 @@
-import { Document, Model, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface Counter extends Document {
+export interface Counter {
 	counterName: string;
 	value: number;
 }
 
-const counterSchema = new Schema<Counter>({
-	counterName: { type: String, required: true, unique: true },
-	value: { type: Number, required: true, default: 0 },
+export const CounterModel = createSqliteModel<Counter>('Counter', {
+	defaults: { value: 0 },
+	unique: [['counterName']],
 });
-
-export const CounterModel: Model<Counter> = model<Counter>('Counter', counterSchema);

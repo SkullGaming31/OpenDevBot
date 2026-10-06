@@ -32,4 +32,44 @@ describe('util/constants exports', () => {
 
 		expect(c.openDevBotID).toBe('659523613');
 	});
+
+	test('skips token records without a valid user ID during initialization', async () => {
+		const userTokens = [
+			{ login: 'unidentified', access_token: 'not-loaded' },
+			{ user_id: '123', login: 'streamer', access_token: 'loaded' },
+		];
+		const lean: any = jest.fn();
+		lean.mockResolvedValue(userTokens);
+		const find: any = jest.fn(() => ({
+			lean,
+		}));
+		const getChannelInfoById: any = jest.fn();
+		getChannelInfoById.mockResolvedValue({
+			delay: 0,
+			displayName: 'streamer',
+			gameId: '',
+			gameName: '',
+			id: '123',
+			language: 'en',
+			name: 'streamer',
+			tags: [],
+			title: '',
+			getBroadcaster: jest.fn(),
+			getGame: jest.fn(),
+		});
+		await jest.isolateModulesAsync(async () => {
+			jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { find } }));
+			jest.doMock('../api/userApiClient', () => ({
+				getUserApi: (jest.fn() as any).mockResolvedValue({
+					channels: { getChannelInfoById },
+				}),
+			}));
+
+			const constants = await import('../util/constants');
+			await expect(constants.initializeConstants()).resolves.toBeUndefined();
+
+			expect(getChannelInfoById).toHaveBeenCalledWith('123');
+			expect(getChannelInfoById).toHaveBeenCalledTimes(2);
+		});
+	});
 });

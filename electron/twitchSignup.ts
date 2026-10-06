@@ -4,7 +4,7 @@ import logger from '../src/util/logger';
 /**
  * Opens the Twitch OAuth flow in a child window. Twitch redirects back to
  * the bot's own `/api/v1/auth/twitch/callback` route (already running on
- * `port`), which exchanges the code for a token and saves it to Mongo.
+ * `port`), which exchanges the code for a token and saves it to the database.
  * This just watches for that navigation, reads the JSON it returns, and
  * reports the result back to whichever renderer asked for it.
  */
@@ -40,7 +40,7 @@ function openTwitchSignup(port: number, type: 'user' | 'bot', onComplete: (resul
 export function registerTwitchSignupHandler(port: number): void {
   ipcMain.on('twitch:signup', (event: IpcMainEvent, type: 'user' | 'bot' = 'user') => {
     openTwitchSignup(port, type, (result) => {
-      if (!event.sender.isDestroyed()) event.sender.send('twitch:signupComplete', result);
+      if (!event.sender.isDestroyed()) event.sender.send('twitch:signupComplete', { type, result });
     });
   });
 }

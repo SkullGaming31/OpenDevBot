@@ -5,12 +5,14 @@ import { initializeTwitchEventSub } from './EventSubEvents';
 import { startRetryWorker } from './EventSub/retryWorker';
 import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
-import Database from './database';
+import { openSqliteDatabase } from './database/sqliteConnection';
+import { connectMongoForDevelopment } from './database/mongoDevTools';
 import createApp from './util/createApp';
 import { initializeConstants } from './util/constants';
 import fs from 'fs';
 import { deleteAllInjuries, deleteExpiredInjuries } from './services/injuryCleanup';
 import logger from './util/logger';
+import { initializeWebhookQueue } from './Discord/webhookQueue';
 
 /**
  * @returns {Promise<void>}
@@ -18,7 +20,7 @@ import logger from './util/logger';
  * Represents the OpenDevBot application.
  */
 
-class OpenDevBot {
+export class OpenDevBot {
 	startTime: number;
 	constructor() {
 		this.startTime = Date.now();
@@ -56,7 +58,7 @@ class OpenDevBot {
 	 * Starts the OpenDevBot by initializing necessary components and services.
 	 * 
 	 * This function performs the following tasks:
-	 * - Determines the MongoDB URI based on the environment and initializes the database connection.
+	 * - Opens the SQLite application database and optionally connects MongoDB developer tooling in dev/debug only.
 	 * - Copies metadata files from the source to the destination directory if they exist.
 	 * - Deletes all entries in the injuries collection from the database.
 	 * - Initializes error handling with the ErrorHandler.
@@ -68,7 +70,8 @@ class OpenDevBot {
 	 * - ENABLE_EVENTSUB: Determines if Twitch EventSub should be initialized.
 	 * - ENABLE_CHAT: Determines if the chat client for Twitch IRC should be initialized.
 	 * - ENVIRONMENT: Specifies the environment type (e.g., 'prod', 'dev', 'debug').
-	 * - MONGO_URI/DOCKER_URI: MongoDB connection URIs for different environments.
+	 * - SQLITE_DB_PATH: Optional path for the SQLite application database.
+	 * - MONGO_URI/DOCKER_URI: Optional MongoDB connection URIs for dev/debug tooling only.
 	 * - PORT: Port number on which the server should listen.
 	 * 
 	 * @throws {Error} Throws an error if an unknown environment is specified or if any initialization step fails.
@@ -77,60 +80,18 @@ class OpenDevBot {
 		try {
 			const EventSub = process.env.ENABLE_EVENTSUB;
 			const chatIIRC = process.env.ENABLE_CHAT;
-			// Initialize database connection
-			// Prefer the sanitized `ENVIRONMENT` helper to avoid literal 'undefined' strings
+			// Initialize the SQLite application database.
 			const environment = process.env.ENVIRONMENT as string;
-			let mongoURI = '';
-
-			// Determine MongoDB URI based on environment
-			switch (environment) {
-				case 'prod':
-					mongoURI = process.env.DOCKER_URI || '';
-					break;
-				case 'debug':
-				case 'dev':
-					mongoURI = process.env.DOCKER_URI || '';
-					break;
-				default:
-					throw new Error(`Unknown environment: ${environment}`);
+			if (!['prod', 'debug', 'dev', 'test'].includes(environment)) {
+				throw new Error(`Unknown environment: ${environment}`);
 			}
-
-			// Expand placeholders and trim quoted env values (support templated MONGO_URI)
-			const trimQuotes = (s: string | undefined) => (s ?? '').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-			const userEnv = trimQuotes(process.env.MONGO_USER);
-			const passEnv = trimQuotes(process.env.MONGO_PASS);
-			const dbEnv = trimQuotes(process.env.MONGO_DB);
-
-			let finalMongoURI = mongoURI;
-			if (finalMongoURI.includes('{MONGO_USER}') || finalMongoURI.includes('{MONGO_PASS}') || finalMongoURI.includes('{MONGO_DB}')) {
-				if (!userEnv || !passEnv) {
-					logger.error('MONGO_URI contains placeholders but MONGO_USER or MONGO_PASS is not set. Aborting.');
-					process.exit(1);
-				}
-				const encUser = encodeURIComponent(userEnv);
-				const encPass = encodeURIComponent(passEnv);
-				finalMongoURI = finalMongoURI.replace(/\{MONGO_USER\}/g, encUser).replace(/\{MONGO_PASS\}/g, encPass).replace(/\{MONGO_DB\}/g, encodeURIComponent(dbEnv || ''));
-			}
-
-			// Log a masked URI (avoid printing password)
+			openSqliteDatabase();
+			await initializeWebhookQueue();
 			try {
-				const schemeIndex = finalMongoURI.indexOf('://');
-				let masked = finalMongoURI;
-				if (schemeIndex !== -1) {
-					const atIndex = finalMongoURI.indexOf('@', schemeIndex + 3);
-					if (atIndex !== -1) {
-						masked = finalMongoURI.slice(0, schemeIndex + 3) + '****' + finalMongoURI.slice(atIndex);
-					}
-				}
-				logger.info(`Connecting to MongoDB: ${masked}`);
-			} catch (e) {
-				logger.info('Connecting to MongoDB (masked)');
+				await connectMongoForDevelopment();
+			} catch (error) {
+				logger.error('MongoDB developer tooling failed to connect; SQLite application services remain available', error);
 			}
-
-			// Initialize database connection
-			const database = new Database(finalMongoURI);
-			await database.connect();
-
 
 			// Injury cleanup strategy:
 			// - If RESET_INJURIES=true, delete all injuries (legacy behavior)
@@ -220,13 +181,13 @@ class OpenDevBot {
 	}
 }
 
-const client = new OpenDevBot();
+if (require.main === module) {
+	const client = new OpenDevBot();
+	initMonitoring();
 
-// Initialize monitoring (Sentry/LogDNA) if configured
-initMonitoring();
-
-client.start().then(() => logger.info('Bot started successfully')).catch((error: unknown) => {
-	if (error instanceof Error) {
-		logger.error('Failed to start bot: ', error.message + error.stack);
-	}
-});
+	client.start().then(() => logger.info('Bot started successfully')).catch((error: unknown) => {
+		if (error instanceof Error) {
+			logger.error('Failed to start bot: ', error.message + error.stack);
+		}
+	});
+}

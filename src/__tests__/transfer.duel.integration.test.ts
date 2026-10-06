@@ -8,8 +8,10 @@ import mongoose from 'mongoose';
 import balanceAdapter from '../services/balanceAdapter';
 import BankAccount from '../database/models/bankAccount';
 import { sleep } from '../util/util';
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 sleep(45000);
+useInMemorySqliteDatabase();
 
 describe('transfer/duel integration (replica-set transactions)', () => {
 	let replset: MongoMemoryReplSet | null = null;

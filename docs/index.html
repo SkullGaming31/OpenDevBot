@@ -45,7 +45,8 @@
   <ul>
     <li>Node.js (16+)</li>
     <li>npm</li>
-    <li>MongoDB (docker/local or mongodb atlas)</li>
+    <li>SQLite (included; required for application data)</li>
+    <li>MongoDB (optional; development/debug tooling only)</li>
   </ul>
 
   <h2>2. Install</h2>
@@ -58,7 +59,9 @@ npm install</code></pre>
   </p>
   <pre><code>TWITCH_CLIENT_ID=your_twitch_client_id
 TWITCH_CLIENT_SECRET=your_twitch_client_secret
-MONGO_URI=mongodb://localhost:27017/opendevbot
+ENVIRONMENT=dev
+DOCKER_URI=mongodb://localhost:27017/opendevbot
+ENABLE_MONGO_DEV_TOOLS=true
 ENABLE_CHAT=true
 ENABLE_EVENTSUB=false
 PORT=8000</code></pre>
@@ -72,7 +75,7 @@ PORT=8000</code></pre>
     <code>&lt;REDIRECT_URI&gt;</code> with your app values):</p>
   <pre><code>https://id.twitch.tv/oauth2/authorize?response_type=code&amp;client_id=&lt;CLIENT_ID&gt;&amp;redirect_uri=&lt;REDIRECT_URI&gt;&amp;scope=user:read:email+chat:read+chat:edit</code></pre>
   <p>By default the project expects the OAuth callback at <code>/auth/twitch/callback</code> (see your configured
-    redirect URI). After completing the OAuth flow the bot will persist the token into MongoDB and, if configured,
+    redirect URI). After completing the OAuth flow the bot will persist the token into SQLite and, if configured,
     automatically join the broadcaster channel.</p>
 
   <p>If you host the web app and want to add the token through the project's UI, use one of the links below depending on

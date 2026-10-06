@@ -29,11 +29,13 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 			await TokenModel.findOneAndUpdate(
 				{ user_id: userId },
 				{
-					access_token: newTokenData.accessToken,
-					refresh_token: newTokenData.refreshToken,
-					scope: newTokenData.scope,
-					expires_in: newTokenData.expiresIn,
-					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+					$set: {
+						access_token: newTokenData.accessToken,
+						refresh_token: newTokenData.refreshToken,
+						scope: newTokenData.scope,
+						expires_in: newTokenData.expiresIn,
+						obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+					},
 				},
 				{ upsert: true, returnDocument: 'after' }
 			);
@@ -41,10 +43,15 @@ export async function getAuthProvider(): Promise<RefreshingAuthProvider> {
 			try { (await import('../monitoring/metrics')).tokenRefreshes.inc({ userId, result: 'success' }); } catch (e) { /* ignore */ }
 		} catch (e) {
 			try { (await import('../monitoring/metrics')).tokenRefreshes.inc({ userId, result: 'error' }); } catch (ee) { /* ignore */ }
-			throw e;
+			logger.error('AuthProvider: failed to persist refreshed token for user', userId, e);
 		}
 	});
 	for (const tokenData of tokenDataList) {
+		if (!tokenData || typeof tokenData.user_id !== 'string' || !tokenData.user_id.trim()) {
+			logger.warn('AuthProvider: skipping token record without a valid user ID');
+			continue;
+		}
+
 		const { user_id, access_token, refresh_token, scope, expires_in, obtainmentTimestamp } = tokenData;
 		const newTokenData: AccessToken = {
 			accessToken: access_token,
@@ -81,11 +88,13 @@ export async function getChatAuthProvider(): Promise<RefreshingAuthProvider | St
 			await TokenModel.findOneAndUpdate(
 				{ user_id: userId },
 				{
-					access_token: newTokenData.accessToken,
-					refresh_token: newTokenData.refreshToken,
-					scope: newTokenData.scope,
-					expires_in: newTokenData.expiresIn,
-					obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+					$set: {
+						access_token: newTokenData.accessToken,
+						refresh_token: newTokenData.refreshToken,
+						scope: newTokenData.scope,
+						expires_in: newTokenData.expiresIn,
+						obtainmentTimestamp: newTokenData.obtainmentTimestamp,
+					},
 				},
 				{ upsert: true, returnDocument: 'after' }
 			);

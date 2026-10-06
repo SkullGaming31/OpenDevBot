@@ -92,7 +92,7 @@ const addpoints: Command = {
 
 		// Perform the deposit via the economy service (creates account if needed)
 		try {
-			const acct = await deposit(userSearch.id, amountToAdd, undefined, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
+			const acct = await deposit(userSearch.id, amountToAdd, { admin: { id: msg.userInfo.userId, name: msg.userInfo.displayName }, channel });
 
 			const addPointsEmbed = new EmbedBuilder()
 				.setTitle('Twitch Event [Addpoints]')

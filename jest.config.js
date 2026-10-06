@@ -26,6 +26,9 @@ const config = {
 		'!src/**/__mocks__/**',
 		'!src/**/*.d.ts',
 		'!src/scripts/**',
+		'electron/adminProxy.ts',
+		'electron/preload.ts',
+		'electron/monitorVisibility.ts',
 	],
 	coverageReporters: ['text', 'lcov', 'json'],
 };

@@ -1,10 +1,8 @@
-import mongoose from 'mongoose';
-
 import { metricsHandler, healthHandler, readyHandler } from '../monitoring/metrics';
+import { closeSqliteDatabase } from '../database/sqliteConnection';
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
-jest.mock('mongoose', () => ({
-	connection: { readyState: 1 }
-}));
+useInMemorySqliteDatabase();
 
 describe('metrics endpoints', () => {
 	test('metricsHandler returns metrics content when DB is healthy', async () => {
@@ -27,7 +25,6 @@ describe('metrics endpoints', () => {
 	});
 
 	test('healthHandler returns ok when DB is healthy', async () => {
-		(mongoose.connection as any).readyState = 1;
 		const handler = healthHandler();
 		const res: any = { statusCode: 200, body: null, status(code: number) { this.statusCode = code; return this; }, json(obj: any) { this.body = obj; } };
 		await handler({} as any, res);
@@ -35,7 +32,7 @@ describe('metrics endpoints', () => {
 	});
 
 	test('readyHandler returns 503 when DB is down', async () => {
-		(mongoose.connection as any).readyState = 0;
+		closeSqliteDatabase();
 		const handler = readyHandler();
 		const res: any = { statusCode: 200, body: null, status(code: number) { this.statusCode = code; return this; }, json(obj: any) { this.body = obj; } };
 		await handler({} as any, res);

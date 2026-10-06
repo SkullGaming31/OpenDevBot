@@ -1,9 +1,9 @@
-import { model, Schema, Document } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
 /**
  * Interface for a channel document in the database.
  */
-interface IChannelDocument extends Document {
+interface IChannelDocument {
 	/**
 	 * The unique ID of the user who owns the channel.
 	 */
@@ -22,29 +22,9 @@ interface IChannelDocument extends Document {
 	channelPointsEnabled?: boolean;
 }
 
-const channelSchema = new Schema<IChannelDocument>({
-	user_id: {
-		type: String,
-		unique: true,
-		index: true, // Add an index to the user_id field
-	},
-	name: {
-		type: String,
-		required: true,
-	},
-	enabled: {
-		type: Boolean,
-		required: true,
-		default: false,
-	},
-	// Whether the channel has enabled channel-points redemption handling
-	channelPointsEnabled: {
-		type: Boolean,
-		required: false,
-		default: false,
-	},
+const channelModel = createSqliteModel<IChannelDocument>('channel', {
+	defaults: { enabled: false, channelPointsEnabled: false },
+	unique: [['user_id']],
 });
-
-const channelModel = model<IChannelDocument>('channel', channelSchema);
 
 export default channelModel;

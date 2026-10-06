@@ -1,3 +1,4 @@
+import Bank from '../database/models/bankAccount';
 import { IBankAccount } from '../database/models/bankAccount';
 import logger from '../util/logger';
 import * as economyService from './economyService';
@@ -24,8 +25,6 @@ export async function withdraw(userId: string, amount: number) {
 }
 
 export async function creditWallet(userKey: string | null | undefined, amount: number, username?: string | null, channelId?: string | null) {
-	const BankModule = require('../database/models/bankAccount');
-	const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
 	const keyStr = safeStr(userKey || username).toLowerCase();
 	const isNumericId = /^\d+$/.test(keyStr);
 
@@ -116,8 +115,6 @@ export async function getWallet(userKey: string | null | undefined, username?: s
 	try {
 		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
-		const BankModule = require('../database/models/bankAccount');
-		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
 		if (isNumericId) return await Bank.findOne({ userId: keyStr }).lean();
 		const uname = safeStr(username || userKey);
 		if (uname) return await Bank.findOne({ username: uname }).lean();
@@ -135,9 +132,6 @@ export async function getWalletBalance(userKey: string | null | undefined, usern
 
 export async function debitWallet(userKey: string | null | undefined, amount: number, username?: string | null, channelId?: string | null): Promise<boolean> {
 	try {
-		const BankModule = require('../database/models/bankAccount');
-		const Bank = (BankModule && (BankModule.default ?? BankModule)) as unknown as import('mongoose').Model<IBankAccount>;
-
 		const keyStr = safeStr(userKey || username).toLowerCase();
 		const isNumericId = /^\d+$/.test(keyStr);
 		// Helper: ensure legacy numeric `balance` fields are normalized (best-effort)

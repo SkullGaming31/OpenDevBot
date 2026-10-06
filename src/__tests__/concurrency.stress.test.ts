@@ -3,6 +3,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 
 import BankAccount from '../database/models/bankAccount';
 import { deposit, transfer } from '../services/economyService';
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 /**
  * Higher-stress concurrency test for non-transactional fallback paths.
@@ -10,6 +11,7 @@ import { deposit, transfer } from '../services/economyService';
  */
 
 let mongod: MongoMemoryServer;
+useInMemorySqliteDatabase();
 
 // Increase timeout because this can be longer under high-stress settings.
 // Make the actual work size configurable so CI/dev runs stay fast by default.

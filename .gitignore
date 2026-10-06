@@ -10,6 +10,7 @@ dist-electron/
 /src/devlogs
 NOTES.txt
 /logs
+/data/*.sqlite*
 /coverage
 .tsbuildinfo
 bot-status.diff
