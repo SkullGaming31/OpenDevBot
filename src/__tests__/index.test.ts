@@ -6,7 +6,6 @@ const mockStartRetryWorker = jest.fn().mockResolvedValue(undefined);
 const mockInitializeErrorHandler = jest.fn().mockResolvedValue(undefined);
 const mockInitializeChat = jest.fn().mockResolvedValue(undefined);
 const mockOpenSqliteDatabase = jest.fn();
-const mockConnectMongo = jest.fn().mockResolvedValue(undefined);
 const mockInitializeWebhookQueue = jest.fn().mockResolvedValue(undefined);
 const mockInitializeConstants = jest.fn().mockResolvedValue(undefined);
 const mockDeleteAllInjuries = jest.fn().mockResolvedValue(undefined);
@@ -50,7 +49,6 @@ function mockDependencies() {
 	}));
 	jest.doMock('../chat', () => ({ initializeChat: mockInitializeChat }));
 	jest.doMock('../database/sqliteConnection', () => ({ openSqliteDatabase: mockOpenSqliteDatabase }));
-	jest.doMock('../database/mongoDevTools', () => ({ connectMongoForDevelopment: mockConnectMongo }));
 	jest.doMock('../Discord/webhookQueue', () => ({ initializeWebhookQueue: mockInitializeWebhookQueue }));
 	jest.doMock('../util/createApp', () => ({ __esModule: true, default: jest.fn(() => mockApp) }));
 	jest.doMock('../util/constants', () => ({ initializeConstants: mockInitializeConstants }));
@@ -72,7 +70,6 @@ describe('OpenDevBot startup', () => {
 			callback?.();
 			return {};
 		});
-		mockConnectMongo.mockResolvedValue(undefined);
 		mockInitializeErrorHandler.mockResolvedValue(undefined);
 		mockInitializeTwitchEventSub.mockResolvedValue(undefined);
 		mockInitializeChat.mockResolvedValue(undefined);
@@ -107,11 +104,10 @@ describe('OpenDevBot startup', () => {
 		);
 	});
 
-	it('continues in test mode when optional MongoDB tooling is unavailable', async () => {
+	it('starts application services with SQLite in test mode', async () => {
 		setEnvironment('ENABLE_CHAT', 'true');
 		setEnvironment('ENABLE_EVENTSUB', 'true');
 		setEnvironment('RESET_INJURIES', 'true');
-		mockConnectMongo.mockRejectedValue(new Error('Mongo unavailable'));
 		const bot = await createBot();
 
 		await bot.start();
@@ -122,10 +118,6 @@ describe('OpenDevBot startup', () => {
 		expect(mockDeleteExpiredInjuries).not.toHaveBeenCalled();
 		expect(mockInitializeChat).not.toHaveBeenCalled();
 		expect(mockInitializeTwitchEventSub).not.toHaveBeenCalled();
-		expect(mockLogger.error).toHaveBeenCalledWith(
-			'MongoDB developer tooling failed to connect; SQLite application services remain available',
-			expect.any(Error),
-		);
 		expect(mockListen).toHaveBeenCalledWith('4319', expect.any(Function));
 	});
 

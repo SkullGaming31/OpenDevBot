@@ -10,7 +10,7 @@ export async function getUsernamesFromDatabase(): Promise<string[]> {
 		const usernames: string[] = tokens.map((token) => token.login).filter((v): v is string => Boolean(v && typeof v === 'string'));
 		return usernames;
 	} catch (error) {
-		logger.error('Error fetching usernames from MongoDB:', error);
+		logger.error('Error fetching usernames from SQLite:', error);
 		throw error;
 	}
 }

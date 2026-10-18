@@ -819,7 +819,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				await SubscriptionModel.deleteMany({});
 				logger.info('All existing subscriptions deleted in dev environment.');
 			}
-			// Check if the subscription already exists in MongoDB
+			// Check if the subscription already exists in SQLite.
 			const existingSubscription = await SubscriptionModel.findOne({
 				subscriptionId: subscription.id,
 				authUserId: subscription.authUserId,
@@ -834,7 +834,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				return; // Exit early if subscription already exists
 			}
 
-			// Save subscription details to MongoDB using upsert to avoid races
+			// Save subscription details to SQLite using upsert to avoid races.
 			try {
 				const subRec = subscription as unknown as Record<string, unknown>;
 				const toSet = {
@@ -907,7 +907,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 					`(SDS){SubscriptionID: ${subscription.id}, SubscriptionAuthUserId: ${subscription.authUserId}`,
 				);
 			}
-			// Check if the subscription exists in MongoDB
+			// Check if the subscription exists in SQLite.
 			const existingSubscription = await SubscriptionModel.findOne({
 				subscriptionId: subscription.id,
 				authUserId: subscription.authUserId,
@@ -920,7 +920,7 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 				return; // Exit early if subscription not found
 			}
 
-			// Delete subscription from MongoDB
+			// Delete subscription from SQLite.
 			const deletedSubscription = await SubscriptionModel.findOneAndDelete({
 				subscriptionId: subscription.id,
 				authUserId: subscription.authUserId,

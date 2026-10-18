@@ -831,7 +831,6 @@ export async function joinChannel(username: string): Promise<void> {
 	}
 }
 
-// Define a function to retrieve usernames from MongoDB
 // username/token DB access lives in src/database/tokenStore.ts
 
 // Re-export token store helper to preserve backwards compatibility for tests

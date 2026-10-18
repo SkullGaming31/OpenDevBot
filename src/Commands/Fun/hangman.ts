@@ -17,7 +17,7 @@ const activeGames = new Map<string, HangmanState>();
 
 const WORDS = [
 	'javascript', 'typescript', 'nodejs', 'twitch', 'developer', 'openai', 'discord', 'webhook', 'integration', 'repository',
-	'database', 'mongodb', 'asynchronous', 'promise', 'function', 'variable', 'closure', 'module', 'package', 'command'
+	'database', 'asynchronous', 'promise', 'function', 'variable', 'closure', 'module', 'package', 'command'
 ];
 
 function makeRevealed(answer: string): string[] {

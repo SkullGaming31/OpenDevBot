@@ -6,7 +6,6 @@ import { startRetryWorker } from './EventSub/retryWorker';
 import ErrorHandler from './Handlers/errorHandler';
 import { initializeChat } from './chat';
 import { openSqliteDatabase } from './database/sqliteConnection';
-import { connectMongoForDevelopment } from './database/mongoDevTools';
 import createApp from './util/createApp';
 import { initializeConstants } from './util/constants';
 import fs from 'fs';
@@ -58,7 +57,7 @@ export class OpenDevBot {
 	 * Starts the OpenDevBot by initializing necessary components and services.
 	 * 
 	 * This function performs the following tasks:
-	 * - Opens the SQLite application database and optionally connects MongoDB developer tooling in dev/debug only.
+	 * - Opens the SQLite application database.
 	 * - Copies metadata files from the source to the destination directory if they exist.
 	 * - Deletes all entries in the injuries collection from the database.
 	 * - Initializes error handling with the ErrorHandler.
@@ -71,7 +70,6 @@ export class OpenDevBot {
 	 * - ENABLE_CHAT: Determines if the chat client for Twitch IRC should be initialized.
 	 * - ENVIRONMENT: Specifies the environment type (e.g., 'prod', 'dev', 'debug').
 	 * - SQLITE_DB_PATH: Optional path for the SQLite application database.
-	 * - MONGO_URI/DOCKER_URI: Optional MongoDB connection URIs for dev/debug tooling only.
 	 * - PORT: Port number on which the server should listen.
 	 * 
 	 * @throws {Error} Throws an error if an unknown environment is specified or if any initialization step fails.
@@ -87,11 +85,6 @@ export class OpenDevBot {
 			}
 			openSqliteDatabase();
 			await initializeWebhookQueue();
-			try {
-				await connectMongoForDevelopment();
-			} catch (error) {
-				logger.error('MongoDB developer tooling failed to connect; SQLite application services remain available', error);
-			}
 
 			// Injury cleanup strategy:
 			// - If RESET_INJURIES=true, delete all injuries (legacy behavior)
@@ -116,10 +109,7 @@ export class OpenDevBot {
 
 			// Initialize Twitch EventSub event listeners
 			if (EventSub) {
-				// During tests we avoid initializing EventSub and constants because tests
-				// typically mock the Database and do not establish a real mongoose
-				// connection; calling initializeConstants() would hit TokenModel.find()
-				// and cause buffering/timeouts. Only initialize in non-test runs.
+				// Avoid live Twitch connections during tests.
 				if (process.env.ENVIRONMENT === 'test') {
 					logger.info('Skipping EventSub initialization in test environment');
 				} else {

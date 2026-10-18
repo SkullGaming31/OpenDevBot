@@ -1,6 +1,5 @@
 import { createSqliteModel } from '../sqliteModel';
 
-// Define MongoDB model
 export interface SubscriptionInfo {
   subscriptionId: string;
   authUserId: string;

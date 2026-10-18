@@ -28,11 +28,6 @@ declare global {
 			DEV_DISCORD_FEATURE_REQUEST_TOKEN: string;
 			DEV_DISCORD_FEATURE_REQUEST_ID: string;
 			PORT: string;
-			MONGO_USER: string;
-			MONGO_PASS: string;
-			MONGO_DB: string;
-			MONGO_URI: string;
-			DOCKER_URI: string;
 			SQLITE_DB_PATH: string;
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;

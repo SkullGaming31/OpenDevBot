@@ -65,7 +65,7 @@ describe('bots command', () => {
 		jest.doMock(require.resolve('../../api/userApiClient'), () => ({ getUserApi: jest.fn().mockResolvedValue({ channels: { getChannelEditors: jest.fn().mockResolvedValue([]) } }) }));
 
 		const botDoc = { username: 'somebot', addedBy: 'adder', addedFromChannel: 'chanx', addedAt: new Date().toISOString() };
-		// Mock findOne to return an object with a .lean() method (Mongoose pattern)
+		// Mock findOne with the chain used by the command.
 		jest.doMock(require.resolve('../../database/models/knownBotsModel'), () => ({ __esModule: true, default: { findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(botDoc) }) } }));
 		jest.doMock(require.resolve('../../util/constants'), () => ({ broadcasterInfo: [{ id: 'b1', name: 't' }], commandUsageWebhookID: '', CommandUsageWebhookTOKEN: '' }));
 

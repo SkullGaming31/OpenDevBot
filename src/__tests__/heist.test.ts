@@ -22,23 +22,13 @@ const mockCandidates = [
 
 jest.doMock('../database/models/bankAccount', () => ({ __esModule: true, default: { find: jest.fn().mockImplementation(() => ({ limit: jest.fn().mockResolvedValue(mockCandidates) })) } }));
 
-// Mock InjuryModel to avoid real MongoDB calls
+// Mock InjuryModel to isolate persistence.
 jest.doMock('../database/models/injury', () => ({
 	InjuryModel: {
 		find: jest.fn().mockReturnValue({ lean: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([]) }),
 		findOneAndUpdate: jest.fn().mockResolvedValue(undefined),
 		deleteOne: jest.fn().mockResolvedValue(undefined)
 	}
-}));
-
-// Mock mongoose to prevent loading mongodb native in these unit tests
-jest.doMock('mongoose', () => ({
-	startSession: jest.fn().mockResolvedValue({
-		startTransaction: jest.fn(),
-		commitTransaction: jest.fn(),
-		abortTransaction: jest.fn(),
-		endSession: jest.fn()
-	})
 }));
 
 // Mock sleep util so tests don't wait

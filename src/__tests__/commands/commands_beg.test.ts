@@ -9,10 +9,10 @@ describe('beg command', () => {
 	test('cooldown path informs user to wait', async () => {
 		const say = jest.fn();
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
-		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
+		// Keep the real Twitch API and auth provider out of this unit test.
 		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
-		// mock UserModel so we don't load mongoose in tests
+		// Mock UserModel to isolate persistence.
 		jest.doMock('../../database/models/userModel', () => ({
 			UserModel: {
 				findOne: (jest.fn() as any).mockResolvedValue({ lastBegTime: new Date() }),
@@ -32,10 +32,10 @@ describe('beg command', () => {
 	test('successful beg credits wallet and announces', async () => {
 		const say = jest.fn();
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
-		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
+		// Keep the real Twitch API and auth provider out of this unit test.
 		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
-		// mock UserModel to avoid mongoose
+		// Mock UserModel to isolate persistence.
 		jest.doMock('../../database/models/userModel', () => ({
 			UserModel: {
 				findOne: (jest.fn() as any).mockResolvedValue(null),
@@ -67,7 +67,7 @@ describe('beg command', () => {
 	test('failed beg announces failure and does not credit', async () => {
 		const say = jest.fn();
 		jest.doMock('../../chat', () => ({ getChatClient: async () => ({ say }) }));
-		// avoid loading real userApiClient/authProvider which touch tokens/mongoose
+		// Keep the real Twitch API and auth provider out of this unit test.
 		jest.doMock('../../api/userApiClient', () => ({ getUserApi: async () => ({ users: { getUserByName: (jest.fn() as any).mockReturnValue(undefined) } }) }));
 
 		jest.doMock('../../database/models/userModel', () => ({

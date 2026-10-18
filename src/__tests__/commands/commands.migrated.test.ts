@@ -142,7 +142,7 @@ describe('migrated command unit tests (beg, dig, roulette)', () => {
 		jest.doMock('../../services/balanceAdapter', () => ({ creditWallet: creditMock }));
 
 		// Mock ChamberStateModel to return existing state
-		// export a mock model function that also has a findOne property (Mongoose model shape)
+		// Export a mock model function that also has a findOne property.
 		const mockModel: any = {};
 		mockModel.findOne = jest.fn().mockResolvedValue({ userId: 'u1', bullets: 1, save: jest.fn() });
 		jest.doMock('../../database/models/roulette', () => ({ __esModule: true, default: mockModel }));

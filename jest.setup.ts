@@ -3,12 +3,6 @@
 jest.mock('./src/util/logger');
 import logger from './src/util/logger';
 
-// Suppress Mongoose's Jest mock-timers warning in test environments. Mongoose
-// prints a noisy warning when Jest's fake timers are enabled; setting this
-// env var silences it. If you'd rather address the root cause, consider
-// calling `jest.useRealTimers()` in tests that interact with Mongoose.
-process.env.SUPPRESS_JEST_WARNINGS = 'true';
-
 // If logger is a manual mock (src/__mocks__/util/logger.ts), its functions are jest.fn()
 if (logger) {
 	// Reset mock call counts before each test
@@ -30,9 +24,7 @@ if (logger) {
 // DISABLE_TEST_CONSOLE_SILENCE=0 in the environment and implement per-test
 // silencing.
 
-// Clear prom-client metrics and mongoose models between test runs to avoid
-// duplicate metric registration and OverwriteModelError when tests re-import
-// model files.
+// Clear prom-client metrics between test runs to avoid duplicate registration.
 beforeEach(() => {
 	try {
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -42,17 +34,6 @@ beforeEach(() => {
 		}
 	} catch (e) {
 		// ignore if prom-client not present in this test
-	}
-
-	try {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const mongoose = require('mongoose');
-		if (mongoose && mongoose.models) {
-			mongoose.models = {};
-			mongoose.modelSchemas = {};
-		}
-	} catch (e) {
-		// ignore if mongoose not available
 	}
 
 	// Forward logger mock calls to console so tests that spy on console.* see

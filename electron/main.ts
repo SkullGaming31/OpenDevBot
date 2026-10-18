@@ -6,7 +6,6 @@ config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true } as never)
 
 import createApp from '../src/util/createApp';
 import { openSqliteDatabase } from '../src/database/sqliteConnection';
-import { connectMongoForDevelopment } from '../src/database/mongoDevTools';
 import { initializeWebhookQueue } from '../src/Discord/webhookQueue';
 import logger, { setApplicationLogFile, setErrorLogFile } from '../src/util/logger';
 import { registerAdminProxy } from './adminProxy';
@@ -60,8 +59,7 @@ ipcMain.on('monitor:visibilityUpdate', (_event, serializedMap: string) => {
 });
 
 /**
- * Opens the SQLite application database, optionally connects MongoDB
- * developer tooling in dev/debug environments, and starts the local Express app.
+ * Opens the SQLite application database and starts the local Express app.
  */
 async function bootstrap(): Promise<void> {
 	// Packaging and installers may run without user env vars, so default packaged
@@ -74,11 +72,6 @@ async function bootstrap(): Promise<void> {
 	initMonitoring();
 	openSqliteDatabase(path.join(app.getPath('userData'), 'opendevbot.sqlite'));
 	await initializeWebhookQueue();
-	try {
-		await connectMongoForDevelopment();
-	} catch (error) {
-		logger.error('MongoDB developer tooling failed to connect; SQLite application services remain available', error);
-	}
 
 	if (process.env.RESET_INJURIES === 'true') {
 		logger.warn('RESET_INJURIES=true: removing all entries from injuries collection (legacy behavior)');

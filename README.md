@@ -74,7 +74,7 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
 
-a personal chat bot for my twitch channel, will make it usable on other channels at some point, im only a <strong>beginner</strong> coder but as i learn how to code better i will add more features to the bot, currently working on features that can be checked out in the Roadmap Section of this readme.
+OpenDevBot is a personal Twitch chat bot designed to run in a single channel. It is not intended to support multiple channels.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -201,7 +201,7 @@ setx ADMIN_API_TOKEN "your-token-value"
 * Added debug logging around chat message parsing and command handling to aid diagnosis of why commands may not run.
 * Started refactor to defer EventSub subscription registration until the websocket session is ready and added scaffolding for restart/retry logic (work in progress).
 
-Notes: these changes include tests and mocks so the project can run unit tests without external Twitch or MongoDB services. See `CHANGELOG.md` for a detailed list of edits made on this date.
+Notes: these changes include tests and mocks so the project can run unit tests without external Twitch services. See `CHANGELOG.md` for a detailed list of edits made on this date.
 
 See the [open issues](https://github.com/skullgaming31/OpenDevBot/issues) for a full list of proposed features (and known issues).
 
@@ -248,36 +248,6 @@ Other Projects: [Projects](https://github.com/SkullGaming31?tab=repositories)
 * [Twurple](https://twurple.js.org/) Twitch Library
 
 <p align="right">(<a href="#top">back to top</a>)</p>
-
-## Running in Docker (Production)
-
-Follow these steps to run OpenDevBot in production inside Docker. Production application data is stored in SQLite; the production compose file does not start or connect to MongoDB.
-
-1. Copy the example env file and fill in secrets:
-
-```powershell
-cp .env.prod.example .env.prod
-# Edit .env.prod and fill in values (TWITCH_CLIENT_ID, etc.)
-```
-
-2- Build and start the services:
-
-```powershell
-docker compose up --build -d
-```
-
-3- Logs:
-
-```powershell
-docker compose logs -f app
-```
-
-Notes:
-
-* The compose file persists SQLite data at `./data/opendevbot.sqlite`.
-* Make sure to provide `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and the bot OAuth token in `.env.prod`.
-* MongoDB developer tooling is restricted to `dev` and `debug` environments. To run it locally, start only the development MongoDB service with `docker compose -f docker-compose.dev.yml up -d mongodb`, set `ENVIRONMENT=dev` and `DOCKER_URI=mongodb://localhost:27017/opendevbot` in your local `.env`, then run the bot outside the production compose file.
-* To exercise the Electron webhook queue without sending anything to Discord, set `DISCORD_WEBHOOK_DRY_RUN=true` with `ENVIRONMENT=dev` and use **Dashboard → Webhook Queue → Queue dry-run samples**. The six sample notifications remain pending in SQLite until deleted.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
