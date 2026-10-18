@@ -28,7 +28,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
       - name: Install dependencies
         run: npm ci
       - name: Run linter
@@ -46,7 +46,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
       - name: Install dependencies
         run: npm ci
       - name: Run typecheck
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [22.x]
     services:
       mongo:
         image: mongo:6.0
@@ -76,15 +76,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-
-      - name: Ensure libssl1.1 is available (needed by mongodb-memory-server)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl1.1 || {
-            echo "libssl1.1 not available via apt, attempting to download focal package..."
-            wget -q -O /tmp/libssl1.1.deb "http://security.ubuntu.com/ubuntu/pool/main/o/openssl1.1/libssl1.1_1.1.1f-1ubuntu2.16_amd64.deb" || true
-            if [ -f /tmp/libssl1.1.deb ]; then sudo dpkg -i /tmp/libssl1.1.deb || true; fi
-          }
 
       - name: Install dependencies
         run: npm ci

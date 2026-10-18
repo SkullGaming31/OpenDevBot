@@ -70,6 +70,9 @@
     "type": "git",
     "url": "https://github.com/SkullGaming31/opendevbot"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "bugs": {
     "url": "https://github.com/SkullGaming31/opendevbot/issues",
     "email": "skullgamingg31@gmail.com"
