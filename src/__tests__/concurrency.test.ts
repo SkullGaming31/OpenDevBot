@@ -1,29 +1,11 @@
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import BankAccount from '../database/models/bankAccount';
 import { deposit, transfer } from '../services/economyService';
 import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 /**
- * Concurrency/stress test for non-transactional fallback paths.
- * Uses a single-node mongodb-memory-server (no transactions) so economyService will use
- * the atomic findOneAndUpdate fallback paths. We simulate many concurrent deposits and
- * transfers and assert that the final total balances are consistent.
+ * Verify that concurrent SQLite transactions preserve account balances.
  */
-
-let mongod: MongoMemoryServer;
 useInMemorySqliteDatabase();
-
-beforeAll(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-	await mongoose.disconnect();
-	await mongod.stop();
-});
 
 beforeEach(async () => {
 	await BankAccount.deleteMany({});

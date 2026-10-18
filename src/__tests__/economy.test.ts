@@ -1,25 +1,9 @@
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-
 import BankAccount from '../database/models/bankAccount';
 import { deposit, withdraw, transfer, buyItem } from '../services/economyService';
 import MarketplaceItem from '../database/models/marketplaceItem';
 import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
-let mongod: MongoMemoryServer;
-
 useInMemorySqliteDatabase();
-
-beforeAll(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-	await mongoose.disconnect();
-	await mongod.stop();
-});
 
 test('deposit and withdraw basic', async () => {
 	await deposit('user1', 100);

@@ -1,16 +1,11 @@
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-
 import BankAccount from '../database/models/bankAccount';
 import { deposit, transfer } from '../services/economyService';
 import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 /**
- * Higher-stress concurrency test for non-transactional fallback paths.
+ * Higher-stress concurrency test for SQLite-backed economy operations.
  * Increased operations compared to the smoke test to surface race conditions.
  */
-
-let mongod: MongoMemoryServer;
 useInMemorySqliteDatabase();
 
 // Increase timeout because this can be longer under high-stress settings.
@@ -18,17 +13,6 @@ useInMemorySqliteDatabase();
 // Set STRESS_SCALE=1 for full stress, or a value <1 to reduce work.
 const STRESS_SCALE = Number(process.env.STRESS_SCALE ?? 0.05); // default to 5% of full work
 jest.setTimeout(60000);
-
-beforeAll(async () => {
-	mongod = await MongoMemoryServer.create();
-	const uri = mongod.getUri();
-	await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-	await mongoose.disconnect();
-	await mongod.stop();
-});
 
 beforeEach(async () => {
 	await BankAccount.deleteMany({});

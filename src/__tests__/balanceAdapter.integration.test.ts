@@ -2,13 +2,10 @@
 jest.resetModules();
 jest.clearAllMocks();
 
-// Integration tests (real mongodb) — load DB modules after resetting module registry
+// Load DB modules after resetting the module registry so the adapter uses the SQLite test database.
 import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
-let mongod: any;
-let mongoose: any;
 let BankAccount: any;
-let UserModel: any;
 let adapter: any;
 
 useInMemorySqliteDatabase();
@@ -18,33 +15,17 @@ beforeAll(async () => {
   jest.resetModules();
   jest.clearAllMocks();
 
-  mongoose = await import('mongoose');
-  const mms = await import('mongodb-memory-server');
-  const MongoMemoryServer = (mms && (mms.MongoMemoryServer ?? mms.default?.MongoMemoryServer)) || mms.MongoMemoryServer || mms.default;
-  mongod = await MongoMemoryServer.create();
-  const uri = mongod.getUri();
-  await mongoose.connect(uri);
-
-  // Dynamically import models and adapter so earlier unit-test mocks don't leak in
+  // Dynamically import models and adapter after clearing earlier unit-test mocks.
   const bankMod = await import('../database/models/bankAccount');
   BankAccount = (bankMod && (bankMod.default ?? bankMod));
-  const userMod = await import('../database/models/userModel');
-  UserModel = userMod.UserModel ?? userMod;
   adapter = await import('../services/balanceAdapter');
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
 });
 
 beforeEach(async () => {
   await BankAccount.deleteMany({});
-  await UserModel.deleteMany({});
 });
 
-test('deposit mirrors to UserModel and creates BankAccount via economyService', async () => {
-  // deposit into bank which should also mirror to UserModel
+test('deposit creates a SQLite-backed BankAccount through economyService', async () => {
   await adapter.deposit('12345', 50);
   const acct = await BankAccount.findOne({ userId: '12345' }).lean();
   expect(acct).not.toBeNull();

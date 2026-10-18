@@ -1,32 +1,13 @@
 /**
- * Integration tests for transfer and duel flows using a mongodb-memory-server replica set
- * to validate transaction behavior.
+ * Integration tests for transfer and duel flows using SQLite transactions.
  */
-import { MongoMemoryReplSet } from 'mongodb-memory-server';
-import mongoose from 'mongoose';
-
 import balanceAdapter from '../services/balanceAdapter';
 import BankAccount from '../database/models/bankAccount';
-import { sleep } from '../util/util';
 import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
-sleep(45000);
 useInMemorySqliteDatabase();
 
-describe('transfer/duel integration (replica-set transactions)', () => {
-	let replset: MongoMemoryReplSet | null = null;
-
-	beforeAll(async () => {
-		replset = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-		const uri = replset.getUri();
-		await mongoose.connect(uri);
-	});
-
-	afterAll(async () => {
-		await mongoose.disconnect();
-		if (replset) await replset.stop();
-	});
-
+describe('transfer/duel integration (SQLite transactions)', () => {
 	beforeEach(async () => {
 		await BankAccount.deleteMany({});
 	});
@@ -48,7 +29,7 @@ describe('transfer/duel integration (replica-set transactions)', () => {
 		await BankAccount.create({ userId: 'p1', balance: { bank: 50, wallet: 0 } });
 		await BankAccount.create({ userId: 'p2', balance: { bank: 50, wallet: 0 } });
 
-		// Perform transfers sequentially to avoid conflicting session commit/abort races in the test environment
+		// Apply competing transfers sequentially and verify the total remains conserved.
 		await balanceAdapter.transfer('p1', 'p2', 30);
 		await balanceAdapter.transfer('p2', 'p1', 20);
 

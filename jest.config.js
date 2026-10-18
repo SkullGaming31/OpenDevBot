@@ -33,16 +33,4 @@ const config = {
 	coverageReporters: ['text', 'lcov', 'json'],
 };
 
-// In CI environments (GitHub Actions) the mongodb-memory-server package
-// may attempt to spawn MongoDB binaries that require OpenSSL 1.1 which
-// isn't available on ubuntu-latest runners. When running in CI we map
-// imports of `mongodb-memory-server` to a lightweight mock that returns
-// the URI from the `MONGO_URI` environment variable (the workflow sets
-// this to the provided Mongo service). This avoids downloading binaries
-// and makes tests stable in CI while leaving local behavior unchanged.
-if (process.env.GITHUB_ACTIONS || process.env.CI) {
-	config.moduleNameMapper = config.moduleNameMapper || {};
-	config.moduleNameMapper['^mongodb-memory-server$'] = '<rootDir>/test-mocks/mongodb-memory-server.mock.ts';
-}
-
 module.exports = config;
