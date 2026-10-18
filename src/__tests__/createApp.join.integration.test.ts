@@ -9,9 +9,7 @@ jest.mock('axios');
 // Mock TokenModel used by createApp
 jest.mock('../database/models/tokenModel', () => {
 	class TokenModel {
-		constructor(obj: any) { Object.assign(this, obj); }
-		async save() { return this; }
-		static async findOne() { return null; }
+		static async findOneAndUpdate() { return { scope: ['chat:read', 'chat:edit'] }; }
 	}
 	return { TokenModel };
 });

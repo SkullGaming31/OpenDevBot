@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm prune --omit=dev
 
 
 # Stage 2: Runtime
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

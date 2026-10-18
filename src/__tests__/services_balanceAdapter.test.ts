@@ -39,8 +39,12 @@ describe('balanceAdapter', () => {
 		jest.doMock('../database/models/userModel', () => ({ UserModel: { findOneAndUpdate } }));
 
 		// Mock BankAccount to avoid real DB calls in unit tests
-		const bankMock: any = { updateOne: (jest.fn() as any).mockResolvedValue(undefined), findOneAndUpdate: (jest.fn() as any).mockResolvedValue(null) };
-		jest.doMock('../database/models/bankAccount', () => ({ default: bankMock }));
+		const bankMock: any = {
+			updateOne: (jest.fn() as any).mockResolvedValue(undefined),
+			findOne: (jest.fn() as any).mockReturnValue({ lean: (jest.fn() as any).mockResolvedValue(null) }),
+			findOneAndUpdate: (jest.fn() as any).mockResolvedValue(null)
+		};
+		jest.doMock('../database/models/bankAccount', () => ({ __esModule: true, default: bankMock }));
 
 		const ba = await import('../services/balanceAdapter');
 		const ok = await ba.debitWallet('alice', 100);
@@ -51,8 +55,12 @@ describe('balanceAdapter', () => {
 		const findOneAndUpdate = (jest.fn() as any).mockResolvedValue({ userId: 'alice', balance: 10 });
 		jest.doMock('../database/models/userModel', () => ({ UserModel: { findOneAndUpdate } }));
 
-		const bankMock2: any = { updateOne: (jest.fn() as any).mockResolvedValue(undefined), findOneAndUpdate: (jest.fn() as any).mockResolvedValue({ userId: 'alice', balance: 10 }) };
-		jest.doMock('../database/models/bankAccount', () => ({ default: bankMock2 }));
+		const bankMock2: any = {
+			updateOne: (jest.fn() as any).mockResolvedValue(undefined),
+			findOne: (jest.fn() as any).mockReturnValue({ lean: (jest.fn() as any).mockResolvedValue(null) }),
+			findOneAndUpdate: (jest.fn() as any).mockResolvedValue({ userId: 'alice', balance: 10 })
+		};
+		jest.doMock('../database/models/bankAccount', () => ({ __esModule: true, default: bankMock2 }));
 
 		const ba = await import('../services/balanceAdapter');
 		const ok = await ba.debitWallet('alice', 5);

@@ -1,7 +1,7 @@
-import { model, Schema, Document } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
 // Define MongoDB model
-export interface SubscriptionInfo extends Document {
+export interface SubscriptionInfo {
   subscriptionId: string;
   authUserId: string;
   type?: string;
@@ -11,17 +11,7 @@ export interface SubscriptionInfo extends Document {
   transport?: Record<string, unknown>;
 }
 
-const subscriptionInfoSchema = new Schema<SubscriptionInfo>({
-	subscriptionId: { type: String, required: true },
-	authUserId: { type: String, required: true },
-	type: { type: String },
-	version: { type: String },
-	condition: { type: Schema.Types.Mixed },
-	status: { type: String },
-	transport: { type: Schema.Types.Mixed },
-}, { timestamps: true });
-
-// Create a compound unique index
-subscriptionInfoSchema.index({ subscriptionId: 1, authUserId: 1 }, { unique: true });
-
-export const SubscriptionModel = model<SubscriptionInfo>('eventSubscriptions', subscriptionInfoSchema);
+export const SubscriptionModel = createSqliteModel<SubscriptionInfo>('eventSubscriptions', {
+	timestamps: true,
+	unique: [['subscriptionId', 'authUserId']],
+});

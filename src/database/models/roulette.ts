@@ -1,15 +1,13 @@
-import { Document, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-interface ChamberState extends Document {
+interface ChamberState {
 	userId: string;
 	bullets: number;
 }
 
-const chamberStateSchema = new Schema<ChamberState>({
-	userId: { type: String, required: true, unique: true, index: true },
-	bullets: { type: Number, required: true, default: 1 },
+const ChamberStateModel = createSqliteModel<ChamberState>('ChamberState', {
+	defaults: { bullets: 1 },
+	unique: [['userId']],
 });
-
-const ChamberStateModel = model<ChamberState>('ChamberState', chamberStateSchema);
 
 export default ChamberStateModel;

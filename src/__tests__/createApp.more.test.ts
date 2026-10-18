@@ -56,11 +56,9 @@ describe('createApp additional branches', () => {
     postMock.mockResolvedValue({ data: { access_token: 'at', refresh_token: 'rt', expires_in: 3600, scope: 'chat:read chat:edit' } });
     getMock.mockResolvedValue({ data: { data: [{ id: 'u1', login: 'tester', broadcaster_type: '' }] } });
 
-    const saveMock = jest.fn().mockResolvedValue(undefined);
-    const tokenDoc = { save: saveMock } as any;
-    const findOneMock = jest.fn().mockResolvedValue(tokenDoc);
-    const TokenModelMock: any = jest.fn().mockImplementation((doc: any) => ({ ...doc, save: saveMock }));
-    TokenModelMock.findOne = findOneMock;
+    const tokenDoc = { scope: ['chat:read', 'chat:edit'] };
+    const findOneAndUpdateMock = jest.fn().mockResolvedValue(tokenDoc);
+    const TokenModelMock: any = { findOneAndUpdate: findOneAndUpdateMock };
     jest.doMock('../database/models/tokenModel', () => ({ TokenModel: TokenModelMock }));
 
     // ensure joinChannel import throws to exercise that catch branch
@@ -71,6 +69,10 @@ describe('createApp additional branches', () => {
 
     const res = await request(app).get('/api/v1/auth/twitch/callback').query({ code: 'abc' });
     expect(res.status).toBe(200);
-    expect(saveMock).toHaveBeenCalled();
+    expect(findOneAndUpdateMock).toHaveBeenCalledWith(
+      { user_id: 'u1' },
+      expect.objectContaining({ $set: expect.objectContaining({ login: 'tester' }) }),
+      { upsert: true, returnDocument: 'after' }
+    );
   });
 });

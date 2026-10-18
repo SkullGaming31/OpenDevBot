@@ -5,8 +5,9 @@ import path from 'path';
 import { getChatClient } from '../../chat';
 import balanceAdapter from '../../services/balanceAdapter';
 import * as economyService from '../../services/economyService';
-import mongoose from 'mongoose';
 import BankAccount from '../../database/models/bankAccount';
+import TransactionLog from '../../database/models/transactionLog';
+import { withSqliteTransaction } from '../../database/sqliteConnection';
 import { Command } from '../../interfaces/Command';
 import { sleep } from '../../util/util';
 import logger from '../../util/logger';
@@ -164,10 +165,10 @@ const heist: Command = {
 		betAmount = amount;
 		const channelId = msg.channelId;
 
-		// Function to load injury data from MongoDB
-		async function loadInjuryDataFromMongoDB(): Promise<InjuryData> {
+		// Function to load injury data from SQLite
+		async function loadInjuryDataFromSqlite(): Promise<InjuryData> {
 			try {
-				// Retrieve all injury data from MongoDB
+				// Retrieve all injury data from SQLite
 				const injuryData = await InjuryModel.find().lean().exec();
 
 				// Convert the retrieved data to the desired format
@@ -185,11 +186,11 @@ const heist: Command = {
 
 				return formattedData;
 			} catch (error) {
-				logger.error('Error loading injury data from MongoDB:', error);
+				logger.error('Error loading injury data from SQLite:', error);
 				return {};
 			}
 		}
-		const existingInjuryData = await loadInjuryDataFromMongoDB();
+		const existingInjuryData = await loadInjuryDataFromSqlite();
 
 		// Check if the user has any active injuries before executing the !heist command
 		if (participantData[user] && participantData[user].injuries.length > 0) {
@@ -389,32 +390,36 @@ const heist: Command = {
 
 					let collected = 0;
 					donorDetails = [];
-					// Try transactional path first
+					// Use a synchronous SQLite transaction so concurrent requests cannot
+					// interleave account updates while the heist is collecting funds.
 					let usedTransaction = false;
 					try {
-						const session = await mongoose.startSession();
-						session.startTransaction();
-						for (const donor of donors) {
-							if (collected >= needed) break;
-							const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
-							const take = Math.min(maxFromDonor, needed - collected);
-							if (take <= 0) continue;
-							await economyService.withdraw(donor.userId, take, session);
-							collected += take;
-							donorDetails.push({ userId: donor.userId, amount: take });
-						}
-						if (collected > 0) {
-							await session.commitTransaction();
-							logger.debug('Heist: transaction committed', { collected, donorDetails });
-							usedTransaction = true;
-						} else {
-							await session.abortTransaction();
-							logger.debug('Heist: transaction aborted, collected=0');
-						}
-						session.endSession();
+						const result = withSqliteTransaction(() => {
+							let total = 0;
+							const details: Array<{ userId: string; amount: number }> = [];
+							for (const donor of donors) {
+								if (total >= needed) break;
+								const maxFromDonor = Math.min(Math.floor(((donor.balance && donor.balance.bank) || 0) * donorMaxPercent), donorMaxAbsolute);
+								const take = Math.min(maxFromDonor, needed - total);
+								if (take <= 0) continue;
+								const debited = BankAccount.findOneAndUpdate(
+									{ userId: donor.userId, 'balance.bank': { $gte: take } },
+									{ $inc: { 'balance.bank': -take }, $set: { updatedAt: new Date() } },
+									{ returnDocument: 'after' }
+								).execSync();
+								if (!debited) continue;
+								TransactionLog.createSync({ type: 'withdraw', from: donor.userId, amount: take, meta: { reason: 'heist' } });
+								total += take;
+								details.push({ userId: donor.userId, amount: take });
+							}
+							return { total, details };
+						});
+						collected = result.total;
+						donorDetails = result.details;
+						usedTransaction = collected > 0;
+						logger.debug(usedTransaction ? 'Heist: SQLite transaction committed' : 'Heist: SQLite transaction had no eligible funds', { collected, donorDetails });
 					} catch (err) {
-						// Transaction path unavailable or failed — fall back to non-transactional per-donor withdraws
-						logger.warn('Bank heist transaction path failed, falling back to per-donor withdraws', err);
+						logger.error('Bank heist SQLite transaction failed; transaction was rolled back', err);
 					}
 
 					if (!usedTransaction) {
@@ -486,8 +491,8 @@ const heist: Command = {
 			}
 
 			resultMessage += ` You managed to steal ${loot} units of loot. You stole the following items: ${stolenItems.join(', ')}`;
-			// Save updated injury data to MongoDB
-			await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
+			// Save updated injury data to SQLite
+			await saveInjuryDataToSqlite(convertToInjuryData(participantData));
 
 			// If bank heist, append masked donor summary and set cooldown
 			if (zoneName === 'bank') {
@@ -521,8 +526,8 @@ const heist: Command = {
 						participantData[participant] = { injuries: [injury] };
 					}
 
-					// Save updated injury data to MongoDB
-					await saveInjuryDataToMongoDB(convertToInjuryData(participantData));
+					// Save updated injury data to SQLite
+					await saveInjuryDataToSqlite(convertToInjuryData(participantData));
 
 					// Log the updated participantData
 					// logger.debug('Updated ParticipantData:', participantData);
@@ -609,10 +614,10 @@ function assignInjury(participant: string, severity: string): Injury {
 	return injury;
 }
 
-// Function to save injury data to MongoDB
-async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
+// Function to save injury data to SQLite
+async function saveInjuryDataToSqlite(data: InjuryData): Promise<void> {
 	try {
-		// Iterate through each participant's injury data and update it in MongoDB
+		// Iterate through each participant's injury data and update it in SQLite
 		for (const participantName in data) {
 			const injuries = data[participantName];
 			if (injuries.length > 0) {
@@ -625,9 +630,9 @@ async function saveInjuryDataToMongoDB(data: InjuryData): Promise<void> {
 				);
 			}
 		}
-		// logger.debug('Injury data saved to MongoDB');
+		// logger.debug('Injury data saved to SQLite');
 	} catch (error) {
-		logger.error('Error saving injury data to MongoDB:', error);
+		logger.error('Error saving injury data to SQLite:', error);
 	}
 }
 

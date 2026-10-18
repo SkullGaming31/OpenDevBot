@@ -4,8 +4,11 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import BankAccount from '../database/models/bankAccount';
 import { deposit, withdraw, transfer, buyItem } from '../services/economyService';
 import MarketplaceItem from '../database/models/marketplaceItem';
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
 
 let mongod: MongoMemoryServer;
+
+useInMemorySqliteDatabase();
 
 beforeAll(async () => {
 	mongod = await MongoMemoryServer.create();

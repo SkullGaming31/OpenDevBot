@@ -1,5 +1,9 @@
 import request from 'supertest';
 
+const mockEnqueueWebhook = jest.fn();
+const originalEnvironment = process.env.ENVIRONMENT;
+const originalDryRun = process.env.DISCORD_WEBHOOK_DRY_RUN;
+
 // Prevent side-effects during imports
 jest.resetModules();
 
@@ -13,6 +17,13 @@ describe('Admin webhook endpoints', () => {
 		jest.resetModules();
 		jest.clearAllMocks();
 		process.env.ADMIN_API_TOKEN = 'admintoken';
+	});
+
+	afterEach(() => {
+		if (originalEnvironment === undefined) Reflect.deleteProperty(process.env, 'ENVIRONMENT');
+		else process.env.ENVIRONMENT = originalEnvironment;
+		if (originalDryRun === undefined) Reflect.deleteProperty(process.env, 'DISCORD_WEBHOOK_DRY_RUN');
+		else process.env.DISCORD_WEBHOOK_DRY_RUN = originalDryRun;
 	});
 
 	test('GET /api/v1/admin/webhooks returns paginated items', async () => {
@@ -77,6 +88,38 @@ describe('Admin webhook endpoints', () => {
 		expect(res.body.ok).toBe(true);
 		expect(res.body.matched).toBe(1);
 		expect(res.body.modified).toBe(1);
+	});
+
+	test('POST /api/v1/admin/webhooks/test-queue enqueues dry-run samples only in dev mode', async () => {
+		process.env.ENVIRONMENT = 'dev';
+		process.env.DISCORD_WEBHOOK_DRY_RUN = 'true';
+		mockEnqueueWebhook.mockResolvedValue({ dryRun: true });
+		jest.doMock('../Discord/webhookQueue', () => ({ enqueueWebhook: mockEnqueueWebhook }));
+
+		const createApp = (await import('../util/createApp')).default;
+		const app = createApp();
+		const res = await request(app)
+			.post('/api/v1/admin/webhooks/test-queue')
+			.set('x-admin-token', 'admintoken')
+			.expect(202);
+
+		expect(res.body).toMatchObject({ ok: true, queued: 6, dryRun: true });
+		expect(mockEnqueueWebhook).toHaveBeenCalledTimes(6);
+	});
+
+	test('POST /api/v1/admin/webhooks/test-queue rejects production mode', async () => {
+		process.env.ENVIRONMENT = 'prod';
+		process.env.DISCORD_WEBHOOK_DRY_RUN = 'true';
+
+		const createApp = (await import('../util/createApp')).default;
+		const app = createApp();
+		const res = await request(app)
+			.post('/api/v1/admin/webhooks/test-queue')
+			.set('x-admin-token', 'admintoken')
+			.expect(403);
+
+		expect(res.body.error).toContain('require dev/debug dry-run mode');
+		expect(mockEnqueueWebhook).not.toHaveBeenCalled();
 	});
 
 	test('DELETE /api/v1/admin/webhooks removes items', async () => {

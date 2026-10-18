@@ -33,6 +33,7 @@ declare global {
 			MONGO_DB: string;
 			MONGO_URI: string;
 			DOCKER_URI: string;
+			SQLITE_DB_PATH: string;
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;
 			ENVIRONMENT: ENVIRONMENT;
