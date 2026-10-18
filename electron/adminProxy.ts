@@ -1,11 +1,6 @@
 import { ipcMain } from 'electron';
 import logger from '../src/util/logger';
 
-interface AdminFetchOptions {
-	method?: string;
-	body?: string;
-}
-
 /**
  * Proxies admin API calls from the renderer to the bot's local Express
  * server, attaching `x-admin-token` on the main-process side so the
@@ -27,7 +22,7 @@ export function registerAdminProxy(port: number): void {
 		return overrideAdminToken || process.env.ADMIN_API_TOKEN || '';
 	});
 
-	ipcMain.handle('admin:fetch', async (_event, path: string, opts: AdminFetchOptions = {}) => {
+	ipcMain.handle('admin:fetch', async (_event, path: string, method?: string, body?: string) => {
 		const maxAttempts = 3;
 		let attempt = 0;
 		const token = overrideAdminToken || process.env.ADMIN_API_TOKEN || '';
@@ -36,12 +31,12 @@ export function registerAdminProxy(port: number): void {
 			attempt++;
 			try {
 				const res = await fetch(`http://localhost:${port}${path}`, {
-					method: opts.method || 'GET',
+					method: method || 'GET',
 					headers: {
 						'Content-Type': 'application/json',
 						'x-admin-token': token
 					},
-					body: opts.body
+					body
 				});
 
 				if (res.ok) {

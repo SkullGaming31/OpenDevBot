@@ -2,7 +2,7 @@ import { WebhookClient, RESTPostAPIWebhookWithTokenJSONBody, WebhookMessageCreat
 import { webhookAttempts, webhookQueueLength, webhookFailureStreak, webhookFailureAlerts } from '../monitoring/metrics';
 import logger from '../util/logger';
 import WebhookQueueModel, { IWebhookQueue } from '../database/models/webhookQueue';
-import mongoose, { UpdateQuery, Document } from 'mongoose';
+import type { SqliteRecord } from '../database/sqliteModel';
 
 type QueueItem = {
 	payload: string | WebhookMessageCreateOptions | RESTPostAPIWebhookWithTokenJSONBody;
@@ -20,6 +20,34 @@ const DEFAULT_RATE_MS = Number(process.env.DISCORD_WEBHOOK_RATE_MS) || 1000; // 
 
 function keyFor(id: string, token: string) { return `${id}:${token}`; }
 
+function isDevelopmentEnvironment(): boolean {
+	return process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
+}
+
+function isDryRunConfigured(): boolean {
+	return process.env.DISCORD_WEBHOOK_DRY_RUN === 'true';
+}
+
+export function isWebhookDryRunEnabled(): boolean {
+	return isDevelopmentEnvironment() && isDryRunConfigured();
+}
+
+function describePayload(payload: unknown): string {
+	if (typeof payload === 'string') return payload.slice(0, 120);
+	if (!payload || typeof payload !== 'object') return 'Webhook message';
+
+	const record = payload as Record<string, unknown>;
+	if (typeof record.content === 'string') return record.content.slice(0, 120);
+	if (Array.isArray(record.embeds)) {
+		const firstEmbed = record.embeds[0];
+		if (firstEmbed && typeof firstEmbed === 'object') {
+			const title = (firstEmbed as Record<string, unknown>).title;
+			if (typeof title === 'string') return title.slice(0, 120);
+		}
+	}
+	return 'Webhook message';
+}
+
 function getClient(id: string, token: string) {
 	const key = keyFor(id, token);
 	let c = clients.get(key);
@@ -31,6 +59,7 @@ function getClient(id: string, token: string) {
 }
 
 async function processQueue(id: string, token: string) {
+	if (isDryRunConfigured()) return;
 	const key = keyFor(id, token);
 	if (processing.get(key)) return;
 	processing.set(key, true);
@@ -90,11 +119,15 @@ async function processQueue(id: string, token: string) {
 // Helper to claim and process pending DB items on startup or when processor is idle
 async function processPendingFromDB() {
 	try {
-		if (!mongoose.connection || mongoose.connection.readyState !== 1) return;
+		if (isDryRunConfigured()) {
+			logger.info('Webhook dry-run enabled; pending webhook delivery is paused');
+			return;
+		}
+
 		// Find pending items ordered by creation time
-		type PendingDoc = { _id: mongoose.Types.ObjectId; webhookId: string; token: string; payload: unknown };
-		const pending = (await WebhookQueueModel.find({ status: 'pending' }).sort({ createdAt: 1 }).limit(200).lean()) as unknown as PendingDoc[];
+		const pending = await WebhookQueueModel.find({ status: 'pending' }).sort({ createdAt: 1 }).limit(200).lean();
 		for (const doc of pending) {
+			if (doc.dryRun) continue;
 			// push into in-memory queue so callers waiting on promises in this process can be resolved
 			const key = `${doc.webhookId}:${doc.token}`;
 			if (!queues.has(key)) queues.set(key, []);
@@ -119,8 +152,7 @@ async function processPendingFromDB() {
 					},
 					reject: async (err?: unknown) => {
 						try {
-							const update = { $set: { status: 'failed', lastError: String(err), updatedAt: new Date() }, $inc: { attempts: 1 } } as unknown as UpdateQuery<IWebhookQueue>;
-							await WebhookQueueModel.findByIdAndUpdate(doc._id, update);
+							await WebhookQueueModel.findByIdAndUpdate(doc._id, { $set: { status: 'failed', lastError: String(err), updatedAt: new Date() }, $inc: { attempts: 1 } });
 						} catch (e) {
 							logger.debug('Failed to mark webhook as failed in DB', String(e));
 						}
@@ -137,20 +169,12 @@ async function processPendingFromDB() {
 	}
 }
 
-// hydrate DB items on module load (best-effort)
-void processPendingFromDB();
-
-// Also attempt to process pending items when the mongoose connection is established/re-established
-try {
-	mongoose.connection.on('connected', () => { void processPendingFromDB(); });
-	mongoose.connection.on('reconnected', () => { void processPendingFromDB(); });
-} catch (e) {
-	// ignore
+export async function initializeWebhookQueue(): Promise<void> {
+	await processPendingFromDB();
 }
 
 export function enqueueWebhook(id: string, token: string, payload: string | WebhookMessageCreateOptions | RESTPostAPIWebhookWithTokenJSONBody) {
 	const key = keyFor(id, token);
-	if (!queues.has(key)) queues.set(key, []);
 	// Serialize payload to plain JSON for persistence when possible
 	function serialize(p: unknown) {
 		if (typeof p === 'string') return p;
@@ -164,17 +188,43 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 
 	return new Promise((resolve, reject) => {
 		(async () => {
+			if (isDryRunConfigured()) {
+				if (!isDevelopmentEnvironment()) {
+					throw new Error('Discord webhook dry-run is only allowed in dev/debug environments');
+				}
+				await WebhookQueueModel.create({
+					webhookId: 'dry-run',
+					token: '',
+					payload: serialize(payload),
+					event: describePayload(payload),
+					status: 'pending',
+					attempts: 0,
+					dryRun: true,
+				});
+				resolve({ dryRun: true });
+				return;
+			}
+
+			if (!queues.has(key)) queues.set(key, []);
 			let q = queues.get(key);
 			if (!q) {
 				q = [];
 				queues.set(key, q);
 			}
 			// Persist the queued webhook to DB (best-effort)
-			let dbDoc: Document | null = null;
+			let dbDoc: SqliteRecord<IWebhookQueue> | null = null;
 			try {
 				if (WebhookQueueModel) {
 					const payloadToStore = serialize(payload);
-					dbDoc = await WebhookQueueModel.create({ webhookId: id, token, payload: payloadToStore, status: 'pending', attempts: 0 });
+					dbDoc = await WebhookQueueModel.create({
+						webhookId: id,
+						token,
+						payload: payloadToStore,
+						event: describePayload(payload),
+						status: 'pending',
+						attempts: 0,
+						dryRun: false,
+					});
 				}
 			} catch (e) {
 				logger.debug('Failed to persist webhook queue item to DB:', String(e));
@@ -188,7 +238,7 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 					if (dbDoc && dbDoc._id) {
 						try {
 							// delete DB record after successful send
-							await WebhookQueueModel.findByIdAndDelete((dbDoc as Document)._id);
+							await WebhookQueueModel.findByIdAndDelete(dbDoc._id);
 						} catch (e) { logger.debug('Failed to remove webhook DB record after send', String(e)); }
 					}
 					resolve(res);
@@ -197,8 +247,7 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 					// update db doc as failed
 					if (dbDoc && dbDoc._id) {
 						try {
-							const update = { $set: { status: 'failed', lastError: String(err), updatedAt: new Date() }, $inc: { attempts: 1 } } as unknown as UpdateQuery<IWebhookQueue>;
-							await WebhookQueueModel.findByIdAndUpdate((dbDoc as Document)._id, update);
+							await WebhookQueueModel.findByIdAndUpdate(dbDoc._id, { $set: { status: 'failed', lastError: String(err), updatedAt: new Date() }, $inc: { attempts: 1 } });
 						} catch (e) { logger.debug('Failed to mark webhook failed', String(e)); }
 					}
 					reject(err);

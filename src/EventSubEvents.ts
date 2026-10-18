@@ -319,13 +319,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					if (!followMessage) {
 						logger.error(`No follow messages found for gameId: ${gameId}`);
 						followMessage = await FollowMessage.findOne({ name: 'default' });
-						if (!followMessage) {
-							logger.error('No default follow messages found.');
-							return;
-						}
+						if (!followMessage) logger.warn('No default follow messages found; using built-in follow messages.');
 					}
 
-					const messages = followMessage.messages.length > 0
+					const messages = followMessage?.messages.length
 						? followMessage.messages
 						: defaultMessages;
 					const randomIndex = Math.floor(Math.random() * messages.length);

@@ -1,6 +1,6 @@
-import { Schema, model, Document } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface ITransactionLog extends Document {
+export interface ITransactionLog {
     type: 'deposit' | 'withdraw' | 'transfer' | 'purchase';
     from?: string;
     to?: string;
@@ -9,13 +9,5 @@ export interface ITransactionLog extends Document {
     createdAt: Date;
 }
 
-const transactionLogSchema = new Schema<ITransactionLog>({
-	type: { type: String, required: true },
-	from: { type: String },
-	to: { type: String },
-	amount: { type: Number, required: true },
-	meta: { type: Schema.Types.Mixed },
-}, { timestamps: true });
-
-const TransactionLog = model<ITransactionLog>('TransactionLog', transactionLogSchema);
+const TransactionLog = createSqliteModel<ITransactionLog>('TransactionLog', { timestamps: true });
 export default TransactionLog;

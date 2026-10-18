@@ -1,6 +1,6 @@
-import { Document, Schema, model } from 'mongoose';
+import { createSqliteModel } from '../sqliteModel';
 
-export interface Bots extends Document {
+export interface Bots {
 	id: string;
 	username: string;
 	addedBy?: string;
@@ -8,14 +8,9 @@ export interface Bots extends Document {
 	addedAt?: Date;
 }
 
-const knownBotSchema = new Schema<Bots>({
-	id: { type: String, required: true },
-	username: { type: String, required: true, unique: true },
-	addedBy: { type: String, required: false },
-	addedFromChannel: { type: String, required: false },
-	addedAt: { type: Date, required: false, default: () => new Date() }
+export const knownBotsModel = createSqliteModel<Bots>('bots', {
+	defaults: { addedAt: new Date() },
+	unique: [['username']],
 });
-
-export const knownBotsModel = model<Bots>('bots', knownBotSchema);
 
 export default knownBotsModel;

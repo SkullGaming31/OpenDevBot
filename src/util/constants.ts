@@ -37,6 +37,11 @@ export async function initializeConstants() {
 		// }
 
 		for (const userToken of userTokens) {
+			if (!userToken || typeof userToken.user_id !== 'string' || !userToken.user_id.trim()) {
+				logger.warn('Skipping Twitch token record without a valid user ID during constants initialization');
+				continue;
+			}
+
 			const helixBroadcaster: HelixChannel | null = await userApiClient.channels.getChannelInfoById(userToken.user_id);
 			// if (process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug') {
 			// 	logger.debug(`Username:${helixBroadcaster?.displayName} : ID:${helixBroadcaster?.id}`);

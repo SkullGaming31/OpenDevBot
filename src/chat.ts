@@ -724,6 +724,13 @@ export async function restartChat(): Promise<void> {
 		throw e;
 	}
 }
+
+export async function stopChat(): Promise<void> {
+	await shutdownChat();
+	chatClientInstance = undefined;
+	logger.info('Chat subsystem stopped');
+}
+
 /**
  * Gracefully shutdown the chat client and clear timers started by this module.
  * Useful for tests and for clean process exit.

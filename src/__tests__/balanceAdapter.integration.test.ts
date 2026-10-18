@@ -3,11 +3,15 @@ jest.resetModules();
 jest.clearAllMocks();
 
 // Integration tests (real mongodb) — load DB modules after resetting module registry
+import { useInMemorySqliteDatabase } from './sqliteTestSetup';
+
 let mongod: any;
 let mongoose: any;
 let BankAccount: any;
 let UserModel: any;
 let adapter: any;
+
+useInMemorySqliteDatabase();
 
 beforeAll(async () => {
   // ensure no mocks are active before loading DB modules

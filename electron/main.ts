@@ -5,8 +5,10 @@ import { config } from 'dotenv';
 config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true } as never);
 
 import createApp from '../src/util/createApp';
-import Database from '../src/database';
-import logger from '../src/util/logger';
+import { openSqliteDatabase } from '../src/database/sqliteConnection';
+import { connectMongoForDevelopment } from '../src/database/mongoDevTools';
+import { initializeWebhookQueue } from '../src/Discord/webhookQueue';
+import logger, { setApplicationLogFile, setErrorLogFile } from '../src/util/logger';
 import { registerAdminProxy } from './adminProxy';
 import { registerTwitchSignupHandler } from './twitchSignup';
 import { registerLogsBridge } from './logsBridge';
@@ -15,6 +17,10 @@ import { initializeTwitchEventSub } from '../src/EventSubEvents';
 import { startRetryWorker } from '../src/EventSub/retryWorker';
 import { initializeChat } from '../src/chat';
 import { setBroadcaster } from '../src/util/monitorBroadcaster';
+import ErrorHandler from '../src/Handlers/errorHandler';
+import { deleteAllInjuries, deleteExpiredInjuries } from '../src/services/injuryCleanup';
+import { initMonitoring } from '../src/monitoring';
+import { parseMonitorVisibility } from './monitorVisibility';
 
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-gpu');
@@ -40,46 +46,59 @@ const PORT = Number(process.env.PORT) || 3000;
 // runtime visibility map controlled by renderer
 let monitorVisibility: Record<string, boolean> = {};
 
-ipcMain.on('monitor:visibilityUpdate', (_event, map: Record<string, boolean>) => {
+ipcMain.on('monitor:visibilityUpdate', (_event, serializedMap: string) => {
 	try {
-		monitorVisibility = Object.assign({}, monitorVisibility, map || {});
+		const map = parseMonitorVisibility(serializedMap);
+		if (!map) {
+			logger.warn('[electron] Ignoring invalid monitor visibility update');
+			return;
+		}
+		monitorVisibility = Object.assign({}, monitorVisibility, map);
 	} catch (err) {
-		// ignore
+		logger.warn('[electron] Failed to parse monitor visibility update', err as Error);
 	}
 });
 
 /**
- * Resolves the Mongo URI the same way `src/index.ts` does, then connects
- * and starts the bot's existing Express app (OAuth + admin routes) so the
- * dashboard has something local to talk to.
+ * Opens the SQLite application database, optionally connects MongoDB
+ * developer tooling in dev/debug environments, and starts the local Express app.
  */
 async function bootstrap(): Promise<void> {
-	// Default to 'dev' when ENVIRONMENT isn't set in the packaged app.
-	// Packaging and installers often run without user env vars; prefer a sensible default
-	// but log a warning so packagers/operators can set it explicitly for production.
-	const environment = (process.env.ENVIRONMENT as string) || 'dev';
+	// Packaging and installers may run without user env vars, so default packaged
+	// builds to production and local Electron runs to development.
 	if (!process.env.ENVIRONMENT) {
-		// eslint-disable-next-line no-console
-		console.warn('[electron] ENVIRONMENT not set — defaulting to "dev"');
+		process.env.ENVIRONMENT = app.isPackaged ? 'prod' : 'dev';
+		logger.warn(`[electron] ENVIRONMENT not set — defaulting to "${process.env.ENVIRONMENT}"`);
 	}
 
-	let mongoURI = '';
-	if (environment === 'prod') {
-		mongoURI = process.env.DOCKER_URI || '';
+	initMonitoring();
+	openSqliteDatabase(path.join(app.getPath('userData'), 'opendevbot.sqlite'));
+	await initializeWebhookQueue();
+	try {
+		await connectMongoForDevelopment();
+	} catch (error) {
+		logger.error('MongoDB developer tooling failed to connect; SQLite application services remain available', error);
+	}
+
+	if (process.env.RESET_INJURIES === 'true') {
+		logger.warn('RESET_INJURIES=true: removing all entries from injuries collection (legacy behavior)');
+		await deleteAllInjuries();
 	} else {
-		// dev/debug and any other non-prod values use DOCKER_URI when present
-		mongoURI = process.env.DOCKER_URI || '';
+		await deleteExpiredInjuries();
+		const cleanupInterval = process.env.INJURY_CLEANUP_INTERVAL_MS
+			? Number(process.env.INJURY_CLEANUP_INTERVAL_MS)
+			: 24 * 60 * 60 * 1000;
+		if (process.env.ENVIRONMENT !== 'test' && cleanupInterval > 0) {
+			setInterval(() => { void deleteExpiredInjuries(); }, cleanupInterval);
+		}
 	}
 
-	// Fallback to a sensible local MongoDB URI when none provided in packaged builds.
-	if (!mongoURI) {
-		// eslint-disable-next-line no-console
-		console.warn('[electron] DOCKER_URI / Mongo URI not set — defaulting to mongodb://127.0.0.1:27017/opendevbot');
-		mongoURI = 'mongodb://127.0.0.1:27017/opendevbot';
+	try {
+		await new ErrorHandler().initialize();
+		logger.info('Error Handler initialized (electron)');
+	} catch (error) {
+		logger.error('Failed to start Error Handler in Electron', error as Error);
 	}
-
-	const database = new Database(mongoURI);
-	await database.connect();
 
 	// Mirror the startup sequence from src/index.ts so constants/chat/eventsub
 	// are initialized when running under the Electron shell.
@@ -132,15 +151,27 @@ function createMainWindow(): void {
 }
 
 app.whenReady().then(async () => {
+	const logsDirectory = path.join(app.getPath('userData'), 'logs');
+	const applicationLogPath = path.join(logsDirectory, 'opendevbot.log');
+	const errorLogPath = path.join(logsDirectory, 'opendevbot-errors.log');
+	process.env.DEV_LOG_FILE = errorLogPath;
+	process.env.PROD_LOG_FILE = errorLogPath;
+	try {
+		setApplicationLogFile(applicationLogPath);
+		setErrorLogFile(errorLogPath);
+		registerLogsBridge();
+		logger.info('Persistent Electron logs configured at', applicationLogPath);
+	} catch (error) {
+		logger.error('Failed to configure persistent Electron logging', error as Error);
+	}
+
 	try {
 		await bootstrap();
 	} catch (err) {
 		logger.error('Failed to bootstrap bot API for Electron shell', err as Error);
 	}
-
 	registerAdminProxy(PORT);
 	registerTwitchSignupHandler(PORT);
-	registerLogsBridge();
 	createMainWindow();
 
 	// Wire monitor broadcaster to send events to any open renderer windows

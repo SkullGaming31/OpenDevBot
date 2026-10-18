@@ -266,6 +266,24 @@
       color: var(--text-dim);
     }
 
+    .signup-status {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .signup-status .user-chip,
+    .signup-status .btn {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .account-action {
+      padding: 4px 8px;
+      margin-left: auto;
+      font-size: 11px;
+    }
+
     .user-chip b {
       color: var(--text);
       font-weight: 600;
@@ -280,6 +298,10 @@
       max-width: 1180px;
       margin: 0 auto;
       align-items: start;
+    }
+
+    main.live-main {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     @media (max-width: 880px) {
@@ -408,6 +430,24 @@
     .tabs {
       display: flex;
       gap: 6px;
+    }
+
+    .live-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .live-feed {
+      max-height: 70vh;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    @media (max-width: 800px) {
+      .live-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .tab {
@@ -604,14 +644,15 @@
         // so this page can also be opened directly for preview.
         const hasBridge = !!(window.twitchApi && window.adminApi);
 
-        const connected = ref(false);
-        const user = ref(null);
+        const userSignup = ref(null);
+        const botSignup = ref(null);
         const activeView = ref('dashboard');
 
         const channels = ref(['skullgaming31', 'opendevbot']);
         const joinInput = ref('');
 
         const status = ref('pending');
+        const queueTestSubmitting = ref(false);
         const items = ref([
           { _id: 'a1b2c3', event: 'channel.follow', status: 'pending', createdAt: new Date().toISOString() },
           { _id: 'd4e5f6', event: 'channel.subscribe', status: 'failed', createdAt: new Date().toISOString() },
@@ -627,8 +668,13 @@
         const economyTotal = ref(0);
         const economyPage = ref(1);
         const economyLimit = 20;
+        const economyError = ref('');
+        const economyLoading = ref(false);
+        const economyPageCount = computed(() => Math.max(1, Math.ceil(economyTotal.value / economyLimit)));
 
         async function loadEconomy() {
+          economyError.value = '';
+          economyLoading.value = true;
           if (!hasBridge) {
             // demo fallback
             economyAccounts.value = [
@@ -636,16 +682,25 @@
               { userId: 'alice', balance: 1200, updatedAt: new Date().toISOString() },
             ];
             economyTotal.value = economyAccounts.value.length;
+            economyLoading.value = false;
             return;
           }
           try {
             const res = await window.adminApi.fetch(`/api/v1/admin/economy/accounts?page=${economyPage.value}&limit=${economyLimit}`);
+            if (res && res.error) throw new Error(res.error);
             economyAccounts.value = res.items || [];
-            economyTotal.value = res.total || economyAccounts.value.length;
+            economyTotal.value = Number.isFinite(Number(res.total)) ? Number(res.total) : economyAccounts.value.length;
+            if (economyPage.value > economyPageCount.value) {
+              economyPage.value = economyPageCount.value;
+              return await loadEconomy();
+            }
           } catch (e) {
-            console.debug('Failed to load economy', e);
+            console.error('Failed to load economy', e);
             economyAccounts.value = [];
             economyTotal.value = 0;
+            economyError.value = e instanceof Error ? e.message : String(e);
+          } finally {
+            economyLoading.value = false;
           }
         }
 
@@ -742,6 +797,58 @@
           }
         }
 
+        async function loadSignupAccounts() {
+          if (!hasBridge) return;
+          try {
+            const res = await window.adminApi.fetch('/api/v1/admin/twitch/accounts');
+            if (res && res.error) throw new Error(res.error);
+            userSignup.value = res.streamer || null;
+            botSignup.value = res.bot || null;
+          } catch (e) {
+            console.error('Failed to load Twitch signup accounts', e);
+          }
+        }
+
+        const accountActionPending = ref('');
+
+        async function changeSignupAccount(type, revoke) {
+          const account = type === 'bot' ? botSignup.value : userSignup.value;
+          if (!hasBridge || !account?.userId || accountActionPending.value) return;
+          const actionLabel = revoke ? 'revoke' : 'sign out';
+          const confirmation = revoke
+            ? `Revoke ${type} access for ${account.username} with Twitch? This invalidates the saved access and refresh tokens.`
+            : `Sign out ${type} account ${account.username} from this app? Its Twitch authorization will remain active.`;
+          if (!await showConfirmModal(confirmation)) return;
+
+          accountActionPending.value = `${type}:${actionLabel}`;
+          try {
+            const suffix = revoke ? '/revoke' : '';
+            const response = await window.adminApi.fetch(
+              `/api/v1/admin/twitch/accounts/${encodeURIComponent(account.userId)}${suffix}`,
+              { method: revoke ? 'POST' : 'DELETE' }
+            );
+            if (response && response.error) {
+              if (response.removed) await loadSignupAccounts();
+              throw new Error(response.error);
+            }
+            await Promise.all([loadSignupAccounts(), loadChannels()]);
+            showToast(`${type} account ${revoke ? 'revoked from Twitch' : 'signed out'}`);
+          } catch (e) {
+            console.error(`Failed to ${actionLabel} ${type} Twitch account`, e);
+            showToast(e instanceof Error ? e.message : `Failed to ${actionLabel} ${type} account`);
+          } finally {
+            accountActionPending.value = '';
+          }
+        }
+
+        function signOutAccount(type) {
+          return changeSignupAccount(type, false);
+        }
+
+        function revokeAccount(type) {
+          return changeSignupAccount(type, true);
+        }
+
         async function joinChannel() {
           const name = joinInput.value.trim().toLowerCase();
           if (!name) return;
@@ -772,6 +879,26 @@
           }
         }
 
+        async function queueDryRunSamples() {
+          if (!hasBridge) { showToast('Queue testing requires the Electron shell'); return; }
+          queueTestSubmitting.value = true;
+          try {
+            const result = await window.adminApi.fetch('/api/v1/admin/webhooks/test-queue', { method: 'POST' });
+            if (!result?.ok || typeof result.queued !== 'number') {
+              throw new Error(result?.error || 'Webhook queue sample request failed');
+            }
+            status.value = 'pending';
+            page.value = 1;
+            await loadQueue();
+            showToast(`Queued ${result.queued} dry-run items; nothing was sent to Discord`);
+          } catch (e) {
+            console.error(e);
+            showToast(e instanceof Error ? e.message : 'Failed to queue dry-run samples');
+          } finally {
+            queueTestSubmitting.value = false;
+          }
+        }
+
         // ---- EventSub subscriptions panel state + loader
         const esItems = ref([]);
         const esTotal = ref(0);
@@ -798,6 +925,8 @@
 
         // Live monitor feed state
         const monitorFeed = ref([]);
+        const chatFeed = computed(() => monitorFeed.value.filter(entry => eventType(entry.event) === 'chat'));
+        const eventMonitorFeed = computed(() => monitorFeed.value.filter(entry => eventType(entry.event) !== 'chat'));
 
         const defaultMonitorSettings = {
           bitsThreshold: 50,
@@ -831,25 +960,69 @@
           }
         };
 
+        function normalizeMonitorSettings(settings) {
+          const parsed = settings && typeof settings === 'object' ? settings : {};
+          return {
+            bitsThreshold: parsed.bitsThreshold ?? defaultMonitorSettings.bitsThreshold,
+            totalMax: parsed.totalMax ?? defaultMonitorSettings.totalMax,
+            perEventMax: Object.assign({}, defaultMonitorSettings.perEventMax, parsed.perEventMax || {}),
+            perEventVisible: Object.assign({}, defaultMonitorSettings.perEventVisible, parsed.perEventVisible || {}),
+          };
+        }
+
         const monitorSettings = ref((() => {
           try {
             const raw = localStorage.getItem('odb.monitorSettings');
-            if (raw) {
-              const parsed = JSON.parse(raw) || {};
-              // merge shallow defaults for missing nested maps to avoid template errors
-              parsed.perEventMax = Object.assign({}, defaultMonitorSettings.perEventMax, parsed.perEventMax || {});
-              parsed.perEventVisible = Object.assign({}, defaultMonitorSettings.perEventVisible, parsed.perEventVisible || {});
-              parsed.bitsThreshold = (parsed.bitsThreshold ?? defaultMonitorSettings.bitsThreshold);
-              parsed.totalMax = (parsed.totalMax ?? defaultMonitorSettings.totalMax);
-              return parsed;
-            }
+            if (raw) return normalizeMonitorSettings(JSON.parse(raw));
           } catch (e) { /* ignore */ }
           return JSON.parse(JSON.stringify(defaultMonitorSettings));
         })());
 
-        function saveMonitorSettings() {
-          try { localStorage.setItem('odb.monitorSettings', JSON.stringify(monitorSettings.value)); showToast('Monitor settings saved'); } catch (e) { showToast('Failed to save settings'); }
-          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(monitorSettings.value.perEventVisible || {}); } catch (e) { /* ignore */ }
+        const settingsError = ref('');
+
+        async function loadMonitorSettings() {
+          if (!hasBridge) return;
+          try {
+            const response = await window.adminApi.fetch('/api/v1/admin/settings/monitor');
+            if (response && response.error) throw new Error(response.error);
+            if (response && response.settings) {
+              monitorSettings.value = normalizeMonitorSettings(response.settings);
+            } else {
+              monitorSettings.value = normalizeMonitorSettings(monitorSettings.value);
+              await saveMonitorSettings();
+              return;
+            }
+            settingsError.value = '';
+            localStorage.setItem('odb.monitorSettings', JSON.stringify(monitorSettings.value));
+            if (window.monitorApi && typeof window.monitorApi.setVisibility === 'function') {
+              window.monitorApi.setVisibility(JSON.stringify(monitorSettings.value.perEventVisible || {}));
+            }
+          } catch (e) {
+            console.error('Failed to load monitor settings', e);
+            settingsError.value = e instanceof Error ? e.message : String(e);
+          }
+        }
+
+        async function saveMonitorSettings() {
+          try {
+            monitorSettings.value = normalizeMonitorSettings(monitorSettings.value);
+            if (hasBridge) {
+              const response = await window.adminApi.fetch('/api/v1/admin/settings/monitor', {
+                method: 'PUT',
+                body: JSON.stringify(monitorSettings.value),
+              });
+              if (response && response.error) throw new Error(response.error);
+              if (response && response.settings) monitorSettings.value = normalizeMonitorSettings(response.settings);
+            }
+            localStorage.setItem('odb.monitorSettings', JSON.stringify(monitorSettings.value));
+            settingsError.value = '';
+            showToast('Monitor settings saved');
+          } catch (e) {
+            console.error('Failed to save monitor settings', e);
+            settingsError.value = e instanceof Error ? e.message : String(e);
+            showToast('Failed to save settings');
+          }
+          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(JSON.stringify(monitorSettings.value.perEventVisible || {})); } catch (e) { /* ignore */ }
         }
 
         // Admin API token settings (persisted to localStorage and sent to main process)
@@ -858,13 +1031,18 @@
         async function loadAdminToken() {
           try {
             // Prefer token provided by main process if available
+            let token = '';
             if (hasBridge && window.adminApi && typeof window.adminApi.getToken === 'function') {
-              const t = await window.adminApi.getToken();
-              adminToken.value = t || (localStorage.getItem('odb.adminToken') || '');
+              token = (await window.adminApi.getToken()) || (localStorage.getItem('odb.adminToken') || '');
             } else {
-              adminToken.value = localStorage.getItem('odb.adminToken') || '';
+              token = localStorage.getItem('odb.adminToken') || '';
             }
-          } catch (e) { adminToken.value = localStorage.getItem('odb.adminToken') || ''; }
+            adminToken.value = token;
+            if (hasBridge && window.adminApi && typeof window.adminApi.setToken === 'function') await window.adminApi.setToken(token);
+          } catch (e) {
+            console.error('Failed to load admin token', e);
+            adminToken.value = localStorage.getItem('odb.adminToken') || '';
+          }
         }
 
         async function saveAdminToken() {
@@ -894,9 +1072,9 @@
           Object.keys(monitorSettings.value.perEventVisible).forEach(k => { monitorSettings.value.perEventVisible[k] = false; });
         }
 
-        function resetMonitorSettings() {
+        async function resetMonitorSettings() {
           monitorSettings.value = JSON.parse(JSON.stringify(defaultMonitorSettings));
-          saveMonitorSettings();
+          await saveMonitorSettings();
         }
 
         function eventKey(ev) { try { return String(ev).split(':').pop() || String(ev); } catch { return String(ev); } }
@@ -939,27 +1117,88 @@
 
         if (hasBridge && window.monitorApi) {
           window.monitorApi.onEvent((entry) => {
-            // Friendly summaries for common events
-            let summary = '';
-            try {
-              if (entry && entry.event === 'chat:message' && entry.payload) {
-                const p = entry.payload || {};
-                const name = p.displayName || p.user || p.username || 'unknown';
-                const text = (p.text ?? p.message ?? '').toString();
-                summary = `${name}: ${text}`;
-              } else if (entry && typeof entry.payload === 'object') {
-                summary = `${entry.timestamp} · ${entry.event} · ${JSON.stringify(entry.payload)}`;
-              } else {
-                summary = `${entry.timestamp} · ${entry.event} · ${String(entry.payload ?? '')}`;
-              }
-            } catch (e) {
-              summary = `${entry.timestamp} · ${entry.event} · ${JSON.stringify(entry.payload)}`;
-            }
+            const summary = eventSummary(entry.event, entry.payload);
             pushMonitor({ text: summary, ts: entry.timestamp, event: entry.event, payload: entry.payload });
           });
         }
 
         function clearMonitor() { monitorFeed.value = []; showToast('Monitor cleared'); }
+
+        function eventLabel(ev) {
+          const key = eventType(ev);
+          const labels = {
+            streamOnline: 'Stream online',
+            streamOffline: 'Stream offline',
+            raid_outgoing: 'Outgoing raid',
+            goal_begin: 'Goal started',
+            goal_progress: 'Goal progress',
+            goal_end: 'Goal ended'
+          };
+          return labels[key] || key.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        function eventSummary(ev, payload) {
+          const key = eventType(ev);
+          const details = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+          const broadcaster = details.broadcaster;
+          const actor = details.user || details.gifter || details.raider;
+          const channel = broadcaster ? ` in ${broadcaster}'s channel` : '';
+
+          switch (key) {
+            case 'chat':
+              return `${details.displayName || details.user || details.username || 'Viewer'}: ${details.text ?? details.message ?? 'sent a message'}`;
+            case 'follow':
+              return `${actor || 'Someone'} followed${channel}.`;
+            case 'subscription':
+              const tier = { 1000: 1, 2000: 2, 3000: 3 }[Number(details.tier)];
+              return `${actor || 'Someone'} subscribed${channel}${tier ? ` (Tier ${tier})` : ''}.`;
+            case 'resub':
+              return `${actor || 'Someone'} resubscribed${channel}${details.months ? ` for ${details.months} months` : ''}.`;
+            case 'gift':
+              return `${details.gifter || 'Someone'} gifted ${details.amount || 1} subscription${Number(details.amount) === 1 ? '' : 's'}${channel}.`;
+            case 'cheer':
+              return `${actor || 'Someone'} cheered ${details.bits || 0} bits${channel}${details.message ? `: “${details.message}”` : '.'}`;
+            case 'raid':
+              return `${details.raider || 'A channel'} raided ${broadcaster || 'the channel'}${details.viewers != null ? ` with ${details.viewers} viewers` : ''}.`;
+            case 'raid_outgoing':
+              return `${broadcaster || 'The channel'} raided ${details.target || 'another channel'}${details.viewers != null ? ` with ${details.viewers} viewers` : ''}.`;
+            case 'redemption':
+              return `${actor || 'Someone'} redeemed ${details.reward || 'a reward'}${details.cost != null ? ` for ${details.cost} points` : ''}${channel}${details.message ? `: “${details.message}”` : '.'}`;
+            case 'streamOnline':
+              return `${broadcaster || 'The channel'} is live.`;
+            case 'streamOffline':
+              return `${broadcaster || 'The channel'} has ended the stream.`;
+            case 'goal_begin':
+            case 'goal_progress':
+            case 'goal_end': {
+              const goalTypes = { follow: 'follower', subscription: 'subscriber', bits: 'bit' };
+              const goalName = goalTypes[String(details.type || '').toLowerCase()] || String(details.type || 'community');
+              const current = Number(details.current);
+              const target = Number(details.target);
+              const progress = Number.isFinite(current) && Number.isFinite(target)
+                ? `${current} of ${target}${target > 0 ? ` (${Math.min(100, Math.round(current / target * 100))}%)` : ''}`
+                : 'progress updated';
+              const action = key === 'goal_begin' ? 'started' : key === 'goal_end' ? (current >= target ? 'completed' : 'ended') : 'progress';
+              return `${broadcaster ? `${broadcaster}'s ` : ''}${goalName} goal ${action}: ${progress}.`;
+            }
+            default: {
+              const humanize = value => value.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+              const valueText = value => {
+                if (value == null) return '';
+                if (Array.isArray(value)) return value.map(valueText).filter(Boolean).join(', ');
+                if (typeof value === 'object') {
+                  return Object.entries(value).map(([name, nested]) => `${humanize(name)}: ${valueText(nested)}`).filter(Boolean).join(', ');
+                }
+                return String(value);
+              };
+              const fields = Object.entries(details)
+                .filter(([name, value]) => name !== 'broadcaster' && value != null && typeof value !== 'object')
+                .map(([name, value]) => `${humanize(name)}: ${valueText(value)}`);
+              if (broadcaster) fields.unshift(`Channel: ${broadcaster}`);
+              return fields.length ? fields.join(' · ') : 'Event received.';
+            }
+          }
+        }
 
         function eventType(ev) {
           const s = String(ev || '');
@@ -974,7 +1213,8 @@
           const k = eventType(ev);
           const map = {
             chat: '💬', follow: '➕', subscription: '⭐', resub: '🔁', gift: '🎁', cheer: '✨', raid: '🚩',
-            redemption: '🎯', goal: '🏆', warning: '⚠️', streamOnline: '🟢', streamOffline: '⚫️', default: '•'
+            redemption: '🎯', goal: '🏆', goal_begin: '🏆', goal_progress: '🏆', goal_end: '🏆',
+            warning: '⚠️', streamOnline: '🟢', streamOffline: '⚫️', default: '•'
           };
           return map[k] || map.default;
         }
@@ -982,9 +1222,15 @@
         function eventColor(ev) {
           const k = eventType(ev);
           const map = {
-            chat: '#f5f7fa', follow: '#e8f5e9', subscription: '#fff8e1', resub: '#fff3e0', gift: '#f3e5f5',
-            cheer: '#fff0f6', raid: '#e3f2fd', redemption: '#e8f5e9', goal: '#fff3e0', warning: '#fff3e0',
-            streamOnline: '#e8f5e9', streamOffline: '#fce4ec', default: '#ffffff'
+            chat: 'rgba(255, 255, 255, 0.02)', follow: 'rgba(127, 231, 196, 0.10)',
+            subscription: 'rgba(243, 185, 95, 0.12)', resub: 'rgba(243, 185, 95, 0.12)',
+            gift: 'rgba(180, 139, 255, 0.12)', cheer: 'rgba(255, 93, 93, 0.12)',
+            raid: 'rgba(110, 170, 255, 0.12)', redemption: 'rgba(127, 231, 196, 0.10)',
+            goal: 'rgba(243, 185, 95, 0.12)', goal_begin: 'rgba(243, 185, 95, 0.12)',
+            goal_progress: 'rgba(243, 185, 95, 0.12)', goal_end: 'rgba(243, 185, 95, 0.12)',
+            warning: 'rgba(243, 185, 95, 0.12)',
+            streamOnline: 'rgba(127, 231, 196, 0.12)', streamOffline: 'rgba(255, 93, 93, 0.12)',
+            default: 'var(--panel-raised)'
           };
           return map[k] || map.default;
         }
@@ -1065,9 +1311,18 @@
         onMounted(() => {
           if (hasBridge) {
             window.twitchApi.onSignupComplete((result) => {
-              connected.value = true;
-              user.value = result;
-              showToast(`Signed up as ${result.username}`);
+              if (result?.result?.error) {
+                showToast(result.result.error);
+                return;
+              }
+
+              if (result.type === 'bot') {
+                botSignup.value = result.result;
+              } else {
+                userSignup.value = result.result;
+              }
+              showToast(`Signed up ${result.type} as ${result.result?.username}`);
+              loadSignupAccounts();
               loadChannels();
             });
             loadChannels();
@@ -1081,7 +1336,7 @@
           setInterval(() => { liveUptimeSeconds.value += 1; }, 1000);
 
           // inform main process of initial visibility preferences so it can filter upstream
-          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(monitorSettings.value.perEventVisible || {}); } catch (e) { /* ignore */ }
+          try { if (hasBridge && window.monitorApi && typeof window.monitorApi.setVisibility === 'function') window.monitorApi.setVisibility(JSON.stringify(monitorSettings.value.perEventVisible || {})); } catch (e) { /* ignore */ }
 
           // Auto-refresh every minute: refresh Economy if active, otherwise refresh dashboard panels
           refreshInterval = window.setInterval(() => {
@@ -1096,8 +1351,10 @@
             } catch (e) { console.debug('Auto-refresh error', e); }
           }, 60 * 1000);
 
-          // Load persisted admin token (if any)
-          try { loadAdminToken(); } catch (e) { /* ignore */ }
+          // Load the token before requesting the settings API.
+          loadAdminToken().then(async () => {
+            await Promise.all([loadMonitorSettings(), loadSignupAccounts()]);
+          }).catch(e => console.error('Failed to initialize dashboard settings', e));
         });
 
         onUnmounted(() => {
@@ -1105,15 +1362,15 @@
         });
 
         return {
-          connected, user, activeView, channels, joinInput, status, items, page, total, totalPages,
-          selected, toast, signUp, joinChannel, partChannel, setStatus, toggleSelect,
-          requeue, remove, fmtTime, limit, botStatus, liveUptimeSeconds, formatUptime, openLogs,
+          userSignup, botSignup, activeView, channels, joinInput, status, items, page, total, totalPages, queueTestSubmitting,
+          selected, toast, signUp, signOutAccount, revokeAccount, accountActionPending, joinChannel, partChannel, setStatus, toggleSelect,
+          requeue, remove, queueDryRunSamples, fmtTime, limit, botStatus, liveUptimeSeconds, formatUptime, openLogs,
           // Live monitor
-          monitorFeed, monitorSettings, saveMonitorSettings, resetMonitorSettings, clearMonitor, eventType, eventIcon, eventColor, showAllEvents, hideAllEvents,
+          monitorFeed, chatFeed, eventMonitorFeed, monitorSettings, settingsError, loadMonitorSettings, saveMonitorSettings, resetMonitorSettings, clearMonitor, eventType, eventLabel, eventIcon, eventColor, showAllEvents, hideAllEvents,
           // EventSub panel bindings
           esItems, esTotal, esPage, esPageItems, esTotalPages, loadEventSubs, esPrevPage, esNextPage,
           // Economy
-          economyAccounts, economyTotal, economyPage, economyLimit, loadEconomy,
+          economyAccounts, economyTotal, economyPage, economyLimit, economyPageCount, economyError, economyLoading, loadEconomy,
           editAccount, deleteAccount, // expose edit/delete handlers to template
           // modal helpers/state
           modalVisible, modalMessage, showModal, hideModal, showConfirmModal,
@@ -1136,21 +1393,27 @@
         <button class="nav-item" :class="{ active: activeView === 'dashboard' }" @click="activeView='dashboard'">Dashboard</button>
         <button class="nav-item" :class="{ active: activeView === 'live' }" @click="activeView='live'">Live</button>
         <button class="nav-item" :class="{ active: activeView === 'economy' }" @click="(activeView='economy', loadEconomy())">Economy</button>
-        <button class="nav-item" :class="{ active: activeView === 'settings' }" @click="activeView='settings'">Settings</button>
+        <button class="nav-item" :class="{ active: activeView === 'settings' }" @click="(activeView='settings', loadMonitorSettings())">Settings</button>
       </div>
       <div class="header-right">
-        <!-- signup/user area -->
-        <div v-if="connected" class="user-chip">
-          streamer&nbsp;<b>{{ user?.username }}</b>
-        </div>
-        <button class="btn btn-primary" v-if="!connected" @click="signUp('user')">Sign Up (User)</button>
-        <button class="btn btn-ghost" @click="signUp('bot')">Sign Up Bot</button>
         <button class="btn btn-ghost" @click="openLogs">Logs</button>
       </div>
     </header>
 
     <main v-if="activeView === 'dashboard'">
       <div class="col-left">
+      <div class="signup-status">
+        <div v-if="userSignup" class="user-chip">
+          <span>streamer:&nbsp;<b>{{ userSignup.username }}</b></span>
+          <button class="btn btn-ghost account-action" :disabled="!!accountActionPending" @click="signOutAccount('streamer')">Sign Out</button>
+        </div>
+        <button class="btn btn-primary" v-else @click="signUp('user')">Sign Up (User)</button>
+        <div v-if="botSignup" class="user-chip">
+          <span>bot:&nbsp;<b>{{ botSignup.username }}</b></span>
+          <button class="btn btn-ghost account-action" :disabled="!!accountActionPending" @click="signOutAccount('bot')">Sign Out</button>
+        </div>
+        <button class="btn btn-ghost" v-else @click="signUp('bot')">Sign Up Bot</button>
+      </div>
       <section class="panel">
         <div class="panel-head">
           <div>
@@ -1229,6 +1492,12 @@
           </div>
         </div>
         <div class="panel-body">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <button class="btn btn-ghost" :disabled="queueTestSubmitting" @click="queueDryRunSamples">
+              {{ queueTestSubmitting ? 'Queueing samples…' : 'Queue dry-run samples' }}
+            </button>
+            <span class="mono-id">Dev/debug only; samples stay pending in SQLite and are never sent.</span>
+          </div>
           <table v-if="items.length">
             <thead>
               <tr>
@@ -1243,7 +1512,8 @@
               <tr v-for="it in items" :key="it._id">
                 <td><input type="checkbox" :checked="selected.has(it._id)" @change="toggleSelect(it._id)" /></td>
                 <td>
-                  {{ it.event }}<br/>
+                  {{ it.event || 'Webhook notification' }}
+                  <span v-if="it.dryRun" class="badge pending">dry run</span><br/>
                   <span class="mono-id">{{ it._id }}</span>
                 </td>
                 <td><span class="badge" :class="it.status">{{ it.status }}</span></td>
@@ -1322,46 +1592,55 @@
     </main>
 
     <!-- Live monitor view -->
-    <main v-if="activeView === 'live'">
-      <div style="max-width:1180px;margin:0 auto;padding:26px 32px 40px;">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="eyebrow">Live</div>
-              <h2>Event & Chat Monitor</h2>
-            </div>
-            <div class="tabs">
-              <button class="tab">live</button>
-            </div>
-          </div>
-          <div class="panel-body" style="max-height:70vh;overflow:auto;padding:12px;">
-            <div v-if="monitorFeed && monitorFeed.length">
-              <div v-for="(m, idx) in monitorFeed" :key="idx">
-                <template v-if="eventType(m.event) === 'chat'">
-                  <div :style="{background: 'rgba(255,255,255,0.02)', padding: '10px 12px', marginBottom: '6px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)'}">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                      <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
-                      <div style="flex:1;line-height:1.1">
-                        <div style="font-weight:600;color:#ffffff;font-size:13px">{{ (m.text.split(':')[0]) || '' }} <span style="font-weight:400;color:#9aa0a6;margin-left:8px;font-size:11px">{{ m.ts }}</span></div>
-                        <div style="margin-top:6px;color:#e6e6e6;font-size:13px;white-space:pre-wrap">{{ (m.text.split(':').slice(1).join(':')).trim() }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-                <template v-else>
-                  <div :style="{background: eventColor(m.event), padding: '10px 12px', marginBottom: '6px', borderRadius: '4px'}">
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                      <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
-                      <div style="flex:1"><strong style="color:var(--text)">{{ eventType(m.event) }}</strong> <span style="margin-left:8px;color:var(--text-dim)">{{ m.ts }}</span></div>
-                    </div>
-                    <div style="font-size:13px;color:var(--text);white-space:pre-wrap">{{ m.text }}</div>
-                  </div>
-                </template>
+    <main v-if="activeView === 'live'" class="live-main">
+      <div style="width:100%;max-width:1180px;margin:0 auto;padding:26px 32px 40px;">
+        <div class="live-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">Live · {{ chatFeed.length }} messages</div>
+                <h2>Chat</h2>
               </div>
             </div>
-            <div v-else class="empty">No events yet</div>
-          </div>
-        </section>
+            <div class="panel-body live-feed">
+              <div v-if="chatFeed.length">
+                <div v-for="(m, idx) in chatFeed" :key="idx"
+                  :style="{background: 'rgba(255,255,255,0.02)', padding: '10px 12px', marginBottom: '6px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)'}">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
+                    <div style="flex:1;line-height:1.1">
+                      <div style="font-weight:600;color:#ffffff;font-size:13px">{{ (m.text.split(':')[0]) || '' }} <span style="font-weight:400;color:#9aa0a6;margin-left:8px;font-size:11px">{{ m.ts }}</span></div>
+                      <div style="margin-top:6px;color:#e6e6e6;font-size:13px;white-space:pre-wrap">{{ (m.text.split(':').slice(1).join(':')).trim() }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty">No chat messages yet</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="eyebrow">Live · {{ eventMonitorFeed.length }} events</div>
+                <h2>Event Monitor</h2>
+              </div>
+            </div>
+            <div class="panel-body live-feed">
+              <div v-if="eventMonitorFeed.length">
+                <div v-for="(m, idx) in eventMonitorFeed" :key="idx"
+                  :style="{background: eventColor(m.event), padding: '10px 12px', marginBottom: '6px', borderRadius: '6px', border: '1px solid var(--line)'}">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                    <div style="font-size:16px">{{ eventIcon(m.event) }}</div>
+                    <div style="flex:1"><strong style="color:var(--text)">{{ eventLabel(m.event) }}</strong> <span style="margin-left:8px;color:var(--text-dim)">{{ m.ts }}</span></div>
+                  </div>
+                  <div style="font-size:13px;color:var(--text);white-space:pre-wrap">{{ m.text }}</div>
+                </div>
+              </div>
+              <div v-else class="empty">No events yet</div>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
 
@@ -1379,6 +1658,7 @@
             </div>
           </div>
           <div class="panel-body">
+            <div v-if="settingsError" class="empty" style="color:var(--danger)">Failed to load/save settings: {{ settingsError }}</div>
             <div style="display:flex;gap:18px;align-items:flex-start;">
               <div style="flex:1">
                 <label>Bits threshold (min bits to show)</label>
@@ -1409,6 +1689,25 @@
                 <button class="btn btn-ghost" @click="resetMonitorSettings">Reset</button>
                 <button class="btn btn-ghost" @click="clearMonitor">Clear Monitor</button>
               </div>
+
+              <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px;">
+                <strong style="display:block;margin-bottom:8px">Twitch Accounts</strong>
+                <div class="status-row">
+                  <span class="label">Streamer</span>
+                  <span class="value" style="display:flex;align-items:center;gap:10px">
+                    {{ userSignup ? userSignup.username : 'Not signed in' }}
+                    <button v-if="userSignup" class="btn btn-ghost account-action" :disabled="!!accountActionPending" @click="revokeAccount('streamer')">Revoke</button>
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="label">Bot</span>
+                  <span class="value" style="display:flex;align-items:center;gap:10px">
+                    {{ botSignup ? botSignup.username : 'Not signed in' }}
+                    <button v-if="botSignup" class="btn btn-ghost account-action" :disabled="!!accountActionPending" @click="revokeAccount('bot')">Revoke</button>
+                  </span>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Revoke invalidates the Twitch access and refresh tokens and removes the saved account from this app.</div>
+              </div>
           
               <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px;">
                 <strong style="display:block;margin-bottom:8px">Admin API Token</strong>
@@ -1438,7 +1737,9 @@
             </div>
           </div>
           <div class="panel-body">
-            <table v-if="economyAccounts.length">
+            <div v-if="economyLoading" class="empty">Loading economy accounts…</div>
+            <div v-else-if="economyError" class="empty" style="color:var(--danger)">Failed to load economy accounts: {{ economyError }}</div>
+            <table v-else-if="economyAccounts.length">
               <thead>
                 <tr>
                   <th>User</th>
@@ -1459,11 +1760,16 @@
                     <button class="btn small" @click="editAccount(acc)">Edit</button>
                     <button class="btn small danger" @click="deleteAccount(acc.userId)">Delete</button>
                   </td>
-                  <td class="mono-id">{{ new Date(acc.updatedAt).toLocaleString() }}</td>
+                  <td class="mono-id">{{ acc.updatedAt ? new Date(acc.updatedAt).toLocaleString() : '—' }}</td>
                 </tr>
               </tbody>
             </table>
-            <div v-else class="empty">No economy data available. Ensure the admin API exposes /api/v1/admin/economy/accounts</div>
+            <div v-else class="empty">No economy accounts found in the SQLite database.</div>
+            <div v-if="!economyLoading && !economyError && economyTotal > economyLimit" style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px">
+              <button class="btn btn-ghost" :disabled="economyPage <= 1" @click="economyPage--; loadEconomy()">Previous</button>
+              <span class="mono-id">Page {{ economyPage }} of {{ economyPageCount }} ({{ economyTotal }} accounts)</span>
+              <button class="btn btn-ghost" :disabled="economyPage >= economyPageCount" @click="economyPage++; loadEconomy()">Next</button>
+            </div>
           </div>
         </section>
       </div>

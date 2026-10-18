@@ -1,6 +1,6 @@
 import client from 'prom-client';
-import mongoose from 'mongoose';
 import { Request, Response, NextFunction } from 'express';
+import { getSqliteDatabase } from '../database/sqliteConnection';
 
 // Create a registry so we can register custom metrics without polluting global
 const register = new client.Registry();
@@ -47,7 +47,7 @@ export const tokenRefreshes = new client.Counter({
 
 export const dbUp = new client.Gauge({
 	name: 'opendevbot_db_up',
-	help: 'MongoDB connectivity (1 = up, 0 = down)',
+	help: 'SQLite connectivity (1 = up, 0 = down)',
 });
 
 // Register metrics individually (avoid TS label-name incompatibilities)
@@ -63,10 +63,8 @@ register.registerMetric(webhookFailureAlerts as unknown as client.Counter<string
 // Health check helpers
 export async function getDbHealth(): Promise<boolean> {
 	try {
-		const state = mongoose.connection.readyState;
-		// readyState 1 == connected
-		return state === 1;
-	} catch (e) {
+		return getSqliteDatabase().open;
+	} catch {
 		return false;
 	}
 }

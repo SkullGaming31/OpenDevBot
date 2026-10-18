@@ -3,7 +3,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { ITwitchToken, TokenModel } from '../database/models/tokenModel';
-import mongoose from 'mongoose';
 import { limiter } from './util';
 import logger from './logger';
 import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
@@ -131,6 +130,103 @@ export default function createApp(): express.Application {
 		}
 	});
 
+	app.get('/api/v1/admin/twitch/accounts', requireAdmin, async (_req, res) => {
+		try {
+			const botUserId = String(process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613');
+			const tokens = await TokenModel.find({}).sort({ obtainmentTimestamp: -1 }).lean();
+			const accounts = tokens
+				.filter((token): token is typeof token & { user_id: string } =>
+					!!token && typeof token.user_id === 'string' && token.user_id.trim().length > 0
+				)
+				.map(token => ({ userId: token.user_id, username: token.login }))
+				.filter(account => typeof account.username === 'string' && account.username.length > 0);
+
+			return res.json({
+				bot: accounts.find(account => account.userId === botUserId) || null,
+				streamer: accounts.find(account => account.userId !== botUserId) || null,
+			});
+		} catch (error) {
+			logger.error('Failed to load Twitch signup accounts', error as Error);
+			return res.status(500).json({ error: 'failed to load Twitch signup accounts' });
+		}
+	});
+
+	async function refreshServicesAfterTokenChange(userId: string): Promise<void> {
+		const botUserId = String(process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613');
+		const reloads: Promise<unknown>[] = [];
+		if (process.env.ENABLE_CHAT) {
+			reloads.push(import('../chat').then(chat =>
+				userId === botUserId ? chat.stopChat() : chat.restartChat()
+			));
+		}
+		if (process.env.ENABLE_EVENTSUB) {
+			reloads.push(import('../EventSubEvents').then(eventSub => eventSub.recreateEventSubs()));
+		}
+
+		const results = await Promise.allSettled(reloads);
+		if (results.some(result => result.status === 'rejected')) {
+			logger.error('One or more Twitch services failed to reload after an account token change');
+			throw new Error('Account credentials were removed, but one or more services could not be refreshed');
+		}
+	}
+
+	async function removeTwitchAccount(req: express.Request, res: express.Response, revoke: boolean) {
+		const userId = String(req.params.userId || '');
+		if (!/^\d{1,20}$/.test(userId)) return res.status(400).json({ error: 'invalid Twitch user ID' });
+
+		try {
+			const token = await TokenModel.findOne({ user_id: userId }).lean();
+			if (!token) return res.status(404).json({ error: 'Twitch account not found' });
+
+			if (revoke) {
+				if (!clientId) return res.status(500).json({ error: 'TWITCH_CLIENT_ID is not configured' });
+				const credentials = [...new Set([token.access_token, token.refresh_token]
+					.filter((value): value is string => typeof value === 'string' && value.length > 0))];
+				if (credentials.length === 0) {
+					return res.status(400).json({ error: 'No Twitch credentials are available to revoke; local token was kept' });
+				}
+
+				for (const credential of credentials) {
+					const body = new URLSearchParams({ client_id: clientId, token: credential });
+					try {
+						await axios.post('https://id.twitch.tv/oauth2/revoke', body, {
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						});
+					} catch {
+						logger.warn('Twitch token revocation failed for user', userId);
+						return res.status(502).json({ error: 'Twitch did not revoke all credentials; the local token was kept' });
+					}
+				}
+			}
+
+			const removed = await TokenModel.findOneAndDelete({ user_id: userId }).exec();
+			if (!removed) return res.status(404).json({ error: 'Twitch account not found' });
+
+			try {
+				await refreshServicesAfterTokenChange(userId);
+			} catch (error) {
+				logger.error('Twitch account was removed but runtime services did not fully refresh', error);
+				return res.status(500).json({
+					error: 'Account credentials were removed, but one or more services could not be refreshed',
+					removed: true,
+				});
+			}
+
+			return res.json({ ok: true, userId, username: token.login });
+		} catch (error) {
+			logger.error('Failed to remove Twitch account token for user', userId, error);
+			return res.status(500).json({ error: 'failed to remove Twitch account token' });
+		}
+	}
+
+	app.delete('/api/v1/admin/twitch/accounts/:userId', requireAdmin, async (req, res) => {
+		return removeTwitchAccount(req, res, false);
+	});
+
+	app.post('/api/v1/admin/twitch/accounts/:userId/revoke', requireAdmin, async (req, res) => {
+		return removeTwitchAccount(req, res, true);
+	});
+
 	// Admin: bot status for the dashboard's status panel (pid, uptime, connectivity)
 	app.get('/api/v1/admin/status', requireAdmin, async (_req, res) => {
 		try {
@@ -188,15 +284,10 @@ export default function createApp(): express.Application {
 			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
 			const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids : req.body?.id ? [req.body.id] : (req.query.id ? [req.query.id as string] : []);
 			if (ids.length === 0) return res.status(400).json({ error: 'id or ids required' });
-			const validIds = ids.filter(i => mongoose.Types.ObjectId.isValid(i)).map(i => new mongoose.Types.ObjectId(i));
+			const validIds = ids.filter(i => typeof i === 'string' && i.trim().length > 0);
 			if (validIds.length === 0) return res.status(400).json({ error: 'no valid ids provided' });
 			const result = await WebhookQueueModel.updateMany({ _id: { $in: validIds } }, { $set: { status: 'pending', updatedAt: new Date() }, $unset: { lastError: '' } });
-			// `result` is an UpdateWriteOpResult; normalize counts where available
-			// Some mongoose types differ by driver version; safely extract counts
-			const resultObj = result as unknown as Record<string, unknown>;
-			const matched = typeof resultObj['matchedCount'] === 'number' ? (resultObj['matchedCount'] as number) : (typeof resultObj['n'] === 'number' ? (resultObj['n'] as number) : 0);
-			const modified = typeof resultObj['modifiedCount'] === 'number' ? (resultObj['modifiedCount'] as number) : (typeof resultObj['nModified'] === 'number' ? (resultObj['nModified'] as number) : 0);
-			return res.json({ ok: true, matched, modified });
+			return res.json({ ok: true, matched: result.matchedCount, modified: result.modifiedCount });
 		} catch (e) {
 			logger.error('Failed to requeue webhook items', e as Error);
 			return res.status(500).json({ error: 'failed' });
@@ -209,13 +300,44 @@ export default function createApp(): express.Application {
 			const WebhookQueueModel = (await import('../database/models/webhookQueue')).default;
 			const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids : req.body?.id ? [req.body.id] : (req.query.id ? [req.query.id as string] : []);
 			if (ids.length === 0) return res.status(400).json({ error: 'id or ids required' });
-			const validIds = ids.filter(i => mongoose.Types.ObjectId.isValid(i)).map(i => new mongoose.Types.ObjectId(i));
+			const validIds = ids.filter(i => typeof i === 'string' && i.trim().length > 0);
 			if (validIds.length === 0) return res.status(400).json({ error: 'no valid ids provided' });
 			const result = await WebhookQueueModel.deleteMany({ _id: { $in: validIds } });
 			return res.json({ ok: true, deleted: result.deletedCount ?? 0 });
 		} catch (e) {
 			logger.error('Failed to delete webhook items', e as Error);
 			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	app.post('/api/v1/admin/webhooks/test-queue', requireAdmin, async (_req, res) => {
+		const isDevelopment = process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
+		if (!isDevelopment || process.env.DISCORD_WEBHOOK_DRY_RUN !== 'true') {
+			return res.status(403).json({ error: 'Webhook queue samples require dev/debug dry-run mode' });
+		}
+
+		try {
+			const { enqueueWebhook } = await import('../Discord/webhookQueue');
+			const sampleEvents = [
+				'Follow notification',
+				'Subscription notification',
+				'Gift subscription notification',
+				'Cheer notification',
+				'Raid notification',
+				'Stream online notification',
+			];
+
+			await Promise.all(sampleEvents.map((event) => enqueueWebhook('dry-run', '', {
+				embeds: [{
+					title: `[DRY RUN] ${event}`,
+					description: 'Queued in SQLite for testing. This item was not sent to Discord.',
+				}],
+			})));
+
+			return res.status(202).json({ ok: true, queued: sampleEvents.length, dryRun: true });
+		} catch (error) {
+			logger.error('Failed to create webhook queue dry-run samples', error as Error);
+			return res.status(500).json({ error: 'failed to create queue samples' });
 		}
 	});
 
@@ -281,15 +403,52 @@ export default function createApp(): express.Application {
 	app.get('/api/v1/admin/economy/accounts', requireAdmin, async (req, res) => {
 		try {
 			const BankAccount = (await import('../database/models/bankAccount')).default;
-			const page = Math.max(1, Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1);
+			const page = Number.isFinite(Number(req.query.page)) ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : 1;
 			let limit = Number.isFinite(Number(req.query.limit)) ? parseInt(String(req.query.limit), 10) || 20 : 20;
 			if (limit < 1) limit = 1;
 			if (limit > 500) limit = 500;
-			const total = await BankAccount.countDocuments({});
-			const items = await BankAccount.find({}, { __v: 0 }).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+			const total = await BankAccount.countDocuments({}).exec();
+			const items = await BankAccount.find({}).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
 			return res.json({ total, page, limit, items });
 		} catch (e) {
 			logger.error('Failed to list economy accounts', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	app.get('/api/v1/admin/settings/monitor', requireAdmin, async (_req, res) => {
+		try {
+			const DashboardSettings = (await import('../database/models/dashboardSettings')).default;
+			const settings = await DashboardSettings.findById('dashboard-monitor').lean();
+			return res.json({ settings: settings?.monitor ?? null });
+		} catch (e) {
+			logger.error('Failed to load dashboard monitor settings', e as Error);
+			return res.status(500).json({ error: 'failed' });
+		}
+	});
+
+	app.put('/api/v1/admin/settings/monitor', requireAdmin, async (req, res) => {
+		try {
+			const { bitsThreshold, totalMax, perEventMax, perEventVisible } = req.body || {};
+			const validLimit = (value: unknown) => Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 10000;
+			const validNumberMap = (value: unknown): value is Record<string, number> =>
+				!!value && typeof value === 'object' && !Array.isArray(value) &&
+				Object.entries(value).every(([key, item]) => /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(key) && validLimit(item));
+			const validVisibilityMap = (value: unknown): value is Record<string, boolean> =>
+				!!value && typeof value === 'object' && !Array.isArray(value) &&
+				Object.entries(value).every(([key, item]) => /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(key) && typeof item === 'boolean');
+			if (!validLimit(bitsThreshold) || !validLimit(totalMax) ||
+				!validNumberMap(perEventMax) || !validVisibilityMap(perEventVisible)) {
+				return res.status(400).json({ error: 'invalid monitor settings' });
+			}
+
+			const DashboardSettings = (await import('../database/models/dashboardSettings')).default;
+			const settings = { bitsThreshold, totalMax, perEventMax, perEventVisible };
+			const document = new DashboardSettings({ _id: 'dashboard-monitor', monitor: settings });
+			await document.save();
+			return res.json({ settings });
+		} catch (e) {
+			logger.error('Failed to save dashboard monitor settings', e as Error);
 			return res.status(500).json({ error: 'failed' });
 		}
 	});
@@ -388,7 +547,7 @@ export default function createApp(): express.Application {
 			const BankAccount = (await import('../database/models/bankAccount')).default;
 			if (amount > 0) {
 				// deposit via service so TransactionLog is written and mirroring happens
-				await economyService.deposit(userId, amount, undefined, { admin: true, reason });
+				await economyService.deposit(userId, amount, { admin: true, reason });
 				const bank = await BankAccount.findOne({ userId }).lean();
 				return res.json({ ok: true, bank });
 			} else {
@@ -759,7 +918,8 @@ export default function createApp(): express.Application {
 		const type = (req.query.type as string) || 'user';
 		logger.debug('Redirect URI:', redirectUri, 'type:', type);
 		const scopes = type === 'bot' ? botScopes : userScopes;
-		const authorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&type=${encodeURIComponent(type)}`;
+		const forceVerify = type === 'bot' ? '&force_verify=true' : '';
+		const authorizeUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&type=${encodeURIComponent(type)}${forceVerify}`;
 		res.redirect(authorizeUrl);
 	});
 
@@ -812,40 +972,34 @@ export default function createApp(): express.Application {
 				});
 				logger.debug('UserResponse: ', userResponse.data);
 
-				const userId = userResponse.data.data[0].id;
-				const username = userResponse.data.data[0].login;
-				const broadcaster_type = userResponse.data.data[0].broadcaster_type || 'streamer';
+				const twitchUser = userResponse.data?.data?.[0];
+				const userId = twitchUser?.id;
+				const username = twitchUser?.login;
+				if (typeof userId !== 'string' || !userId.trim() || typeof username !== 'string' || !username.trim()) {
+					throw new Error('Twitch user response did not include a valid user identity');
+				}
+				const broadcaster_type = twitchUser.broadcaster_type || 'streamer';
 				// store seconds
 				const obtainmentTimestamp = Math.floor(Date.now() / 1000);
 
-				// Check if token already exists in MongoDB
-				let tokenDoc = await TokenModel.findOne({ user_id: userId });
+				const tokenDoc = await TokenModel.findOneAndUpdate(
+					{ user_id: userId },
+					{
+						$set: {
+							login: username,
+							access_token: access_token ?? '',
+							refresh_token: refresh_token ?? '',
+							scope: returnedScopes.length > 0 ? returnedScopes : userScopes.split('+'),
+							expires_in: expires_in ?? 0,
+							obtainmentTimestamp,
+							broadcaster_type
+						}
+					},
+					{ upsert: true, returnDocument: 'after' }
+				);
 				if (!tokenDoc) {
-					// If no token is found, create a new one
-					tokenDoc = new TokenModel({
-						user_id: userId,
-						login: username,
-						access_token,
-						refresh_token,
-						scope: returnedScopes.length > 0 ? returnedScopes : userScopes.split('+'),
-						expires_in,
-						obtainmentTimestamp,
-						broadcaster_type
-					});
-					logger.info('Token Saved');
-				} else {
-					// If token is found, update it
-					tokenDoc.login = username;
-					tokenDoc.access_token = access_token ?? '';
-					tokenDoc.refresh_token = refresh_token ?? '';
-					tokenDoc.scope = returnedScopes.length > 0 ? returnedScopes : userScopes.split('+');
-					tokenDoc.expires_in = expires_in ?? 0;
-					tokenDoc.obtainmentTimestamp = obtainmentTimestamp;
-					tokenDoc.broadcaster_type = broadcaster_type;
+					throw new Error(`Failed to save Twitch token for user ${userId}`);
 				}
-
-				// Save the token document
-				await tokenDoc.save();
 				logger.info('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
 
 				// Try to dynamically join the chat client to the newly registered user's channel

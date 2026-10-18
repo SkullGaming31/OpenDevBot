@@ -109,4 +109,79 @@ describe('authProvider', () => {
 			expect(provider).toBeInstanceOf(MockProvider as any);
 		});
 	});
+
+	test('getAuthProvider logs token persistence failures without rejecting the refresh callback', async () => {
+		const logger = { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() };
+
+		await jest.isolateModulesAsync(async () => {
+			const find = (jest.fn() as any).mockResolvedValue([]);
+			const findOneAndUpdate = (jest.fn() as any).mockRejectedValue(new Error('database write failed'));
+			jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { find, findOneAndUpdate } }));
+			jest.doMock('../util/logger', () => ({ __esModule: true, default: logger }));
+
+			class MockProvider {
+				refreshCallback: any;
+				onRefresh(callback: any) { this.refreshCallback = callback; }
+				addUserForToken = jest.fn();
+				addUser = jest.fn();
+			}
+			jest.doMock('@twurple/auth', () => ({ RefreshingAuthProvider: MockProvider }));
+
+			const { getAuthProvider } = await import('../auth/authProvider');
+			const provider: any = await getAuthProvider();
+			await expect(provider.refreshCallback('111', {
+				accessToken: 'access',
+				refreshToken: 'refresh',
+				scope: ['chat:read'],
+				expiresIn: 3600,
+				obtainmentTimestamp: 1,
+			})).resolves.toBeUndefined();
+			expect(findOneAndUpdate).toHaveBeenCalledWith(
+				{ user_id: '111' },
+				{
+					$set: {
+						access_token: 'access',
+						refresh_token: 'refresh',
+						scope: ['chat:read'],
+						expires_in: 3600,
+						obtainmentTimestamp: 1,
+					},
+				},
+				{ upsert: true, returnDocument: 'after' }
+			);
+			expect(logger.error).toHaveBeenCalledWith(
+				'AuthProvider: failed to persist refreshed token for user',
+				'111',
+				expect.any(Error)
+			);
+		});
+	});
+
+	test('getAuthProvider skips token records without a valid user ID', async () => {
+		const logger = { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() };
+		const find = (jest.fn() as any).mockResolvedValue([
+			{ access_token: 'orphaned-token', scope: ['chat:read'] },
+		]);
+
+		await jest.isolateModulesAsync(async () => {
+			jest.doMock('../database/models/tokenModel', () => ({ TokenModel: { find } }));
+			jest.doMock('../util/logger', () => ({ __esModule: true, default: logger }));
+
+			class MockProvider {
+				onRefresh = jest.fn();
+				addUserForToken = jest.fn();
+				addUser = jest.fn();
+			}
+			jest.doMock('@twurple/auth', () => ({ RefreshingAuthProvider: MockProvider }));
+
+			const { getAuthProvider } = await import('../auth/authProvider');
+			const provider = await getAuthProvider();
+
+			expect(provider).toBeInstanceOf(MockProvider as any);
+			expect(provider.addUserForToken).not.toHaveBeenCalled();
+			expect(logger.warn).toHaveBeenCalledWith(
+				'AuthProvider: skipping token record without a valid user ID'
+			);
+		});
+	});
 });

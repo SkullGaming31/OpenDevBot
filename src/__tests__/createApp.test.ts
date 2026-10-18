@@ -7,10 +7,9 @@ const getMock = jest.fn();
 
 jest.doMock('axios', () => ({ post: postMock, get: getMock }));
 
-const saveMock = jest.fn().mockResolvedValue(undefined);
-const findOneMock = jest.fn().mockResolvedValue(null);
-const TokenModelMock: any = jest.fn().mockImplementation((doc: any) => ({ ...doc, save: saveMock }));
-TokenModelMock.findOne = findOneMock;
+const tokenDoc = { scope: ['chat:read', 'chat:edit'] };
+const findOneAndUpdateMock = jest.fn().mockResolvedValue(tokenDoc);
+const TokenModelMock: any = { findOneAndUpdate: findOneAndUpdateMock };
 
 jest.doMock('../database/models/tokenModel', () => ({ TokenModel: TokenModelMock }));
 
@@ -33,6 +32,15 @@ describe('createApp', () => {
 		expect(res.headers.location).toContain('client_id=cid');
 	});
 
+	it('prompts to verify the Twitch account for bot signup', async () => {
+		const createApp = (await import('../util/createApp')).default as any;
+		const app = createApp();
+		const res = await request(app).get('/api/v1/twitch').query({ type: 'bot' });
+
+		expect(res.status).toBe(302);
+		expect(new URL(res.headers.location).searchParams.get('force_verify')).toBe('true');
+	});
+
 	it('handles oauth callback success and saves token', async () => {
 		// Mock axios responses
 		postMock.mockResolvedValue({ data: { access_token: 'at', refresh_token: 'rt', expires_in: 3600, scope: 'chat:read chat:edit' } });
@@ -44,9 +52,11 @@ describe('createApp', () => {
 		const res = await request(app).get('/api/v1/auth/twitch/callback').query({ code: 'abc' });
 		expect(res.status).toBe(200);
 		expect(res.body).toMatchObject({ userId: 'u1', username: 'tester' });
-		// TokenModel was constructed and saved
-		expect(TokenModelMock).toHaveBeenCalled();
-		expect(saveMock).toHaveBeenCalled();
+		expect(findOneAndUpdateMock).toHaveBeenCalledWith(
+			{ user_id: 'u1' },
+			expect.objectContaining({ $set: expect.objectContaining({ login: 'tester' }) }),
+			{ upsert: true, returnDocument: 'after' }
+		);
 	});
 
 	it('returns 500 when axios token exchange fails with details', async () => {
