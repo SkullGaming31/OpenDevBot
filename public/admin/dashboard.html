@@ -227,6 +227,12 @@
       background: var(--accent-soft);
     }
 
+    .economy-actions .btn {
+      font-size: 10px;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+
     .btn:disabled {
       opacity: 0.45;
       cursor: default;
@@ -1756,7 +1762,7 @@
                         ? (String(acc.balance.bank) + ' / ' + String(acc.balance.wallet ?? 0))
                         : String(acc.balance ?? '') }}
                   </td>
-                  <td>
+                  <td class="economy-actions">
                     <button class="btn small" @click="editAccount(acc)">Edit</button>
                     <button class="btn small danger" @click="deleteAccount(acc.userId)">Delete</button>
                   </td>
