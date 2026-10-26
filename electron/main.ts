@@ -21,15 +21,15 @@ import { deleteAllInjuries, deleteExpiredInjuries } from '../src/services/injury
 import { initMonitoring } from '../src/monitoring';
 import { parseMonitorVisibility } from './monitorVisibility';
 
-app.disableHardwareAcceleration();
-app.commandLine.appendSwitch('disable-gpu');
-app.commandLine.appendSwitch('disable-gpu-compositing');
-app.commandLine.appendSwitch('disable-software-rasterizer');
-app.commandLine.appendSwitch('disable-gpu-sandbox');
+// app.disableHardwareAcceleration();
+// app.commandLine.appendSwitch('disable-gpu');
+// app.commandLine.appendSwitch('disable-gpu-compositing');
+// app.commandLine.appendSwitch('disable-software-rasterizer');
+// app.commandLine.appendSwitch('disable-gpu-sandbox');
 // Windows-specific: DirectComposition frequently fails to negotiate a
 // shared GPU context inside VMs (VMware/Hyper-V/VirtualBox) and RDP
 // sessions. This is the switch that actually fixes that failure mode.
-app.commandLine.appendSwitch('disable-direct-composition');
+// app.commandLine.appendSwitch('disable-direct-composition');
 // The renderer process itself was crashing (not just the GPU process).
 // `in-process-gpu` keeps GPU work inside the browser process instead of a
 // separate one, removing the process that was failing to negotiate a
@@ -37,8 +37,8 @@ app.commandLine.appendSwitch('disable-direct-composition');
 // which is a common crash source when AV/EDR software intercepts
 // sandboxed child processes — acceptable here since this window only ever
 // loads our own local dashboard.html, never untrusted remote content.
-app.commandLine.appendSwitch('in-process-gpu');
-app.commandLine.appendSwitch('no-sandbox');
+// app.commandLine.appendSwitch('in-process-gpu');
+// app.commandLine.appendSwitch('no-sandbox');
 
 let mainWindow: BrowserWindow | null = null;
 const PORT = Number(process.env.PORT) || 3000;
@@ -131,6 +131,7 @@ function createMainWindow(): void {
 		backgroundColor: '#14121B',
 		title: 'OpenDevBot Control Room',
 		icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'),
+		resizable: true,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),
 			contextIsolation: true,

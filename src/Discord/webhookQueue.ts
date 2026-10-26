@@ -24,12 +24,20 @@ function isDevelopmentEnvironment(): boolean {
 	return process.env.ENVIRONMENT === 'dev' || process.env.ENVIRONMENT === 'debug';
 }
 
+function isTestEnvironment(): boolean {
+	return process.env.ENVIRONMENT === 'test';
+}
+
 function isDryRunConfigured(): boolean {
 	return process.env.DISCORD_WEBHOOK_DRY_RUN === 'true';
 }
 
 export function isWebhookDryRunEnabled(): boolean {
-	return isDevelopmentEnvironment() && isDryRunConfigured();
+	return isTestEnvironment() || (isDevelopmentEnvironment() && isDryRunConfigured());
+}
+
+function shouldPauseWebhookDelivery(): boolean {
+	return isTestEnvironment() || isDryRunConfigured();
 }
 
 function describePayload(payload: unknown): string {
@@ -59,7 +67,7 @@ function getClient(id: string, token: string) {
 }
 
 async function processQueue(id: string, token: string) {
-	if (isDryRunConfigured()) return;
+	if (shouldPauseWebhookDelivery()) return;
 	const key = keyFor(id, token);
 	if (processing.get(key)) return;
 	processing.set(key, true);
@@ -119,8 +127,10 @@ async function processQueue(id: string, token: string) {
 // Helper to claim and process pending DB items on startup or when processor is idle
 async function processPendingFromDB() {
 	try {
-		if (isDryRunConfigured()) {
-			logger.info('Webhook dry-run enabled; pending webhook delivery is paused');
+		if (shouldPauseWebhookDelivery()) {
+			logger.info(isTestEnvironment()
+				? 'Webhook delivery is disabled in test environment'
+				: 'Webhook dry-run enabled; pending webhook delivery is paused');
 			return;
 		}
 
@@ -188,10 +198,11 @@ export function enqueueWebhook(id: string, token: string, payload: string | Webh
 
 	return new Promise((resolve, reject) => {
 		(async () => {
-			if (isDryRunConfigured()) {
-				if (!isDevelopmentEnvironment()) {
-					throw new Error('Discord webhook dry-run is only allowed in dev/debug environments');
-				}
+			if (isDryRunConfigured() && !isDevelopmentEnvironment() && !isTestEnvironment()) {
+				throw new Error('Discord webhook dry-run is only allowed in dev/debug environments');
+			}
+
+			if (isWebhookDryRunEnabled()) {
 				await WebhookQueueModel.create({
 					webhookId: 'dry-run',
 					token: '',

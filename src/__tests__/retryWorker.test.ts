@@ -1,4 +1,5 @@
 import { attemptResubscribe } from '../EventSub/retryWorker';
+import axios from 'axios';
 
 jest.mock('../EventSub/retryManager', () => ({
 	__esModule: true,
@@ -8,6 +9,8 @@ jest.mock('../EventSub/retryManager', () => ({
 		getPending: jest.fn().mockResolvedValue([]),
 	}
 }));
+
+jest.mock('axios');
 
 jest.mock('../EventSubEvents', () => ({
 	createSubscriptionsForAuthUser: jest.fn().mockResolvedValue(undefined),
@@ -29,10 +32,12 @@ const { TokenModel } = require('../database/models/tokenModel');
 const { SubscriptionModel } = require('../database/models/eventSubscriptions');
 const retryManager = require('../EventSub/retryManager').default;
 const esEvents = require('../EventSubEvents');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('retryWorker.attemptResubscribe', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		mockedAxios.get.mockResolvedValue({ data: { data: [] } });
 	});
 
 	test('marks failed when no token present', async () => {

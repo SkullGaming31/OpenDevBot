@@ -5,9 +5,6 @@
   "author": "SkullGaming31",
   "license": "MIT",
   "scripts": {
-    "start": "node ./dist/index.js",
-    "start:dev": "nodemon ./src/index.ts",
-    "start:prod": "tsc && node ./dist/index.js",
     "build": "tsc",
     "postinstall": "node ./node_modules/electron/install.js",
     "electron:build": "tsc -p electron/tsconfig.json",
@@ -17,8 +14,7 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint --fix src",
     "watch": "tsc -w",
-    "typecheck": "tsc -p tsconfig.jest.json --noEmit",
-    "seed-db": "ts-node ./src/scripts/seedDatabase.ts"
+    "typecheck": "tsc -p tsconfig.jest.json --noEmit"
   },
   "keywords": [],
   "dependencies": {
