@@ -130,24 +130,13 @@ This is an example of how to list things you need to use the software and how to
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-<p>electron:dev compiles the Electron app and starts it. The better-sqlite3 native addon must be built for the installed Electron version.</p>
+<p>electron:dev compiles the Electron app and starts it. better-sqlite3 13 includes N-API prebuilt binaries for supported platforms, including Windows x64, so no Electron-specific native rebuild is needed.</p>
 
 ```sh
 npm run electron:dev
 ```
 
-To avoid installing a native build toolchain on Windows, run the `Electron native prebuild` workflow from GitHub Actions, then download its `better-sqlite3-electron-win32-x64` artifact into `node_modules\better-sqlite3\build\Release`:
-
-```powershell
-gh run list --workflow electron-native-prebuild.yml
-$runId = Read-Host "Enter the successful workflow run ID"
-$prebuild = Join-Path $env:TEMP 'opendevbot-electron-prebuild'
-gh run download $runId --name better-sqlite3-electron-win32-x64 --dir $prebuild
-Copy-Item "$prebuild\better_sqlite3.node" "node_modules\better-sqlite3\build\Release\better_sqlite3.node" -Force
-npm run electron:dev
-```
-
-The workflow builds the addon for the Electron version in the checked-out package manifest. Re-run it after changing Electron or `better-sqlite3`; `npm install` or `npm ci` may replace the downloaded addon. If building locally instead, `npm run electron:rebuild` requires Python and a C++ build toolchain (Visual Studio C++ Build Tools on Windows).
+Run `npm install` after changing dependencies to ensure the platform-specific prebuilt binary is installed. Unsupported platforms or architectures may still require Python and a C++ build toolchain.
 
 Electron writes persistent application logs to the `logs` directory under its `userData` folder:
 
