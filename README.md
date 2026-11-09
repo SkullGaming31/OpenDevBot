@@ -141,6 +141,11 @@ Run `npm test` from the repository root. Tests are in `__tests__/`, with Electro
 tests in `__tests__/electron/` and shared mock files in `__mock__/`. Some
 integration tests require localhost connections.
 
+The economy dashboard edits and deletes accounts by their database `_id`, using
+`PUT` and `DELETE /api/v1/admin/economy/accounts/:accountId`. Missing accounts
+return 404 rather than being created. The existing singular `/account/:userId`
+routes remain available for user-ID-based API clients.
+
 ### Windows installer
 
 On Windows x64, run `npm run electron:package:win` to build the unsigned NSIS

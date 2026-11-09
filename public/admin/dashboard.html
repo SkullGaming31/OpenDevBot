@@ -684,8 +684,8 @@
           if (!hasBridge) {
             // demo fallback
             economyAccounts.value = [
-              { userId: '12345', displayName: 'alice', balance: 5000, updatedAt: new Date().toISOString() },
-              { userId: '67890', displayName: 'bob', balance: 1200, updatedAt: new Date().toISOString() },
+              { _id: 'demo-1', userId: '12345', displayName: 'alice', balance: 5000, updatedAt: new Date().toISOString() },
+              { _id: 'demo-2', userId: '67890', displayName: 'bob', balance: 1200, updatedAt: new Date().toISOString() },
             ];
             economyTotal.value = economyAccounts.value.length;
             economyLoading.value = false;
@@ -712,6 +712,7 @@
 
         async function editAccount(acc) {
           if (!hasBridge) { showToast('Edit requires the Electron shell'); return; }
+          if (typeof acc._id !== 'string' || !acc._id.trim()) { showToast('Cannot edit account: missing account ID'); return; }
           try {
             const current = acc.balance || {};
             // Prefer the native modal bridge when available (Electron)
@@ -729,7 +730,7 @@
             if (!result) return; // cancelled
             const body = { bank: Number(result.bank || 0), wallet: Number(result.wallet || 0) };
             if (Number.isNaN(body.bank) || Number.isNaN(body.wallet)) { showToast('Invalid amounts'); return; }
-            const response = await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'PUT', body: JSON.stringify(body) });
+            const response = await window.adminApi.fetch(`/api/v1/admin/economy/accounts/${encodeURIComponent(acc._id)}`, { method: 'PUT', body: JSON.stringify(body) });
             if (response?.error) throw new Error(response.error);
             if (response?.ok !== true) throw new Error('Invalid response from economy API');
             showToast('Account updated');
@@ -739,11 +740,12 @@
 
         async function deleteAccount(acc) {
           if (!hasBridge) { showToast('Delete requires the Electron shell'); return; }
+          if (typeof acc._id !== 'string' || !acc._id.trim()) { showToast('Cannot delete account: missing account ID'); return; }
           // show modal confirmation
           try {
             const ok = await showConfirmModal(`Delete account ${acc.displayName || acc.username || acc.userId}? This cannot be undone.`);
             if (!ok) return;
-            const response = await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'DELETE' });
+            const response = await window.adminApi.fetch(`/api/v1/admin/economy/accounts/${encodeURIComponent(acc._id)}`, { method: 'DELETE' });
             if (response?.error) throw new Error(response.error);
             if (response?.ok !== true) throw new Error('Invalid response from economy API');
             showToast('Account deleted');
@@ -1759,7 +1761,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="acc in economyAccounts" :key="acc.userId">
+                <tr v-for="acc in economyAccounts" :key="acc._id">
                   <td>{{ acc.displayName || acc.username || acc.userId || 'Unknown user' }}</td>
                   <td>
                     {{ (acc.balance && typeof acc.balance === 'object' && acc.balance.bank != null)

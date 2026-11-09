@@ -1,9 +1,12 @@
 import request from 'supertest';
 import axios from 'axios';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import BankAccount from '../src/database/models/bankAccount';
 import { TokenModel } from '../src/database/models/tokenModel';
 import { UserModel } from '../src/database/models/userModel';
+import TransactionLog from '../src/database/models/transactionLog';
 import { closeSqliteDatabase, getSqliteDatabase, openSqliteDatabase } from '../src/database/sqliteConnection';
 
 const mockGetUsersByIds = jest.fn();
@@ -109,6 +112,44 @@ describe('SQLite dashboard admin endpoints', () => {
 		const remove = await request(app).delete('/api/v1/admin/economy/account/103').set('x-admin-token', token);
 		expect(remove.status).toBe(200);
 		expect(await BankAccount.findOne({ userId: '103' })).toBeNull();
+	});
+
+	it('edits and deletes username-only accounts by database ID without affecting other accounts', async () => {
+		const legacy = await BankAccount.create({ _id: 'legacy/account', username: 'Viewer', balance: { bank: 10, wallet: 5 } });
+		const sameName = await BankAccount.create({ userId: 'Viewer', username: 'Viewer', balance: { bank: 30, wallet: 3 } });
+		const undefinedId = await BankAccount.create({ userId: 'undefined', balance: { bank: 40, wallet: 4 } });
+
+		const list = await request(app).get('/api/v1/admin/economy/accounts').set('x-admin-token', token);
+		expect(list.status).toBe(200);
+		expect(list.body.items).toEqual(expect.arrayContaining([
+			expect.objectContaining({ _id: legacy._id, username: 'Viewer', displayName: 'Viewer' }),
+		]));
+
+		const endpoint = `/api/v1/admin/economy/accounts/${encodeURIComponent(legacy._id)}`;
+		expect((await request(app).put(endpoint).send({ bank: 12, wallet: 4 })).status).toBe(401);
+		expect((await request(app).delete(endpoint)).status).toBe(401);
+		expect((await request(app).put(endpoint).set('x-admin-token', token).send({ bank: 'not-a-number' })).status).toBe(400);
+		expect((await BankAccount.findById(legacy._id))?.balance).toEqual({ bank: 10, wallet: 5 });
+		const update = await request(app).put(endpoint).set('x-admin-token', token).send({ bank: 12, wallet: 4 });
+		expect(update.status).toBe(200);
+		expect(update.body.bank).toMatchObject({ _id: legacy._id, username: 'Viewer', balance: { bank: 12, wallet: 4 } });
+		expect((await BankAccount.findById(sameName._id))?.balance).toEqual({ bank: 30, wallet: 3 });
+		expect((await BankAccount.findById(undefinedId._id))?.balance).toEqual({ bank: 40, wallet: 4 });
+
+		const remove = await request(app).delete(endpoint).set('x-admin-token', token);
+		expect(remove.status).toBe(200);
+		expect(await BankAccount.findById(legacy._id)).toBeNull();
+		expect(await BankAccount.findById(sameName._id)).not.toBeNull();
+		expect(await BankAccount.findById(undefinedId._id)).not.toBeNull();
+		expect(await BankAccount.countDocuments({})).toBe(2);
+		expect(await TransactionLog.find({}).lean()).toEqual(expect.arrayContaining([
+			expect.objectContaining({ type: 'deposit', to: 'Viewer', meta: expect.objectContaining({ action: 'admin_update', accountId: legacy._id }) }),
+			expect.objectContaining({ type: 'withdraw', from: 'Viewer', meta: expect.objectContaining({ action: 'admin_delete', accountId: legacy._id }) }),
+		]));
+
+		expect((await request(app).put(endpoint).set('x-admin-token', token).send({ bank: 1, wallet: 2 })).status).toBe(404);
+		expect((await request(app).delete(endpoint).set('x-admin-token', token)).status).toBe(404);
+		expect(await BankAccount.countDocuments({})).toBe(2);
 	});
 
 	it('caches resolved Twitch names and leaves persisted accounts unchanged', async () => {
@@ -293,6 +334,32 @@ describe('SQLite dashboard admin endpoints', () => {
 		expect(page.status).toBe(200);
 		expect(page.text).toContain('EventSub');
 		expect(css.status).toBe(200);
+	});
+
+	it('serves admin pages when the public directory is under a dot-prefixed parent', async () => {
+		const directory = fs.mkdtempSync(path.join(os.tmpdir(), '.opendevbot-public-'));
+		const adminDirectory = path.join(directory, 'admin');
+		const eventsubs = path.join(adminDirectory, 'eventsubs.html');
+		const webhooks = path.join(adminDirectory, 'webhooks.html');
+		try {
+			fs.mkdirSync(adminDirectory);
+			fs.writeFileSync(eventsubs, 'EventSub test page');
+			fs.writeFileSync(webhooks, 'Webhooks test page');
+			const createApp = (await import('../src/util/createApp')).default;
+			const configured = createApp({ publicDir: directory });
+
+			const eventsubResponse = await request(configured).get('/admin/eventsubs').set('x-admin-token', token);
+			const webhookResponse = await request(configured).get('/admin/webhooks').set('x-admin-token', token);
+			expect(eventsubResponse.status).toBe(200);
+			expect(eventsubResponse.text).toBe('EventSub test page');
+			expect(webhookResponse.status).toBe(200);
+			expect(webhookResponse.text).toBe('Webhooks test page');
+		} finally {
+			fs.rmSync(eventsubs, { force: true });
+			fs.rmSync(webhooks, { force: true });
+			if (fs.existsSync(adminDirectory)) fs.rmdirSync(adminDirectory);
+			fs.rmdirSync(directory);
+		}
 	});
 
 	it('keeps disabled integrations stopped for status, reload, join and part requests', async () => {

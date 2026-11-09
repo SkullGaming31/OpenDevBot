@@ -17,7 +17,7 @@ export function createEconomyAccountNameResolver() {
 		for (const account of accounts) {
 			const id = account.userId;
 			const username = typeof account.username === 'string' ? account.username.trim() : '';
-			if (username && username !== id) {
+			if (typeof id === 'string' && id && username && username !== id) {
 				names.set(id, username);
 			}
 			if (typeof id === 'string' && /^\d+$/.test(id)) {
@@ -67,7 +67,7 @@ export function createEconomyAccountNameResolver() {
 
 		return accounts.map(account => ({
 			...account,
-			displayName: names.get(account.userId) || account.userId || account.username || 'Unknown user',
+			displayName: (typeof account.userId === 'string' && names.get(account.userId)) || account.userId || account.username || 'Unknown user',
 		}));
 	};
 }

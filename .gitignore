@@ -24,4 +24,7 @@ CODE-REVIEW-PRIORITY-2026-08.md
 madge-orphans.json
 /archive/
 QA-REPORT.md
-/scripts
+/scripts/*
+!/scripts/check-release-contents.js
+!/scripts/check-offline-render.js
+!/scripts/smoke-windows-release.ps1

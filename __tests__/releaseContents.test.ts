@@ -1,5 +1,8 @@
 export {};
 
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 const requiredFiles = [
 	'/dist-electron/electron/main.js',
 	'/dist-electron/electron/preload.js',
@@ -14,6 +17,14 @@ const requiredFiles = [
 const mockListPackage = jest.fn();
 
 describe('release archive contents check', () => {
+	it.each([
+		'check-release-contents.js',
+		'check-offline-render.js',
+		'smoke-windows-release.ps1',
+	])('has the CI release script %s available', file => {
+		expect(existsSync(path.join(__dirname, '..', 'scripts', file))).toBe(true);
+	});
+
 	beforeEach(() => {
 		jest.resetModules();
 		mockListPackage.mockReset().mockReturnValue(requiredFiles);

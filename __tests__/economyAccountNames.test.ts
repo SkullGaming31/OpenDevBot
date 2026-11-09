@@ -59,6 +59,17 @@ describe('economy account name resolution', () => {
 		expect(mockGetUserApi).toHaveBeenCalledTimes(2);
 	});
 
+	it('keeps username-only account names distinct', async () => {
+		const first = account('', 'First');
+		const second = account('', 'Second');
+		Reflect.deleteProperty(first, 'userId');
+		Reflect.deleteProperty(second, 'userId');
+
+		const resolved = await createEconomyAccountNameResolver()([first, second]);
+		expect(resolved.map(item => item.displayName)).toEqual(['First', 'Second']);
+		expect(mockGetUserApi).not.toHaveBeenCalled();
+	});
+
 	it('keeps a stale name on a failed refresh and retries at the expiry boundary', async () => {
 		const resolve = createEconomyAccountNameResolver();
 		const now = jest.spyOn(Date, 'now').mockReturnValue(1000);

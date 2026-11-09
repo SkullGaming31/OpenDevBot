@@ -366,7 +366,7 @@ export default function createApp(options: { publicDir?: string } = {}): express
 	// static HTML file from the repository `public` folder.
 	app.get('/admin/webhooks', requireAdmin, (_req: express.Request, res: express.Response) => {
 		try {
-			return res.sendFile(path.join(publicDir, 'admin', 'webhooks.html'));
+			return res.sendFile('webhooks.html', { root: path.join(publicDir, 'admin') });
 		} catch (e) {
 			logger.error('Failed to serve admin webhooks UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
@@ -475,49 +475,71 @@ export default function createApp(options: { publicDir?: string } = {}): express
 		}
 	});
 
-	// Admin: update single account balance
-	app.put('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
-		try {
-			const BankAccount = (await import('../database/models/bankAccount')).default;
-			const userId = String(req.params.userId || '').trim();
-			if (!userId) return res.status(400).json({ error: 'userId required' });
-			const body = req.body || {};
-			const bank = typeof body.bank === 'number' ? body.bank : Number(body.bank || 0);
-			const wallet = typeof body.wallet === 'number' ? body.wallet : Number(body.wallet || 0);
-			if (Number.isNaN(bank) || Number.isNaN(wallet)) return res.status(400).json({ error: 'invalid amounts' });
-			await BankAccount.updateOne({ userId }, { $set: { balance: { bank, wallet } } }, { upsert: true });
-			const updated = await BankAccount.findOne({ userId }).lean();
-			// record transaction log for admin change
+	function updateEconomyAccount(byDocumentId: boolean): express.RequestHandler {
+		return async (req, res) => {
 			try {
-				const TransactionLog = (await import('../database/models/transactionLog')).default;
-				const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
-				await TransactionLog.create({ type: 'deposit', from: 'admin', to: userId, amount: bank + wallet, meta: { action: 'admin_update', admin: adminId } });
-			} catch (e) { /* non-fatal */ }
-			return res.json({ ok: true, bank: updated });
-		} catch (e) {
-			logger.error('Failed to update economy account', e as Error);
-			return res.status(500).json({ error: 'failed' });
-		}
-	});
+				const BankAccount = (await import('../database/models/bankAccount')).default;
+				const value = String((byDocumentId ? req.params.accountId : req.params.userId) || '');
+				const identifier = byDocumentId ? value : value.trim();
+				if (!identifier.trim()) return res.status(400).json({ error: byDocumentId ? 'accountId required' : 'userId required' });
+				const body = req.body || {};
+				const bank = typeof body.bank === 'number' ? body.bank : Number(body.bank || 0);
+				const wallet = typeof body.wallet === 'number' ? body.wallet : Number(body.wallet || 0);
+				if (Number.isNaN(bank) || Number.isNaN(wallet)) return res.status(400).json({ error: 'invalid amounts' });
+				let updated;
+				if (byDocumentId) {
+					updated = await BankAccount.findByIdAndUpdate(identifier, { $set: { balance: { bank, wallet } } }, { returnDocument: 'after' }).lean();
+					if (!updated) return res.status(404).json({ error: 'account not found' });
+				} else {
+					await BankAccount.updateOne({ userId: identifier }, { $set: { balance: { bank, wallet } } }, { upsert: true });
+					updated = await BankAccount.findOne({ userId: identifier }).lean();
+				}
+				// record transaction log for admin change
+				try {
+					const TransactionLog = (await import('../database/models/transactionLog')).default;
+					const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
+					const target = byDocumentId ? updated?.userId || updated?.username || identifier : identifier;
+					await TransactionLog.create({ type: 'deposit', from: 'admin', to: target, amount: bank + wallet, meta: { action: 'admin_update', admin: adminId, ...(byDocumentId ? { accountId: identifier } : {}) } });
+				} catch (e) { logger.warn('Failed to log economy account update', e as Error); }
+				return res.json({ ok: true, bank: updated });
+			} catch (e) {
+				logger.error('Failed to update economy account', e as Error);
+				return res.status(500).json({ error: 'failed' });
+			}
+		};
+	}
+	app.put('/api/v1/admin/economy/account/:userId', requireAdmin, updateEconomyAccount(false));
+	app.put('/api/v1/admin/economy/accounts/:accountId', requireAdmin, updateEconomyAccount(true));
 
-	// Admin: delete single account
-	app.delete('/api/v1/admin/economy/account/:userId', requireAdmin, async (req, res) => {
-		try {
-			const BankAccount = (await import('../database/models/bankAccount')).default;
-			const userId = String(req.params.userId || '').trim();
-			if (!userId) return res.status(400).json({ error: 'userId required' });
-			await BankAccount.deleteOne({ userId });
+	function deleteEconomyAccount(byDocumentId: boolean): express.RequestHandler {
+		return async (req, res) => {
 			try {
-				const TransactionLog = (await import('../database/models/transactionLog')).default;
-				const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
-				await TransactionLog.create({ type: 'withdraw', from: userId, to: 'admin', amount: 0, meta: { action: 'admin_delete', admin: adminId } });
-			} catch (e) { /* non-fatal */ }
-			return res.json({ ok: true });
-		} catch (e) {
-			logger.error('Failed to delete economy account', e as Error);
-			return res.status(500).json({ error: 'failed' });
-		}
-	});
+				const BankAccount = (await import('../database/models/bankAccount')).default;
+				const value = String((byDocumentId ? req.params.accountId : req.params.userId) || '');
+				const identifier = byDocumentId ? value : value.trim();
+				if (!identifier.trim()) return res.status(400).json({ error: byDocumentId ? 'accountId required' : 'userId required' });
+				let target = identifier;
+				if (byDocumentId) {
+					const account = await BankAccount.findByIdAndDelete(identifier).lean();
+					if (!account) return res.status(404).json({ error: 'account not found' });
+					target = account.userId || account.username || identifier;
+				} else {
+					await BankAccount.deleteOne({ userId: identifier });
+				}
+				try {
+					const TransactionLog = (await import('../database/models/transactionLog')).default;
+					const adminId = ((req as unknown) as { admin?: { id?: string } }).admin?.id || 'admin';
+					await TransactionLog.create({ type: 'withdraw', from: target, to: 'admin', amount: 0, meta: { action: 'admin_delete', admin: adminId, ...(byDocumentId ? { accountId: identifier } : {}) } });
+				} catch (e) { logger.warn('Failed to log economy account deletion', e as Error); }
+				return res.json({ ok: true });
+			} catch (e) {
+				logger.error('Failed to delete economy account', e as Error);
+				return res.status(500).json({ error: 'failed' });
+			}
+		};
+	}
+	app.delete('/api/v1/admin/economy/account/:userId', requireAdmin, deleteEconomyAccount(false));
+	app.delete('/api/v1/admin/economy/accounts/:accountId', requireAdmin, deleteEconomyAccount(true));
 
 	// Admin: list transactions (optionally filter by userId)
 	app.get('/api/v1/admin/economy/transactions', requireAdmin, async (req, res) => {
@@ -584,7 +606,7 @@ export default function createApp(options: { publicDir?: string } = {}): express
 	// Serve admin EventSub UI
 	app.get('/admin/eventsubs', requireAdmin, (_req: express.Request, res: express.Response) => {
 		try {
-			return res.sendFile(path.join(publicDir, 'admin', 'eventsubs.html'));
+			return res.sendFile('eventsubs.html', { root: path.join(publicDir, 'admin') });
 		} catch (e) {
 			logger.error('Failed to serve admin eventsubs UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
