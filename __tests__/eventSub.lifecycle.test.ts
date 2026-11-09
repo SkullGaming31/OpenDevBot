@@ -15,9 +15,16 @@ describe('EventSub listener lifecycle and handlers', () => {
 	let previousChatFlag: string | undefined;
 	let getExistingChatClient: jest.Mock;
 	let initializeConstants: jest.Mock;
+	let sleep: jest.Mock;
 	const environment = process.env as Record<string, string | undefined>;
 
-	const loadModule = async () => {
+	function deferred<T>() {
+		let resolve!: (value: T) => void;
+		const promise = new Promise<T>(done => { resolve = done; });
+		return { promise, resolve };
+	}
+
+	const loadModule = async (channels = [{ id: '31124455', name: 'canadiendragon' }]) => {
 		jest.resetModules();
 		handlers = {};
 		listenerInstances = [];
@@ -49,6 +56,7 @@ describe('EventSub listener lifecycle and handlers', () => {
 		};
 		lurkingUsers = new Set(['viewer']);
 		initializeConstants = jest.fn().mockResolvedValue(undefined);
+		sleep = jest.fn().mockResolvedValue(undefined);
 
 		class MockEventSubWsListener {
 			start = jest.fn();
@@ -62,6 +70,9 @@ describe('EventSub listener lifecycle and handlers', () => {
 							return (...args: any[]) => {
 								handlers[property] = args[args.length - 1];
 								target.callbacks[property] = args[args.length - 1];
+								if (property === 'onStreamOnline' || property === 'onStreamOffline') {
+									target.callbacks[`${property}:${args[0]}`] = args[args.length - 1];
+								}
 							};
 						}
 						return undefined;
@@ -84,7 +95,7 @@ describe('EventSub listener lifecycle and handlers', () => {
 		jest.doMock('../src/util/monitorBroadcaster', () => ({ broadcast }));
 		jest.doMock('../src/util/constants', () => ({
 			initializeConstants,
-			broadcasterInfo: [{ id: '31124455', name: 'canadiendragon' }],
+			broadcasterInfo: channels,
 			moderatorIDs: [],
 			openDevBotID: '659523613',
 			PromoteWebhookID: 'live-webhook',
@@ -92,7 +103,7 @@ describe('EventSub listener lifecycle and handlers', () => {
 			TwitchActivityWebhookID: 'activity-webhook',
 			TwitchActivityWebhookToken: 'activity-token',
 		}));
-		jest.doMock('../src/util/util', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
+		jest.doMock('../src/util/util', () => ({ sleep }));
 		jest.doMock('../src/Commands/Information/lurk', () => ({ lurkingUsers }));
 		jest.doMock('../src/database/models/LurkModel', () => ({
 			LurkMessageModel: { deleteMany: jest.fn().mockResolvedValue(undefined) },
@@ -238,6 +249,202 @@ describe('EventSub listener lifecycle and handlers', () => {
 			['eventsub:streamOnline', { broadcaster: 'canadiendragon', displayName: 'Streamer' }],
 			['eventsub:streamOffline', { broadcaster: 'canadiendragon', displayName: 'Streamer' }],
 		]);
+	});
+
+	test('does not announce an online event whose lookup finishes after offline', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const stream = deferred<{ userDisplayName: string }>();
+		const online = handlers.onStreamOnline({
+			getStream: jest.fn().mockReturnValue(stream.promise),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await handlers.onStreamOffline({ getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }) });
+		stream.resolve({ userDisplayName: 'Streamer' });
+		await online;
+
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream'))).toEqual([
+			['eventsub:streamOffline', { broadcaster: 'canadiendragon', displayName: 'Streamer' }],
+		]);
+		expect(apiClient.chat.sendAnnouncement).toHaveBeenCalledTimes(1);
+		expect(apiClient.chat.sendAnnouncement).toHaveBeenCalledWith('31124455', expect.objectContaining({ color: 'primary' }));
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+		expect(enqueueWebhook).toHaveBeenCalledWith('live-webhook', 'live-token', { content: 'Streamer has gone offline' });
+		expect(chatClient.say).toHaveBeenCalledTimes(1);
+	});
+
+	test('does not announce online when its broadcaster lookup finishes after offline', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const broadcaster = deferred<{ displayName: string }>();
+		const started = deferred<void>();
+		const online = handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn(() => { started.resolve(); return broadcaster.promise; }),
+		});
+		await started.promise;
+		await handlers.onStreamOffline({ getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }) });
+		broadcaster.resolve({ displayName: 'Streamer' });
+		await online;
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream')).map(call => call[0]))
+			.toEqual(['eventsub:streamOffline']);
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+	});
+
+	test('does not emit stale offline messages or clear new lurks after a new online event', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const broadcaster = deferred<{ displayName: string }>();
+		const started = deferred<void>();
+		const offline = handlers.onStreamOffline({
+			getBroadcaster: jest.fn(() => { started.resolve(); return broadcaster.promise; }),
+		});
+		await started.promise;
+		await handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		lurkingUsers.add('new-viewer');
+		broadcaster.resolve({ displayName: 'Streamer' });
+		await offline;
+
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream'))).toEqual([
+			['eventsub:streamOnline', { broadcaster: 'canadiendragon', displayName: 'Streamer' }],
+		]);
+		expect(apiClient.chat.sendAnnouncement).toHaveBeenCalledTimes(1);
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+		expect(lurkingUsers.has('new-viewer')).toBe(true);
+		expect(require('../src/database/models/LurkModel').LurkMessageModel.deleteMany).toHaveBeenCalledTimes(1);
+	});
+
+	test('stops remaining online notifications when offline arrives during the delay', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const waiting = deferred<void>();
+		const reachedDelay = deferred<void>();
+		sleep.mockImplementationOnce(() => Promise.resolve())
+			.mockImplementationOnce(() => { reachedDelay.resolve(); return waiting.promise; });
+		const online = handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await reachedDelay.promise;
+		await handlers.onStreamOffline({ getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }) });
+		waiting.resolve();
+		await online;
+
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+		expect(enqueueWebhook).toHaveBeenCalledWith('live-webhook', 'live-token', { content: 'Streamer has gone offline' });
+		expect(chatClient.say).toHaveBeenCalledTimes(1);
+	});
+
+	test('waits for an in-flight online announcement before completing the offline transition', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const announcement = deferred<void>();
+		const started = deferred<void>();
+		apiClient.chat.sendAnnouncement.mockImplementationOnce(() => { started.resolve(); return announcement.promise; });
+		const online = handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await started.promise;
+		let offlineCompleted = false;
+		const offline = Promise.resolve(handlers.onStreamOffline({
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		})).then(() => { offlineCompleted = true; });
+		await new Promise<void>(resolve => setImmediate(resolve));
+		expect(offlineCompleted).toBe(false);
+		expect(broadcast).not.toHaveBeenCalledWith('eventsub:streamOffline', expect.anything());
+		announcement.resolve();
+		await Promise.all([online, offline]);
+		expect(offlineCompleted).toBe(true);
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream')).map(call => call[0]))
+			.toEqual(['eventsub:streamOnline', 'eventsub:streamOffline']);
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+	});
+
+	test('waits for an in-flight offline webhook before announcing the next online transition', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const webhook = deferred<void>();
+		const started = deferred<void>();
+		enqueueWebhook.mockImplementationOnce(() => { started.resolve(); return webhook.promise; });
+		const offline = handlers.onStreamOffline({
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await started.promise;
+		let onlineCompleted = false;
+		const online = Promise.resolve(handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		})).then(() => { onlineCompleted = true; });
+		await new Promise<void>(resolve => setImmediate(resolve));
+		expect(onlineCompleted).toBe(false);
+		expect(broadcast).not.toHaveBeenCalledWith('eventsub:streamOnline', expect.anything());
+		webhook.resolve();
+		await Promise.all([offline, online]);
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream')).map(call => call[0]))
+			.toEqual(['eventsub:streamOffline', 'eventsub:streamOnline']);
+		expect(chatClient.say).toHaveBeenCalledTimes(1);
+		expect(chatClient.say).toHaveBeenCalledWith('canadiendragon', expect.stringContaining('!help'));
+	});
+
+	test('invalidates delayed stream notifications across EventSub listener reloads', async () => {
+		const { initializeTwitchEventSub, recreateEventSubs } = await loadModule();
+		await initializeTwitchEventSub();
+		const stream = deferred<{ userDisplayName: string }>();
+		const oldOnline = listenerInstances[0].callbacks.onStreamOnline({
+			getStream: jest.fn().mockReturnValue(stream.promise),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await recreateEventSubs();
+		await listenerInstances[1].callbacks.onStreamOffline({
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		stream.resolve({ userDisplayName: 'Streamer' });
+		await oldOnline;
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream')).map(call => call[0]))
+			.toEqual(['eventsub:streamOffline']);
+		expect(enqueueWebhook).toHaveBeenCalledTimes(1);
+	});
+
+	test('keeps stream transition cancellation scoped to each broadcaster', async () => {
+		const { initializeTwitchEventSub } = await loadModule([
+			{ id: '31124455', name: 'canadiendragon' },
+			{ id: 'other-id', name: 'anotherchannel' },
+		]);
+		await initializeTwitchEventSub();
+		const stream = deferred<{ userDisplayName: string }>();
+		const online = listenerInstances[0].callbacks['onStreamOnline:31124455']({
+			getStream: jest.fn().mockReturnValue(stream.promise),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		await listenerInstances[0].callbacks['onStreamOffline:other-id']({
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Other' }),
+		});
+		stream.resolve({ userDisplayName: 'Streamer' });
+		await online;
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream'))).toEqual([
+			['eventsub:streamOffline', { broadcaster: 'anotherchannel', displayName: 'Other' }],
+			['eventsub:streamOnline', { broadcaster: 'canadiendragon', displayName: 'Streamer' }],
+		]);
+	});
+
+	test('continues processing later transitions after a notification fails', async () => {
+		const { initializeTwitchEventSub } = await loadModule();
+		await initializeTwitchEventSub();
+		const error = new Error('webhook unavailable');
+		enqueueWebhook.mockRejectedValueOnce(error);
+		await handlers.onStreamOffline({ getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }) });
+		await handlers.onStreamOnline({
+			getStream: jest.fn().mockResolvedValue({ userDisplayName: 'Streamer' }),
+			getBroadcaster: jest.fn().mockResolvedValue({ displayName: 'Streamer' }),
+		});
+		expect(logger.error).toHaveBeenCalledWith(error);
+		expect(broadcast.mock.calls.filter(call => call[0].startsWith('eventsub:stream')).map(call => call[0]))
+			.toEqual(['eventsub:streamOffline', 'eventsub:streamOnline']);
+		expect(enqueueWebhook).toHaveBeenCalledTimes(2);
 	});
 
 	test('uses broadcaster name when the online stream lookup fails', async () => {

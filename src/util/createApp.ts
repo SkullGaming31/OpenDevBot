@@ -29,7 +29,7 @@ const EVENTSUB_MAX_ATTEMPTS = 6;
  *
  * @returns {express.Application} The Express.js app.
  */
-export default function createApp(options: { publicDir?: string } = {}): express.Application {
+export default function createApp(options: { publicDir?: string; localAdminToken?: string } = {}): express.Application {
 	const app = express();
 	const publicDir = options.publicDir || path.join(process.cwd(), 'public');
 	const resolveEconomyAccountNames = createEconomyAccountNameResolver();
@@ -88,14 +88,10 @@ export default function createApp(options: { publicDir?: string } = {}): express
 	}
 
 	function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
-		const token = process.env.ADMIN_API_TOKEN;
-		// If ADMIN_API_TOKEN is not set, allow local admin access from the
-		// Electron shell for desktop packaged builds. This keeps the UX simple
-		// for end-users while preserving token-based protection when a token
-		// is configured (e.g., in server deployments).
+		const token = process.env.ADMIN_API_TOKEN || options.localAdminToken;
 		if (!token) {
-			logger.warn('Admin API token not configured — allowing local admin access');
-			return next();
+			logger.warn('Admin API token not configured; rejecting admin request');
+			return res.status(503).json({ error: 'Admin API token is not configured' });
 		}
 		const provided = getProvidedAdminToken(req);
 		if (!provided) return res.status(401).json({ error: 'Unauthorized' });

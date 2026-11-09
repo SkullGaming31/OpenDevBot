@@ -11,7 +11,7 @@ const mockLogger = {
 };
 
 describe('Electron startup integration flags', () => {
-	const keys = ['ENVIRONMENT', 'ENABLE_CHAT', 'ENABLE_EVENTSUB', 'INJURY_CLEANUP_INTERVAL_MS', 'DEV_LOG_FILE', 'PROD_LOG_FILE'];
+	const keys = ['ENVIRONMENT', 'ENABLE_CHAT', 'ENABLE_EVENTSUB', 'INJURY_CLEANUP_INTERVAL_MS', 'DEV_LOG_FILE', 'PROD_LOG_FILE', 'ADMIN_API_TOKEN'];
 	const original = new Map(keys.map(key => [key, process.env[key]]));
 
 	beforeEach(() => {
@@ -150,5 +150,24 @@ describe('Electron startup integration flags', () => {
 		expect(mockEventSub).toHaveBeenCalledTimes(1);
 		expect(mockLogger.error).toHaveBeenCalledWith('Failed to initialize chat (electron)', failure);
 		expect(mockListen).toHaveBeenCalledTimes(1);
+	});
+
+	it('shares a private per-process token between the API and Electron proxy', async () => {
+		delete process.env.ADMIN_API_TOKEN;
+		process.env.ENABLE_CHAT = 'false';
+		process.env.ENABLE_EVENTSUB = 'false';
+		let resolveListen: () => void = () => undefined;
+		const listening = new Promise<void>(resolve => { resolveListen = resolve; });
+		mockListen.mockImplementation(() => resolveListen());
+
+		await import('../../electron/main');
+		await listening;
+		await new Promise<void>(resolve => setImmediate(resolve));
+		const createApp = (await import('../../src/util/createApp')).default;
+		const { registerAdminProxy } = await import('../../electron/adminProxy');
+		const options = jest.mocked(createApp).mock.calls[0][0];
+		expect(options?.localAdminToken).toMatch(/^[a-f0-9]{64}$/);
+		expect(registerAdminProxy).toHaveBeenCalledWith(expect.any(Number), options?.localAdminToken);
+		expect(mockListen).toHaveBeenCalledWith(expect.any(Number), '127.0.0.1', expect.any(Function));
 	});
 });

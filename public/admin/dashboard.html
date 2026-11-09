@@ -1045,7 +1045,7 @@
             // Prefer token provided by main process if available
             let token = '';
             if (hasBridge && window.adminApi && typeof window.adminApi.getToken === 'function') {
-              token = (await window.adminApi.getToken()) || (localStorage.getItem('odb.adminToken') || '');
+              token = (await window.adminApi.getToken()) || '';
             } else {
               token = localStorage.getItem('odb.adminToken') || '';
             }

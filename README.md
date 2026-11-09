@@ -122,6 +122,9 @@ To get a local copy up and running follow these simple example steps. -->
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+## Project UI Preview
+<img src="opendevbot.png" alt="Project Preview">
+
 <!-- USAGE EXAMPLES -->
 ## Usage
 <p>electron:dev compiles the Electron app and starts it. The application uses Node's built-in SQLite support, so SQLite does not require a separate native package or C++ build tools. Existing SQLite databases remain compatible.</p>
@@ -134,12 +137,22 @@ Run `npm install` to install the application's other dependencies. Node's SQLite
 
 Set `ENABLE_CHAT=true` and/or `ENABLE_EVENTSUB=true` to start those integrations.
 Unset values and `false` leave them disabled; other values are rejected with a warning.
+When stream online and offline events overlap, superseded notifications are
+skipped; already-started notifications finish before the next transition is
+announced.
 
 ### Tests
 
 Run `npm test` from the repository root. Tests are in `__tests__/`, with Electron
 tests in `__tests__/electron/` and shared mock files in `__mock__/`. Some
 integration tests require localhost connections.
+
+The `glob` and `minimatch` npm overrides upgrade affected development-tool
+dependencies across major versions to address their security advisories. Review
+and remove these overrides when upstream tools adopt patched versions. Nodemon
+is pinned to an unaffected release for the same reason. Jest's development-only
+`deepmerge` dependency has a separate low-severity advisory with no patched
+release; check `npm audit` for its current status.
 
 The economy dashboard edits and deletes accounts by their database `_id`, using
 `PUT` and `DELETE /api/v1/admin/economy/accounts/:accountId`. Missing accounts
@@ -161,7 +174,8 @@ API port (the example redirect uses port 3001, so set `PORT=3001` if using it).
 Restart the app after editing the file. The packaged app stores its SQLite
 database and logs in the same per-user application data directory and binds its
 local API to `127.0.0.1`. Set `ADMIN_API_TOKEN` to protect its admin endpoints
-from other local applications. The installer is not code-signed and may trigger
+with a persistent token, or let Electron use an automatically generated private
+session token. The installer is not code-signed and may trigger
 Windows SmartScreen warnings.
 
 Electron writes persistent application logs to the `logs` directory under its `userData` folder:
@@ -181,6 +195,12 @@ logs window use a bundled Vue runtime and do not require a CDN to load.
 
 ## Admin token persistence & security
 
+- **Standalone server:** Set `ADMIN_API_TOKEN` to use admin endpoints. If it is
+  missing, those endpoints return 503; health and setup endpoints remain available.
+- **Electron:** The local API requires authentication even without a configured
+  token. Electron generates a fresh private session token and attaches it through
+  its admin proxy; it is not saved or exposed to the renderer. A configured
+  `ADMIN_API_TOKEN` takes precedence.
 - **Env var:** `ALLOW_PERSIST_ADMIN_TOKEN` (default: not set / false). Set to `true` only for local/dev use when you explicitly want the admin token written to the repository `.env` file.
 - **Production:** Persistence is disabled when `ENVIRONMENT` is `prod` — do not enable persistence in production. Tokens persisted to disk are sensitive and should never be stored in shared or committed files.
 - **How it works:** The app accepts admin credentials via the `x-admin-token` header or the `admin_token` cookie only (query parameters are no longer accepted). Sensitive comparisons use a timing-safe compare to reduce attack surface.

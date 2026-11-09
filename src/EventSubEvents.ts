@@ -45,6 +45,33 @@ async function sendEventSubChatApi(action: () => Promise<unknown>): Promise<void
 }
 
 const initializedListeners = new WeakSet<EventSubWsListener>();
+type StreamTransitionState = { version: number; pending: Promise<void> };
+const streamTransitions = new Map<string, StreamTransitionState>();
+
+function beginStreamTransition(broadcasterId: string) {
+	let state = streamTransitions.get(broadcasterId);
+	if (!state) {
+		state = { version: 0, pending: Promise.resolve() };
+		streamTransitions.set(broadcasterId, state);
+	}
+	const currentState = state;
+	const version = ++currentState.version;
+	const isCurrent = () => currentState.version === version;
+
+	return {
+		isCurrent,
+		run: async (action: () => void | Promise<unknown>) => {
+			// Only in-flight notifications block a newer transition, not lookups or delays.
+			const result = currentState.pending.then(async () => {
+				if (isCurrent()) await action();
+			});
+			currentState.pending = result.catch(error => {
+				logger.error('Stream transition notification failed', error);
+			});
+			await result;
+		},
+	};
+}
 
 export async function initializeTwitchEventSub(): Promise<void> {
 	const userApiClient = await getUserApi();
@@ -64,12 +91,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	//#region EventSub
 	for (const info of broadcasterInfo) {
 
-		let streamStartTime: Date | undefined; // testing for stream end message for discord when stream goes offline and shows how long the stream was live
-		void streamStartTime;
 		void eventSubListener.onStreamOnline(
 			info.id as UserIdResolvable,
 			async (o) => {
-				streamStartTime = new Date();
+				const transition = beginStreamTransition(info.id);
 				let streamDisplayName: string | undefined;
 				let broadcasterDisplayName: string | undefined;
 				try {
@@ -77,27 +102,35 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				} catch (error) {
 					logger.warn('Failed to look up online stream details', error);
 				}
+				if (!transition.isCurrent()) return;
 				try {
 					broadcasterDisplayName = (await o.getBroadcaster())?.displayName;
 				} catch (error) {
 					logger.warn('Failed to look up online stream broadcaster', error);
 				}
+				if (!transition.isCurrent()) return;
 				const displayName = streamDisplayName || broadcasterDisplayName || info.name;
 
 				try {
 					await sleep(2000);
-					try { broadcast('eventsub:streamOnline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
-					await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+					if (!transition.isCurrent()) return;
+					await transition.run(() => broadcast('eventsub:streamOnline', { broadcaster: info.name, displayName }));
+					if (!transition.isCurrent()) return;
+					await transition.run(() => sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'green',
 						message: `${displayName} has Begun the stream — thank you for Hanging out`,
-					}));
+					})));
+					if (!transition.isCurrent()) return;
 					await sleep(2000);
+					if (!transition.isCurrent()) return;
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
-						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` });
+						await transition.run(() => enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` }));
+						if (!transition.isCurrent()) return;
 						await sleep(2000);
+						if (!transition.isCurrent()) return;
 						if (info.name === 'canadiendragon') {
-							await sendEventSubChatMessage(info.name, 'dont forget you can play some games aswell just use the !help command to see all the commands you can use in chat!');
+							await transition.run(() => sendEventSubChatMessage(info.name, 'dont forget you can play some games aswell just use the !help command to see all the commands you can use in chat!'));
 						}
 					}
 				} catch (error) {
@@ -108,39 +141,47 @@ export async function initializeTwitchEventSub(): Promise<void> {
 		void eventSubListener.onStreamOffline(
 			info.id as UserIdResolvable,
 			async (o) => {
-				streamStartTime = undefined;
+				const transition = beginStreamTransition(info.id);
+				// Clear at the transition, before a later online event can add new lurks.
+				lurkingUsers.clear();
+				try {
+					await LurkMessageModel.deleteMany({});
+				} catch (error) {
+					logger.error('Failed to clear lurk messages after stream offline', error);
+				}
+				if (!transition.isCurrent()) return;
 				let displayName = info.name;
 				try {
 					displayName = (await o.getBroadcaster())?.displayName || info.name;
 				} catch (error) {
 					logger.warn('Failed to look up offline stream broadcaster', error);
 				}
+				if (!transition.isCurrent()) return;
 
 				try {
 					await sleep(2000);
-					try { broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
-					await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+					if (!transition.isCurrent()) return;
+					await transition.run(() => broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }));
+					if (!transition.isCurrent()) return;
+					await transition.run(() => sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'primary',
 						message: `${displayName} has gone offline, thank you for stopping by!`,
-					}));
+					})));
+					if (!transition.isCurrent()) return;
 					await sleep(2000);
+					if (!transition.isCurrent()) return;
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
-						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
+						await transition.run(() => enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` }));
+						if (!transition.isCurrent()) return;
 						await sleep(2000);
+						if (!transition.isCurrent()) return;
 						if (info.name === 'canadiendragon') {
-							await sendEventSubChatMessage(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
+							await transition.run(() => sendEventSubChatMessage(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR'));
 						}
 					}
 				} catch (error) {
 					logger.error(error);
-				} finally {
-					lurkingUsers.clear();
-					try {
-						await LurkMessageModel.deleteMany({});
-					} catch (error) {
-						logger.error('Failed to clear lurk messages after stream offline', error);
-					}
 				}
 			},
 		);

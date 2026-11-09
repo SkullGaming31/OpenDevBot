@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { randomBytes } from 'node:crypto';
 import path from 'path';
 import { config } from 'dotenv';
 
@@ -46,6 +47,7 @@ import { isIntegrationEnabled } from '../src/util/integrationFlags';
 
 let mainWindow: BrowserWindow | null = null;
 const PORT = Number(process.env.PORT) || 3000;
+const localAdminToken = randomBytes(32).toString('hex');
 // runtime visibility map controlled by renderer
 let monitorVisibility: Record<string, boolean> = {};
 
@@ -122,7 +124,7 @@ async function bootstrap(): Promise<void> {
 		}
 	}
 
-	createApp({ publicDir: path.join(__dirname, '..', '..', 'public') }).listen(PORT, '127.0.0.1', () => {
+	createApp({ publicDir: path.join(__dirname, '..', '..', 'public'), localAdminToken }).listen(PORT, '127.0.0.1', () => {
 		logger.info(`[electron] bot API listening on http://127.0.0.1:${PORT}`);
 	});
 }
@@ -169,7 +171,7 @@ app.whenReady().then(async () => {
 	} catch (err) {
 		logger.error('Failed to bootstrap bot API for Electron shell', err as Error);
 	}
-	registerAdminProxy(PORT);
+	registerAdminProxy(PORT, localAdminToken);
 	registerTwitchSignupHandler(PORT);
 	createMainWindow();
 

@@ -80,12 +80,33 @@
     "electron-builder": "^26.18.0",
     "eslint": "^8.5.0",
     "jest": "^30.2.0",
-    "nodemon": "^3.1.0",
+    "nodemon": "3.1.11",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "@electron/universal": {
+      "minimatch@^9.0.0": "^11.0.5"
+    },
+    "@jest/reporters": {
+      "glob": "^14.0.4"
+    },
+    "app-builder-lib": {
+      "minimatch@^10.0.0": "^11.0.5"
+    },
+    "jest-config": {
+      "glob": "^14.0.4"
+    },
+    "jest-runtime": {
+      "glob": "^14.0.4"
+    },
+    "test-exclude": {
+      "glob": "^14.0.4",
+      "minimatch": "^11.0.5"
+    }
   },
   "repository": {
     "directory": "private",

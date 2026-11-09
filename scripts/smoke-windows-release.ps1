@@ -79,8 +79,8 @@ try {
 
 	$css = Invoke-WebRequest -Uri "http://127.0.0.1:$apiPort/assets/css/admin.css" -TimeoutSec 5
 	if ($css.StatusCode -ne 200 -or -not $css.Content) { throw 'Packaged admin assets were not served' }
-	$admin = Invoke-WebRequest -Uri "http://127.0.0.1:$apiPort/admin/eventsubs" -TimeoutSec 5
-	if ($admin.StatusCode -ne 200 -or $admin.Content -notmatch 'EventSub') { throw 'Packaged EventSub page was not served' }
+	$admin = Invoke-WebRequest -Uri "http://127.0.0.1:$apiPort/admin/eventsubs" -TimeoutSec 5 -SkipHttpErrorCheck
+	if ($admin.StatusCode -ne 401) { throw 'Packaged admin endpoint allowed an unauthenticated request' }
 	if (-not (Test-Path -LiteralPath (Join-Path $profile 'opendevbot.sqlite'))) {
 		throw 'Packaged application did not create its isolated SQLite database'
 	}

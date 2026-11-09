@@ -22,7 +22,7 @@ async function evaluate(target, expression) {
 					resolve(message.result.result.value);
 				}
 			});
-			socket.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
+			socket.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true, awaitPromise: true } }));
 		});
 	} finally {
 		socket.close();
@@ -44,6 +44,8 @@ async function waitForPage(name) {
 
 async function main() {
 	const dashboard = await waitForPage('dashboard');
+	const adminPage = await evaluate(dashboard, "(async () => { const result = await window.adminApi.fetch('/admin/eventsubs'); return typeof result === 'string' && result.includes('EventSub'); })()");
+	if (!adminPage) throw new Error('Dashboard could not access the authenticated EventSub page');
 	const opened = await evaluate(dashboard, "Boolean(window.logsApi && (window.logsApi.openWindow(), true))");
 	if (!opened) throw new Error('Dashboard logs bridge is unavailable');
 	await waitForPage('logs');

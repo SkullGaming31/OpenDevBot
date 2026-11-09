@@ -31,9 +31,9 @@ describe('Electron admin API proxy', () => {
 		global.fetch = originalFetch;
 	});
 
-	async function registerProxy() {
+	async function registerProxy(localAdminToken?: string) {
 		const { registerAdminProxy } = await import('../../electron/adminProxy');
-		registerAdminProxy(4317);
+		registerAdminProxy(4317, localAdminToken);
 		return mockHandlers;
 	}
 
@@ -78,5 +78,27 @@ describe('Electron admin API proxy', () => {
 		);
 
 		expect(response).toEqual({ error: 'invalid monitor settings' });
+	});
+
+	it('uses the private session token without exposing it through getToken', async () => {
+		const previousToken = process.env.ADMIN_API_TOKEN;
+		delete process.env.ADMIN_API_TOKEN;
+		try {
+			mockFetch.mockImplementation(() => Promise.resolve(new Response('{}', { headers: { 'content-type': 'application/json' } })));
+			const handlers = await registerProxy('synthetic-session-token');
+			expect(await handlers.get('admin:getToken')?.({})).toBe('');
+			await handlers.get('admin:fetch')?.({}, '/api/v1/admin/status');
+			expect(mockFetch).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
+				headers: expect.objectContaining({ 'x-admin-token': 'synthetic-session-token' }),
+			}));
+			process.env.ADMIN_API_TOKEN = 'synthetic-configured-token';
+			await handlers.get('admin:fetch')?.({}, '/api/v1/admin/status');
+			expect(mockFetch).toHaveBeenLastCalledWith(expect.any(String), expect.objectContaining({
+				headers: expect.objectContaining({ 'x-admin-token': 'synthetic-configured-token' }),
+			}));
+		} finally {
+			if (previousToken === undefined) delete process.env.ADMIN_API_TOKEN;
+			else process.env.ADMIN_API_TOKEN = previousToken;
+		}
 	});
 });

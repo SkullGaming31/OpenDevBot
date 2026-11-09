@@ -6,7 +6,7 @@ import logger from '../src/util/logger';
  * server, attaching `x-admin-token` on the main-process side so the
  * renderer (and dashboard.html) never sees the token.
  */
-export function registerAdminProxy(port: number): void {
+export function registerAdminProxy(port: number, localAdminToken?: string): void {
 	logger.info('[electron] adminProxy configured');
 
 	// In-memory override token that can be set from the renderer via IPC.
@@ -25,7 +25,7 @@ export function registerAdminProxy(port: number): void {
 	ipcMain.handle('admin:fetch', async (_event, path: string, method?: string, body?: string) => {
 		const maxAttempts = 3;
 		let attempt = 0;
-		const token = overrideAdminToken || process.env.ADMIN_API_TOKEN || '';
+		const token = overrideAdminToken || process.env.ADMIN_API_TOKEN || localAdminToken || '';
 
 		while (attempt < maxAttempts) {
 			attempt++;
