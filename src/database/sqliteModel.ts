@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import Database from 'better-sqlite3';
-import { getSqliteDatabase } from './sqliteConnection';
+import { getSqliteDatabase, withSqliteTransaction } from './sqliteConnection';
 
 type Filter = Record<string, unknown>;
 type Update = Record<string, unknown>;
@@ -269,7 +268,7 @@ function project<T>(document: StoredDocument, projection?: Projection): T {
 }
 
 export function createSqliteModel<T extends object>(collection: string, options: ModelOptions<T> = {}): SqliteModel<T> {
-	const db = (): Database.Database => getSqliteDatabase();
+	const db = () => getSqliteDatabase();
 	const ensureTable = () => {
 		db().exec(`CREATE TABLE IF NOT EXISTS application_documents (
 			collection TEXT NOT NULL,
@@ -370,7 +369,7 @@ export function createSqliteModel<T extends object>(collection: string, options:
 	}) as SqliteModel<T>['findOne'];
 	const findOneAndUpdate = (filter: Filter, update: Update, opts: QueryOptions | object = {}) => query<SqliteRecord<T> | null>(() => {
 		const config = opts as QueryOptions;
-		const transaction = db().transaction(() => {
+		return withSqliteTransaction(() => {
 			const existing = findDocuments(filter)[0];
 			if (!existing && config.upsert) {
 				const seed = Object.fromEntries(Object.entries(filter).filter(([, value]) => !String(value).startsWith('$')));
@@ -384,7 +383,6 @@ export function createSqliteModel<T extends object>(collection: string, options:
 			write(updated);
 			return hydrate((config.returnDocument === 'after' || config.new ? updated : before) as Partial<T>);
 		});
-		return transaction();
 	});
 	const findByIdAndUpdate = (id: unknown, update: Update, opts?: QueryOptions | object) => findOneAndUpdate({ _id: String(id) }, update, opts);
 	const findOneAndDelete = (filter: Filter) => query<SqliteRecord<T> | null>(() => {
@@ -397,7 +395,7 @@ export function createSqliteModel<T extends object>(collection: string, options:
 	const findByIdAndDelete = (id: unknown) => findOneAndDelete({ _id: String(id) });
 	const updateOne = (filter: Filter, update: Update, opts: QueryOptions | object = {}) => query<UpdateResult>(() => {
 		const config = opts as QueryOptions;
-		const transaction = db().transaction(() => {
+		return withSqliteTransaction(() => {
 			const existing = findDocuments(filter)[0];
 			if (existing) {
 				write(applyUpdate(existing, update));
@@ -415,15 +413,13 @@ export function createSqliteModel<T extends object>(collection: string, options:
 			}
 			return result();
 		});
-		return transaction();
 	});
 	const updateMany = (filter: Filter, update: Update) => query<UpdateResult>(() => {
-		const transaction = db().transaction(() => {
+		return withSqliteTransaction(() => {
 			const docs = findDocuments(filter);
 			for (const doc of docs) write(applyUpdate(doc, update));
 			return result(docs.length, docs.length);
 		});
-		return transaction();
 	});
 	const deleteMany = async (filter: Filter = {}): Promise<UpdateResult> => {
 		const docs = findDocuments(filter);
@@ -438,12 +434,11 @@ export function createSqliteModel<T extends object>(collection: string, options:
 	};
 	const createSync = (data: Partial<T> | Array<Partial<T>>): SqliteRecord<T> | SqliteRecord<T>[] => {
 		if (Array.isArray(data)) {
-			const transaction = db().transaction(() => data.map(value => {
+			return withSqliteTransaction(() => data.map(value => {
 				const instance = hydrate(value);
 				write(instance as unknown as StoredDocument, true);
 				return instance;
 			}));
-			return transaction();
 		}
 		const instance = hydrate(data);
 		write(instance as unknown as StoredDocument, true);

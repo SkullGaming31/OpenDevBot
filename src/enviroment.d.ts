@@ -32,8 +32,8 @@ declare global {
 			PROD_LOG_FILE: string;
 			DEV_LOG_FILE: string;
 			ENVIRONMENT: ENVIRONMENT;
-			ENABLE_CHAT: boolean;
-			ENABLE_EVENTSUB: boolean;
+			ENABLE_CHAT?: string;
+			ENABLE_EVENTSUB?: string;
 		}
 	}
 }

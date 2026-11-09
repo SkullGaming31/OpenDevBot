@@ -20,7 +20,7 @@ function openTwitchSignup(port: number, type: 'user' | 'bot', onComplete: (resul
     }
   });
 
-  win.loadURL(`http://localhost:${port}/api/v1/twitch?type=${encodeURIComponent(type)}`);
+  win.loadURL(`http://127.0.0.1:${port}/api/v1/twitch?type=${encodeURIComponent(type)}`);
 
   win.webContents.on('did-navigate', async (_event, url) => {
     if (!url.includes('/api/v1/auth/twitch/callback')) return;

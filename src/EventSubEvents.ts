@@ -8,23 +8,48 @@ import type { ApiClient, UserIdResolvable, } from '@twurple/api';
 import logger from './util/logger';
 import { lurkingUsers } from './Commands/Information/lurk';
 import { getUserApi } from './api/userApiClient';
-import { getChatClient } from './chat';
+import { getExistingChatClient } from './chat';
 import { LurkMessageModel } from './database/models/LurkModel';
 import ChannelModel from './database/models/channel';
 import { creditWallet } from './services/balanceAdapter';
-import { broadcasterInfo, moderatorIDs, openDevBotID, PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
+import { broadcasterInfo, moderatorIDs, initializeConstants, openDevBotID, PromoteWebhookID, PromoteWebhookToken, TwitchActivityWebhookID, TwitchActivityWebhookToken } from './util/constants';
 import { sleep } from './util/util';
 import { SubscriptionModel } from './database/models/eventSubscriptions';
 import retryManager from './EventSub/retryManager';
 import subscriptionLimiter from './EventSub/subscriptionLimiter';
 import FollowMessage from './database/models/followMessages';
 import { broadcast } from './util/monitorBroadcaster';
+import { isIntegrationEnabled } from './util/integrationFlags';
 
+async function sendEventSubChatMessage(channel: string, message: string): Promise<void> {
+	if (!isIntegrationEnabled('ENABLE_CHAT')) return;
+	const client = getExistingChatClient();
+	if (!client || !client.isConnected) {
+		logger.warn('EventSub chat message skipped: chat is not connected');
+		return;
+	}
+	try {
+		await client.say(channel, message);
+	} catch (error) {
+		logger.warn('EventSub chat message failed', error);
+	}
+}
+
+async function sendEventSubChatApi(action: () => Promise<unknown>): Promise<void> {
+	if (!isIntegrationEnabled('ENABLE_CHAT')) return;
+	try {
+		await action();
+	} catch (error) {
+		logger.warn('EventSub chat API action failed', error);
+	}
+}
+
+const initializedListeners = new WeakSet<EventSubWsListener>();
 
 export async function initializeTwitchEventSub(): Promise<void> {
 	const userApiClient = await getUserApi();
 	const eventSubListener = await getEventSubs();
-	const chatClient = await getChatClient();
+	if (initializedListeners.has(eventSubListener)) return;
 
 	//#region DiscordWebhooks
 	const LIVE_ID = PromoteWebhookID;
@@ -45,30 +70,34 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (o) => {
 				streamStartTime = new Date();
-				const userApiClient = await getUserApi();
-				const stream = await o.getStream();
-				const userInfo = await o.getBroadcaster();
-
-				// guard nullable stream shape and derive a display name safely
-				const displayName = (stream as unknown as Record<string, unknown>)?.broadcasterDisplayName
-					|| (userInfo && (userInfo as unknown as Record<string, unknown>).displayName)
-					|| info.name;
+				let streamDisplayName: string | undefined;
+				let broadcasterDisplayName: string | undefined;
+				try {
+					streamDisplayName = (await o.getStream())?.userDisplayName;
+				} catch (error) {
+					logger.warn('Failed to look up online stream details', error);
+				}
+				try {
+					broadcasterDisplayName = (await o.getBroadcaster())?.displayName;
+				} catch (error) {
+					logger.warn('Failed to look up online stream broadcaster', error);
+				}
+				const displayName = streamDisplayName || broadcasterDisplayName || info.name;
 
 				try {
 					await sleep(2000);
 					try { broadcast('eventsub:streamOnline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
-					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+					await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'green',
 						message: `${displayName} has Begun the stream — thank you for Hanging out`,
-					});
+					}));
 					await sleep(2000);
-					try { broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `@everyone ${displayName} is now live https://twitch.tv/${displayName}` });
 						await sleep(2000);
 						if (info.name === 'canadiendragon') {
-							await chatClient.say(info.name, 'dont forget you can play some games aswell just use the !help command to see all the commands you can use in chat!');
+							await sendEventSubChatMessage(info.name, 'dont forget you can play some games aswell just use the !help command to see all the commands you can use in chat!');
 						}
 					}
 				} catch (error) {
@@ -80,33 +109,38 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			info.id as UserIdResolvable,
 			async (o) => {
 				streamStartTime = undefined;
-				const userApiClient = await getUserApi();
-				const userInfo = await o.getBroadcaster();
-
-				// guard nullable stream shape and derive a display name safely
-				const displayName = (userInfo as unknown as Record<string, unknown>)?.displayName
-					|| info.name;
+				let displayName = info.name;
+				try {
+					displayName = (await o.getBroadcaster())?.displayName || info.name;
+				} catch (error) {
+					logger.warn('Failed to look up offline stream broadcaster', error);
+				}
 
 				try {
 					await sleep(2000);
-					await userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
+					try { broadcast('eventsub:streamOffline', { broadcaster: info.name, displayName }); } catch (e) { void e; }
+					await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(info.id as UserIdResolvable, {
 						color: 'primary',
 						message: `${displayName} has gone offline, thank you for stopping by!`,
-					});
+					}));
 					await sleep(2000);
 					if (info.id === '31124455') {
 						// send a simple offline notice to promote webhook when configured
 						await enqueueWebhook(LIVE_ID, LIVE_TOKEN, { content: `${displayName} has gone offline` });
 						await sleep(2000);
 						if (info.name === 'canadiendragon') {
-							await chatClient.say(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
+							await sendEventSubChatMessage(info.name, 'dont forget you can join the Discord Server too, https://discord.com/invite/UhQuaASkKR');
 						}
 					}
-					// clear set of lurking users when stream ends
-					lurkingUsers.clear();
-					await LurkMessageModel.deleteMany({});
 				} catch (error) {
 					logger.error(error);
+				} finally {
+					lurkingUsers.clear();
+					try {
+						await LurkMessageModel.deleteMany({});
+					} catch (error) {
+						logger.error('Failed to clear lurk messages after stream offline', error);
+					}
 				}
 			},
 		);
@@ -188,7 +222,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				if (userInfo === null) return;
 				const broadcasterInfoResult = await gift.getBroadcaster();
 				if (broadcasterInfoResult.broadcasterType === '') return;
-				chatClient.say(
+				await sendEventSubChatMessage(
 					userInfo.name,
 					`${gift.gifterDisplayName} has just gifted ${gift.amount} ${gift.tier} subs to ${gift.broadcasterName}, they have given a total of ${gift.cumulativeAmount} Subs to the channel`,
 				);
@@ -268,7 +302,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 				try {
 					try { broadcast('eventsub:resub', { broadcaster: info.name, user: s.userDisplayName, months: s.cumulativeMonths }); } catch (e) { void e; }
 					// await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [resubEmbed] });
-					await chatClient.say(
+					await sendEventSubChatMessage(
 						userInfo.name,
 						`${s.userDisplayName} has resubbed to the channel for ${s.cumulativeMonths} Months, currently on a ${s.streakMonths} streak, ${s.messageText}`,
 					);
@@ -310,14 +344,10 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					);
 					const isDescriptionEmpty = userInfo.description === '';
 					const gameId = stream?.gameId;
-					if (!gameId) {
-						logger.error('No gameId found for the current stream.');
-						return;
-					}
-					let followMessage = await FollowMessage.findOne({ gameId });
+					let followMessage = gameId ? await FollowMessage.findOne({ gameId }) : null;
 
 					if (!followMessage) {
-						logger.error(`No follow messages found for gameId: ${gameId}`);
+						if (gameId) logger.warn(`No follow messages found for gameId: ${gameId}`);
 						followMessage = await FollowMessage.findOne({ name: 'default' });
 						if (!followMessage) logger.warn('No default follow messages found; using built-in follow messages.');
 					}
@@ -357,7 +387,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						logger.info(`Users Channel Description: ${userInfo.description}`);
 					}
 
-					await chatClient.say(info.name, `${randomMessage}`);
+					await sendEventSubChatMessage(info.name, `${randomMessage}`);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [followEmbed] });
 					try { broadcast('eventsub:follow', { broadcaster: info.name, user: userInfo.displayName }); } catch (e) { void e; }
 				} catch (error) {
@@ -404,7 +434,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					.setTimestamp();
 				void subEmbed;
 				try {
-					await chatClient.say(
+					await sendEventSubChatMessage(
 						info.id,
 						`${s.userName} has Subscribed to the channel with a tier ${s.tier} Subscription`,
 					);
@@ -453,7 +483,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						})
 						.setTimestamp();
 					try {
-						await chatClient.say(
+						await sendEventSubChatMessage(
 							info.name,
 							`${cheer.userDisplayName} has cheered ${cheer.bits} bits in ${info.name}`,
 						);
@@ -502,13 +532,13 @@ export async function initializeTwitchEventSub(): Promise<void> {
 
 					const raidMessage =
 						`${raidingBroadcaster.displayName} has raided ${raidedBroadcaster.displayName}'s channel with ${raidToEvent.viewers} viewers!`;
-					await chatClient.say(info.name, raidMessage);
+					await sendEventSubChatMessage(info.name, raidMessage);
 					await enqueueWebhook(TWITCH_ACTIVITY_ID, TWITCH_ACTIVITY_TOKEN, { embeds: [raidEmbed] });
 					try { broadcast('eventsub:raid', { broadcaster: info.name, raider: raidingBroadcaster.displayName, viewers: raidToEvent.viewers }); } catch (e) { void e; }
 
 					await sleep(1000);
 
-					await userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.id);
+					await sendEventSubChatApi(() => userApiClient.chat.shoutoutUser(info.id, raidingBroadcaster.id));
 				} catch (error) {
 					logger.error('Error sending raid notification to Discord:', error);
 				}
@@ -565,40 +595,36 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						logger.info(
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
-						await chatClient.say(
+						await sendEventSubChatMessage(
 							userInfo.name,
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
-						await userApiClient.chat.sendAnnouncement(
+						await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(
 							info.id as UserIdResolvable as UserIdResolvable,
 							{
 								color: 'purple',
 								message:
 									`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 							},
-						).catch((err) => {
-							logger.error(err);
-						});
+						));
 						try { broadcast('eventsub:goal_begin', { broadcaster: info.name, type: gb.type, current: gb.currentAmount, target: gb.targetAmount }); } catch (e) { void e; }
 						break;
 					case 'subscription':
 						logger.info(
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
-						await chatClient.say(
+						await sendEventSubChatMessage(
 							userInfo.name,
 							`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 						);
-						await userApiClient.chat.sendAnnouncement(
+						await sendEventSubChatApi(() => userApiClient.chat.sendAnnouncement(
 							info.id as UserIdResolvable as UserIdResolvable,
 							{
 								color: 'purple',
 								message:
 									`${gb.type} goal started: ${gb.currentAmount} - ${gb.targetAmount}`,
 							},
-						).catch((err) => {
-							logger.error(err);
-						});
+						));
 						break;
 					// case 'subscription_count':
 					// 	logger.debug(`${gb.type}`);
@@ -624,7 +650,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 						`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`,
 					);
 				}, 60000);
-				await chatClient.say(
+				await sendEventSubChatMessage(
 					userInfo.name,
 					`${userInfo.displayName} ${gp.type} Goal, ${gp.currentAmount} - ${gp.targetAmount}`,
 				);
@@ -639,7 +665,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 					`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 				);
 				if (broadcasterInfo) {
-					await chatClient.say(
+					await sendEventSubChatMessage(
 						userInfo.name,
 						`${userInfo.displayName}, ${ge.currentAmount} - ${ge.targetAmount} Goal Started:${ge.startDate} Goal Ended: ${ge.endDate}`,
 					);
@@ -687,7 +713,7 @@ export async function initializeTwitchEventSub(): Promise<void> {
 			}
 
 			logger.info('Warning Event for %s: Warning Reason: %s', userDisplayName, reasonDisplay);
-			await chatClient.say(userInfo.name, `Warning Event for ${userDisplayName}, Warning Reason: ${reasonDisplay}`);
+			await sendEventSubChatMessage(userInfo.name, `Warning Event for ${userDisplayName}, Warning Reason: ${reasonDisplay}`);
 		});
 		void eventSubListener.onChannelWarningAcknowledge(info.id as UserIdResolvable, info.id as UserIdResolvable, async (ack) => {
 			const userInfo = await ack.getBroadcaster();
@@ -756,9 +782,11 @@ export async function initializeTwitchEventSub(): Promise<void> {
 	}
 
 	//#endregion
+	initializedListeners.add(eventSubListener);
 }
 
 let eventSubListenerPromise: Promise<EventSubWsListener> | null = null;
+let recreationPromise: Promise<void> | null = null;
 /**
  * Creates a new EventSub listener and sets up the necessary event listeners
  * The listener is started immediately and will reconnect if the socket is disconnected
@@ -778,33 +806,11 @@ async function createEventSubListener(): Promise<EventSubWsListener> {
 	// Start the listener
 	eventSubListener.start();
 
-	// Set up the disconnect event listener only once
-	let isReconnecting = false;
-
-	eventSubListener.onUserSocketDisconnect(async (userId: string, error?: Error) => {
-		if (isReconnecting) {
-			logger.info('Reconnection attempt already in progress.');
-			return;
-		}
-
-		isReconnecting = true;
-
+	eventSubListener.onUserSocketDisconnect((userId: string, error?: Error) => {
 		if (error) {
 			logger.error(`Socket disconnected for user ${userId}`, error);
-		}
-
-		try {
-			// Reset the promise to allow a new listener to be created
-			eventSubListenerPromise = null;
-
-			// Attempt to recreate EventSub listener
-			await getEventSubs();
-			logger.info('EventSub listener reconnected successfully.');
-		} catch (e) {
-			logger.error('Failed to reconnect EventSub listener:', e);
-			process.exit(1);
-		} finally {
-			isReconnecting = false; // Reset reconnection flag
+		} else {
+			logger.warn(`Socket disconnected for user ${userId}; waiting for Twurple to reconnect`);
 		}
 	});
 	eventSubListener.onUserSocketConnect(async (userId: string) => {
@@ -964,20 +970,48 @@ export async function getEventSubs(): Promise<EventSubWsListener> {
 	if (!eventSubListenerPromise) {
 		eventSubListenerPromise = createEventSubListener();
 	}
-	return eventSubListenerPromise;
+	const current = eventSubListenerPromise;
+	try {
+		return await current;
+	} catch (error) {
+		if (eventSubListenerPromise === current) eventSubListenerPromise = null;
+		throw error;
+	}
 }
 
 /**
- * Force recreation of the EventSub listener. This clears the cached listener
- * promise and creates a fresh listener which will re-register subscriptions.
- * Used by the retry worker to trigger re-subscription attempts.
+ * Refresh broadcaster data and replace the listener, registering event handlers again.
  */
 export async function recreateEventSubs(): Promise<void> {
-	// Reset the promise so getEventSubs will create a new listener
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore - eventSubListenerPromise is module scoped above
-	eventSubListenerPromise = null;
-	await getEventSubs();
+	if (recreationPromise) return recreationPromise;
+	recreationPromise = (async () => {
+		await initializeConstants();
+		const previous = eventSubListenerPromise;
+		if (previous) {
+			const listener = await previous;
+			listener.stop();
+			if (eventSubListenerPromise === previous) eventSubListenerPromise = null;
+		}
+		try {
+			await initializeTwitchEventSub();
+		} catch (error) {
+			const failed = eventSubListenerPromise;
+			if (failed) {
+				try {
+					(await failed).stop();
+				} catch (cleanupError) {
+					logger.warn('Failed to stop EventSub listener after reload failure', cleanupError);
+				}
+				if (eventSubListenerPromise === failed) eventSubListenerPromise = null;
+			}
+			throw error;
+		}
+	})();
+	try {
+		await recreationPromise;
+	} finally {
+		recreationPromise = null;
+	}
 }
 
 /**

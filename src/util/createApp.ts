@@ -7,6 +7,8 @@ import { limiter } from './util';
 import logger from './logger';
 import { metricsHandler, healthHandler, readyHandler, getDbHealth } from '../monitoring/metrics';
 import crypto from 'crypto';
+import { isIntegrationEnabled } from './integrationFlags';
+import { createEconomyAccountNameResolver } from '../services/economyAccountNames';
 
 // Captured once when this module first loads (i.e. once per process
 // lifetime), not per createApp() call — that's what "uptime"/"last restart"
@@ -27,8 +29,10 @@ const EVENTSUB_MAX_ATTEMPTS = 6;
  *
  * @returns {express.Application} The Express.js app.
  */
-export default function createApp(): express.Application {
+export default function createApp(options: { publicDir?: string } = {}): express.Application {
 	const app = express();
+	const publicDir = options.publicDir || path.join(process.cwd(), 'public');
+	const resolveEconomyAccountNames = createEconomyAccountNameResolver();
 
 	const clientId = process.env.TWITCH_CLIENT_ID as string;
 	const clientSecret = process.env.TWITCH_CLIENT_SECRET as string;
@@ -38,7 +42,7 @@ export default function createApp(): express.Application {
 	app.use(limiter);
 
 	// Serve static admin assets (JS/CSS) from the `public/assets` folder
-	app.use('/assets', express.static(path.join(process.cwd(), 'public', 'assets')));
+	app.use('/assets', express.static(path.join(publicDir, 'assets')));
 
 	// Normalize username inputs from req.body or req.query which may be
 	// `string | string[] | undefined` depending on how Express parses the
@@ -154,12 +158,12 @@ export default function createApp(): express.Application {
 	async function refreshServicesAfterTokenChange(userId: string): Promise<void> {
 		const botUserId = String(process.env.OPENDEVBOT_ID || process.env.OPEN_DEV_BOT_ID || '659523613');
 		const reloads: Promise<unknown>[] = [];
-		if (process.env.ENABLE_CHAT) {
+		if (isIntegrationEnabled('ENABLE_CHAT')) {
 			reloads.push(import('../chat').then(chat =>
 				userId === botUserId ? chat.stopChat() : chat.restartChat()
 			));
 		}
-		if (process.env.ENABLE_EVENTSUB) {
+		if (isIntegrationEnabled('ENABLE_EVENTSUB')) {
 			reloads.push(import('../EventSubEvents').then(eventSub => eventSub.recreateEventSubs()));
 		}
 
@@ -230,14 +234,15 @@ export default function createApp(): express.Application {
 	// Admin: bot status for the dashboard's status panel (pid, uptime, connectivity)
 	app.get('/api/v1/admin/status', requireAdmin, async (_req, res) => {
 		try {
-			const { getChatClient } = await import('../chat');
 			let chatConnected = false;
-			try {
-				const client = await getChatClient();
-				chatConnected = !!(client as unknown as { isConnected?: boolean } | undefined)?.isConnected;
-			} catch {
-				// chat client not initialized yet — treated as disconnected, not an error
-				logger.debug('Chat client not initialized for admin status');
+			if (isIntegrationEnabled('ENABLE_CHAT')) {
+				try {
+					const { getChatClient } = await import('../chat');
+					const client = await getChatClient();
+					chatConnected = !!(client as unknown as { isConnected?: boolean } | undefined)?.isConnected;
+				} catch {
+					logger.debug('Chat client not initialized for admin status');
+				}
 			}
 
 			return res.json({
@@ -345,6 +350,7 @@ export default function createApp(): express.Application {
 		const raw = req.body?.username ?? req.query.username;
 		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
+		if (!isIntegrationEnabled('ENABLE_CHAT')) return res.status(409).json({ error: 'chat is disabled' });
 		try {
 			const { joinChannel } = await import('../chat');
 			await joinChannel(username);
@@ -360,7 +366,7 @@ export default function createApp(): express.Application {
 	// static HTML file from the repository `public` folder.
 	app.get('/admin/webhooks', requireAdmin, (_req: express.Request, res: express.Response) => {
 		try {
-			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'webhooks.html'));
+			return res.sendFile(path.join(publicDir, 'admin', 'webhooks.html'));
 		} catch (e) {
 			logger.error('Failed to serve admin webhooks UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
@@ -409,7 +415,7 @@ export default function createApp(): express.Application {
 			if (limit > 500) limit = 500;
 			const total = await BankAccount.countDocuments({}).exec();
 			const items = await BankAccount.find({}).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
-			return res.json({ total, page, limit, items });
+			return res.json({ total, page, limit, items: await resolveEconomyAccountNames(items) });
 		} catch (e) {
 			logger.error('Failed to list economy accounts', e as Error);
 			return res.status(500).json({ error: 'failed' });
@@ -578,7 +584,7 @@ export default function createApp(): express.Application {
 	// Serve admin EventSub UI
 	app.get('/admin/eventsubs', requireAdmin, (_req: express.Request, res: express.Response) => {
 		try {
-			return res.sendFile(path.join(process.cwd(), 'public', 'admin', 'eventsubs.html'));
+			return res.sendFile(path.join(publicDir, 'admin', 'eventsubs.html'));
 		} catch (e) {
 			logger.error('Failed to serve admin eventsubs UI', e as Error);
 			return res.status(500).send('failed to load admin UI');
@@ -733,10 +739,19 @@ export default function createApp(): express.Application {
 	// Admin: reload chat and eventsub listeners at runtime
 	app.post('/api/v1/admin/reload', requireAdmin, async (_req: express.Request, res: express.Response) => {
 		try {
-			const { restartChat } = await import('../chat');
-			const { recreateEventSubs } = await import('../EventSubEvents');
-			// best-effort non-blocking but wait for operations to complete
-			await Promise.allSettled([restartChat().catch((e) => { throw e; }), recreateEventSubs().catch((e) => { throw e; })]);
+			const reloads: Promise<unknown>[] = [];
+			if (isIntegrationEnabled('ENABLE_CHAT')) {
+				const { restartChat } = await import('../chat');
+				reloads.push(restartChat());
+			}
+			if (isIntegrationEnabled('ENABLE_EVENTSUB')) {
+				const { recreateEventSubs } = await import('../EventSubEvents');
+				reloads.push(recreateEventSubs());
+			}
+			const results = await Promise.allSettled(reloads);
+			if (results.some(result => result.status === 'rejected')) {
+				throw new Error('One or more integrations failed to reload');
+			}
 			return res.json({ ok: true });
 		} catch (e) {
 			logger.error('Admin reload failed', e as Error);
@@ -748,6 +763,7 @@ export default function createApp(): express.Application {
 		const raw = req.body?.username ?? req.query.username;
 		const username = normalizeUsername(raw);
 		if (!username) return res.status(400).json({ error: 'username required' });
+		if (!isIntegrationEnabled('ENABLE_CHAT')) return res.status(409).json({ error: 'chat is disabled' });
 		try {
 
 			const { getChatClient, joinedChannels } = await import('../chat');
@@ -1003,13 +1019,13 @@ export default function createApp(): express.Application {
 				logger.info('Token Updated for user:', userId, 'login:', username, 'scopes:', tokenDoc.scope);
 
 				// Try to dynamically join the chat client to the newly registered user's channel
-				try {
-					// Import lazily to avoid any startup ordering issues
-					const { joinChannel } = await import('../chat');
-					// best-effort — don't block the response
-					void joinChannel(username).catch((e) => logger.warn('Failed to join new channel after signup', e));
-				} catch (e) {
-					logger.warn('Dynamic joinChannel import failed', e);
+				if (isIntegrationEnabled('ENABLE_CHAT')) {
+					try {
+						const { joinChannel } = await import('../chat');
+						void joinChannel(username).catch((e) => logger.warn('Failed to join new channel after signup', e));
+					} catch (e) {
+						logger.warn('Dynamic joinChannel import failed', e);
+					}
 				}
 
 				return res.json({

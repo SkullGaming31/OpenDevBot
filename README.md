@@ -74,7 +74,10 @@ bits:read channel:edit:commercial channel:manage:broadcast channel:manage:polls 
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
 
-OpenDevBot is a personal Twitch chat bot designed to run in a single channel. It is not intended to support multiple channels.
+OpenDevBot is a personal Twitch chatbot intended for a single broadcaster. It can
+join multiple chat channels, but some features use the first configured
+broadcaster or hard-coded channel details, so independent multi-channel operation
+is not currently supported.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -82,7 +85,9 @@ OpenDevBot is a personal Twitch chat bot designed to run in a single channel. It
 
 * [Twurple](https://twurple.js.org/)
 * [Express.js](https://expressjs.com/)
-* [guilded.js](https://guilded.js.org/) Basics, just for discord Embeds for webhooks
+* [discord.js](https://discord.js.org/) for Discord webhook notifications
+* Node.js built-in SQLite for local persistence
+* [Electron](https://www.electronjs.org/) for the desktop control room
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -94,24 +99,13 @@ To get a local copy up and running follow these simple example steps. -->
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-
-* npm
-
-  ```sh
-  npm install npm@latest -g
-  ```
-
-* node<br>
-  [Node](https://nodejs.org)
-  
-* Code Editor[Optional Choices] <strong>NOTE: i do not know how to setup the project with Atom so everything is based on VS Code</strong><br>
-  [VS Code](https://code.visualstudio.com)<br>
-  [Atom](https://atom.io)<br>
+* [Node.js](https://nodejs.org/) 22.13 or newer, including npm, for running from source.
+* A Twitch developer application and Twitch accounts for the desired integrations.
+* Discord webhooks if Discord notifications are enabled.
 
 ### Installation
 
-1. Create a Twitch Dev Application [Twitch Developer Application](https://dev.twitch.tv/console), you will need access to a discord bot aswell, for webhooks
+1. Create a [Twitch developer application](https://dev.twitch.tv/console) and configure its OAuth redirect URL.
 2. Clone the repo
 
    ```sh
@@ -124,19 +118,46 @@ This is an example of how to list things you need to use the software and how to
    npm install
    ```
 
-4. Fill out the .env with all nessasary Information, check .env.example for whats needed
+4. Copy `.env.example` to `.env` and configure the required credentials and flags. Keep `.env` private.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-<p>electron:dev compiles the Electron app and starts it. better-sqlite3 13 includes N-API prebuilt binaries for supported platforms, including Windows x64, so no Electron-specific native rebuild is needed.</p>
+<p>electron:dev compiles the Electron app and starts it. The application uses Node's built-in SQLite support, so SQLite does not require a separate native package or C++ build tools. Existing SQLite databases remain compatible.</p>
 
 ```sh
 npm run electron:dev
 ```
 
-Run `npm install` after changing dependencies to ensure the platform-specific prebuilt binary is installed. Unsupported platforms or architectures may still require Python and a C++ build toolchain.
+Run `npm install` to install the application's other dependencies. Node's SQLite API is experimental in Node 22 and 24, so an experimental warning may appear.
+
+Set `ENABLE_CHAT=true` and/or `ENABLE_EVENTSUB=true` to start those integrations.
+Unset values and `false` leave them disabled; other values are rejected with a warning.
+
+### Tests
+
+Run `npm test` from the repository root. Tests are in `__tests__/`, with Electron
+tests in `__tests__/electron/` and shared mock files in `__mock__/`. Some
+integration tests require localhost connections.
+
+### Windows installer
+
+On Windows x64, run `npm run electron:package:win` to build the unsigned NSIS
+installer in `release/`. The installer does not require Node.js to be installed
+on the target computer. The Windows CI job builds it, checks the archive for
+required assets and private data, installs it in an isolated CI directory, and
+smoke-tests the installed application.
+
+After installation, create `%APPDATA%\OpenDevBot\.env` using `.env.example` as a
+reference and add your Twitch application credentials. Do not include your own
+`.env` or database in a distributable. Set the Twitch redirect URL to match the
+API port (the example redirect uses port 3001, so set `PORT=3001` if using it).
+Restart the app after editing the file. The packaged app stores its SQLite
+database and logs in the same per-user application data directory and binds its
+local API to `127.0.0.1`. Set `ADMIN_API_TOKEN` to protect its admin endpoints
+from other local applications. The installer is not code-signed and may trigger
+Windows SmartScreen warnings.
 
 Electron writes persistent application logs to the `logs` directory under its `userData` folder:
 
@@ -144,6 +165,12 @@ Electron writes persistent application logs to the `logs` directory under its `u
 - `opendevbot-errors.log` contains error-handler and logger error output.
 
 Electron uses these per-user paths regardless of `DEV_LOG_FILE`, `PROD_LOG_FILE`, or `ERROR_LOG_FILE` in `.env`. The Logs window still shows recent entries from the current session.
+
+The economy dashboard looks up Twitch usernames and caches them for five
+minutes, falling back to a saved name or the account ID if Twitch is
+unavailable. Account balances and admin actions continue to use the Twitch ID,
+so a username change does not create a new balance. The desktop dashboard and
+logs window use a bundled Vue runtime and do not require a CDN to load.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -228,7 +255,7 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the MIT License. See `LICENSE` for more information.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 

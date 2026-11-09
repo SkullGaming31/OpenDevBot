@@ -19,7 +19,7 @@ This repo is a Twitch chatbot built on Twurple with Discord webhook notification
 - Start (dev): `npm run start` (uses `ts-node` to run `src/index.ts`).
 - Watch / dev iterate: `npm run dev` (nodemon) or `npm run watch` (tsc watch).
 - Production: `npm run build` then `npm run prod`.
-- Tests: run the test suite with `npm test` (Jest). Individual tests live under `src/__tests__` and top-level `__tests__`.
+- Tests: run the test suite with `npm test` (Jest). Tests live under the root `__tests__` directory, with Electron tests in `__tests__/electron`.
 - DB helpers: `npm run seed`, `npm run log` (run TypeScript scripts that seed or log DB data).
 
 **Integration points & important files**

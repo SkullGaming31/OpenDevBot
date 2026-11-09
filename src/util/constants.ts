@@ -31,6 +31,8 @@ export async function initializeConstants() {
 	try {
 		// Exclude the entry with user_id '659523613'
 		const userTokens = await TokenModel.find<ITwitchToken>({ user_id: { $ne: '659523613' } }).lean();
+		const nextBroadcasters: ChannelInfo[] = [];
+		const nextModerators: ChannelInfo[] = [];
 
 		// if (userTokens.length === 0) {
 		// 	throw new Error('No Twitch tokens found in the database');
@@ -52,7 +54,7 @@ export async function initializeConstants() {
 				throw new Error(`Failed to retrieve info for user ${userToken.user_id}`);
 			}
 
-			broadcasterInfo.push({
+			nextBroadcasters.push({
 				delay: helixBroadcaster.delay,
 				displayName: helixBroadcaster.displayName,
 				id: helixBroadcaster.id,
@@ -66,7 +68,7 @@ export async function initializeConstants() {
 				title: helixBroadcaster.title
 			});
 
-			moderatorIDs.push({
+			nextModerators.push({
 				delay: helixModerator.delay,
 				displayName: helixModerator.displayName,
 				id: helixModerator.id,
@@ -80,6 +82,8 @@ export async function initializeConstants() {
 				title: helixModerator.title
 			});
 		}
+		broadcasterInfo.splice(0, broadcasterInfo.length, ...nextBroadcasters);
+		moderatorIDs.splice(0, moderatorIDs.length, ...nextModerators);
 	} catch (error) {
 		logger.error('Error initializing constants:', error);
 		throw error; // Re-throw the error to propagate it further if needed

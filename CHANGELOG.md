@@ -1,5 +1,16 @@
 # Changelog for OpenDevBot
 
+## 0.9.2 - Unreleased
+
+- Replace `better-sqlite3` with Node's built-in SQLite API. Existing SQLite databases remain compatible; Node.js 22.13 or newer is required.
+- Honor `ENABLE_CHAT` and `ENABLE_EVENTSUB` as explicit true/false flags during startup and account changes.
+- Add a Windows x64 installer build and CI installation smoke test, with per-user configuration and data.
+- Start chat and EventSub independently if one integration fails; refresh economy display names and bundle the dashboard's Vue runtime.
+- Keep EventSub operational without chat, and report failed economy edits or deletions instead of showing success.
+- Preserve EventSub handlers across socket reconnects and reloads, correct stream monitor events, and handle follows without a Twitch category.
+- Keep stream transition notifications and offline lurk cleanup working when Twitch metadata lookups fail.
+- Clarify that independent multi-channel operation is not currently supported.
+
 ## Unreleased - 2025-11-28
 
 - Chore: Replace all mentions of `skullgaminghq` with `canadiendragon` (2025-12-23)

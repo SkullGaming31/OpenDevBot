@@ -9,6 +9,8 @@
   },
   "include": [
     "src/**/*",
+    "__tests__/**/*",
+    "__mock__/**/*",
     "jest.setup.ts"
   ]
 }

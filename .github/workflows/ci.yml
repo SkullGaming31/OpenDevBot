@@ -82,3 +82,34 @@ jobs:
         env:
           CI: true
         run: npm test --silent -- -i
+
+  windows-release:
+    name: Windows release smoke test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Windows installer
+        run: npm run electron:package:win
+      - name: Verify release contents
+        run: node scripts/check-release-contents.js
+      - name: Install and smoke-test application
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem release\OpenDevBot-*-x64-Setup.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Windows installer not found' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'OpenDevBotSmoke'
+          $setup = Start-Process -FilePath $installer.FullName -ArgumentList @('/S', "/D=$installDir") -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Installer exited with code $($setup.ExitCode)" }
+          & .\scripts\smoke-windows-release.ps1 -ExecutablePath (Join-Path $installDir 'OpenDevBot.exe')
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenDevBot-windows-x64-installer
+          path: release/OpenDevBot-*-x64-Setup.exe
+          if-no-files-found: error

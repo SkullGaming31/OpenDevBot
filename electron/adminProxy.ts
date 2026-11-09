@@ -30,7 +30,7 @@ export function registerAdminProxy(port: number): void {
 		while (attempt < maxAttempts) {
 			attempt++;
 			try {
-				const res = await fetch(`http://localhost:${port}${path}`, {
+				const res = await fetch(`http://127.0.0.1:${port}${path}`, {
 					method: method || 'GET',
 					headers: {
 						'Content-Type': 'application/json',

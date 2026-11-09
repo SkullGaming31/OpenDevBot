@@ -1,9 +1,7 @@
-// Jest setup: ensure logger mocks are used and prevent noisy output
-// Prefer manual mock under `src/__mocks__/util/logger.ts` and ensure jest picks it up
+// Jest setup: auto-mock the logger while allowing individual tests to unmock it.
 jest.mock('./src/util/logger');
 import logger from './src/util/logger';
 
-// If logger is a manual mock (src/__mocks__/util/logger.ts), its functions are jest.fn()
 if (logger) {
 	// Reset mock call counts before each test
 	beforeEach(() => {
@@ -60,6 +58,6 @@ beforeEach(() => {
 			}
 		}
 	} catch (e) {
-		// ignore when manual mock not present or require fails
+		// ignore if the logger cannot be loaded
 	}
 });

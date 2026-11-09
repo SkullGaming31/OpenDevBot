@@ -12,6 +12,7 @@ import fs from 'fs';
 import { deleteAllInjuries, deleteExpiredInjuries } from './services/injuryCleanup';
 import logger from './util/logger';
 import { initializeWebhookQueue } from './Discord/webhookQueue';
+import { isIntegrationEnabled } from './util/integrationFlags';
 
 /**
  * @returns {Promise<void>}
@@ -72,12 +73,12 @@ export class OpenDevBot {
 	 * - SQLITE_DB_PATH: Optional path for the SQLite application database.
 	 * - PORT: Port number on which the server should listen.
 	 * 
-	 * @throws {Error} Throws an error if an unknown environment is specified or if any initialization step fails.
+	 * @throws {Error} Throws an error if an unknown environment is specified or a core startup step fails.
 	 */
 	async start() {
 		try {
-			const EventSub = process.env.ENABLE_EVENTSUB;
-			const chatIIRC = process.env.ENABLE_CHAT;
+			const EventSub = isIntegrationEnabled('ENABLE_EVENTSUB');
+			const chatIIRC = isIntegrationEnabled('ENABLE_CHAT');
 			// Initialize the SQLite application database.
 			const environment = process.env.ENVIRONMENT as string;
 			if (!['prod', 'debug', 'dev', 'test'].includes(environment)) {
@@ -114,13 +115,15 @@ export class OpenDevBot {
 					logger.info('Skipping EventSub initialization in test environment');
 				} else {
 					const message = process.env.ENVIRONMENT === 'dev' ? 'Event Sub Initialized' : 'Event Sub Started';
-					logger.time(message);
-					// Ensure constants (broadcasterInfo, moderatorIDs) are initialized from DB
-					await initializeConstants();
-					await initializeTwitchEventSub();
-					// start background retry worker to process failed subscription creations
-					void startRetryWorker();
-					logger.timeEnd(message);
+					try {
+						logger.time(message);
+						await initializeConstants();
+						await initializeTwitchEventSub();
+						void startRetryWorker();
+						logger.timeEnd(message);
+					} catch (error) {
+						logger.error('Failed to initialize EventSub:', error);
+					}
 				}
 			}
 
@@ -130,11 +133,14 @@ export class OpenDevBot {
 					logger.info('Skipping Chat initialization in test environment');
 				} else {
 					const message = process.env.ENVIRONMENT === 'dev' ? 'Chat now Initialized' : 'Chat now Initialized';
-					logger.time(message);
-					// Ensure broadcaster info is loaded for chat operations
-					await initializeConstants();
-					await initializeChat();
-					logger.timeEnd(message);
+					try {
+						logger.time(message);
+						await initializeConstants();
+						await initializeChat();
+						logger.timeEnd(message);
+					} catch (error) {
+						logger.error('Failed to initialize chat:', error);
+					}
 				}
 			}
 

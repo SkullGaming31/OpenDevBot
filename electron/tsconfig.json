@@ -12,8 +12,6 @@
   "exclude": [
     "../node_modules",
     "../dist",
-    "../dist-electron",
-    "../src/__tests__",
-    "../src/__mocks__"
+    "../dist-electron"
   ]
 }

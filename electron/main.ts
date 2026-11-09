@@ -2,7 +2,10 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { config } from 'dotenv';
 
-config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true } as never);
+config({
+	path: app.isPackaged ? path.join(app.getPath('userData'), '.env') : path.join(__dirname, '..', '..', '.env'),
+	quiet: true,
+});
 
 import createApp from '../src/util/createApp';
 import { openSqliteDatabase } from '../src/database/sqliteConnection';
@@ -20,6 +23,7 @@ import ErrorHandler from '../src/Handlers/errorHandler';
 import { deleteAllInjuries, deleteExpiredInjuries } from '../src/services/injuryCleanup';
 import { initMonitoring } from '../src/monitoring';
 import { parseMonitorVisibility } from './monitorVisibility';
+import { isIntegrationEnabled } from '../src/util/integrationFlags';
 
 // app.disableHardwareAcceleration();
 // app.commandLine.appendSwitch('disable-gpu');
@@ -93,32 +97,33 @@ async function bootstrap(): Promise<void> {
 		logger.error('Failed to start Error Handler in Electron', error as Error);
 	}
 
-	// Mirror the startup sequence from src/index.ts so constants/chat/eventsub
-	// are initialized when running under the Electron shell.
-	try {
-		if (process.env.ENVIRONMENT !== 'test') {
-			if (process.env.ENABLE_EVENTSUB) {
+	if (process.env.ENVIRONMENT !== 'test') {
+		if (isIntegrationEnabled('ENABLE_EVENTSUB')) {
+			try {
 				logger.time('Event Sub Initializing (electron)');
 				await initializeConstants();
 				await initializeTwitchEventSub();
 				void startRetryWorker();
 				logger.timeEnd('Event Sub Initializing (electron)');
+			} catch (err) {
+				logger.error('Failed to initialize EventSub (electron)', err as Error);
 			}
+		}
 
-			if (process.env.ENABLE_CHAT) {
+		if (isIntegrationEnabled('ENABLE_CHAT')) {
+			try {
 				logger.time('Chat Initializing (electron)');
 				await initializeConstants();
 				await initializeChat();
 				logger.timeEnd('Chat Initializing (electron)');
+			} catch (err) {
+				logger.error('Failed to initialize chat (electron)', err as Error);
 			}
 		}
-	} catch (err) {
-		logger.error('Error during electron initialization of services', err as Error);
-		// allow the express app to come up even if service init fails
 	}
 
-	createApp().listen(PORT, () => {
-		logger.info(`[electron] bot API listening on http://localhost:${PORT}`);
+	createApp({ publicDir: path.join(__dirname, '..', '..', 'public') }).listen(PORT, '127.0.0.1', () => {
+		logger.info(`[electron] bot API listening on http://127.0.0.1:${PORT}`);
 	});
 }
 
@@ -130,7 +135,7 @@ function createMainWindow(): void {
 		minHeight: 600,
 		backgroundColor: '#14121B',
 		title: 'OpenDevBot Control Room',
-		icon: path.join(__dirname, '..', '..', 'build', 'icon.ico'),
+		icon: path.join(__dirname, '..', '..', 'public', 'assets', 'images', 'logo.png'),
 		resizable: true,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),

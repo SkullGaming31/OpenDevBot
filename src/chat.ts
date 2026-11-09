@@ -438,6 +438,9 @@ function registerCommand(newCommand: Command, name: string) {
 
 // holds the ChatClient
 let chatClientInstance: ChatClient | undefined;
+export function getExistingChatClient(): ChatClient | undefined {
+	return chatClientInstance;
+}
 // IDs for timers started by this module so they can be cleared on shutdown
 let periodicSaveIntervalId: NodeJS.Timeout | null = null;
 let socialTimeoutId: NodeJS.Timeout | null = null;

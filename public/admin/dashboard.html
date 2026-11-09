@@ -5,13 +5,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
+    content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
   <title>OpenDevBot — Control Room</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="../../node_modules/vue/dist/vue.global.prod.js"></script>
   <style>
     :root {
       --bg: #14121B;
@@ -684,8 +684,8 @@
           if (!hasBridge) {
             // demo fallback
             economyAccounts.value = [
-              { userId: '12345', balance: 5000, updatedAt: new Date().toISOString() },
-              { userId: 'alice', balance: 1200, updatedAt: new Date().toISOString() },
+              { userId: '12345', displayName: 'alice', balance: 5000, updatedAt: new Date().toISOString() },
+              { userId: '67890', displayName: 'bob', balance: 1200, updatedAt: new Date().toISOString() },
             ];
             economyTotal.value = economyAccounts.value.length;
             economyLoading.value = false;
@@ -717,7 +717,7 @@
             // Prefer the native modal bridge when available (Electron)
             let result = null;
             if (window.adminModalEdit && typeof window.adminModalEdit.show === 'function') {
-              result = await window.adminModalEdit.show({ userId: acc.userId, bank: Number(current.bank ?? 0), wallet: Number(current.wallet ?? 0) });
+              result = await window.adminModalEdit.show({ displayName: acc.displayName || acc.username || acc.userId, bank: Number(current.bank ?? 0), wallet: Number(current.wallet ?? 0) });
             } else {
               // fallback for browser preview: use prompt()
               const bank = prompt('Bank amount', String(current.bank ?? current ?? 0));
@@ -729,22 +729,26 @@
             if (!result) return; // cancelled
             const body = { bank: Number(result.bank || 0), wallet: Number(result.wallet || 0) };
             if (Number.isNaN(body.bank) || Number.isNaN(body.wallet)) { showToast('Invalid amounts'); return; }
-            await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'PUT', body: JSON.stringify(body) });
+            const response = await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'PUT', body: JSON.stringify(body) });
+            if (response?.error) throw new Error(response.error);
+            if (response?.ok !== true) throw new Error('Invalid response from economy API');
             showToast('Account updated');
             await loadEconomy();
-          } catch (e) { console.error(e); showToast('Failed to update account'); }
+          } catch (e) { console.error(e); showToast(`Failed to update account: ${e?.message || 'Unknown error'}`); }
         }
 
-        async function deleteAccount(userId) {
+        async function deleteAccount(acc) {
           if (!hasBridge) { showToast('Delete requires the Electron shell'); return; }
           // show modal confirmation
           try {
-            const ok = await showConfirmModal(`Delete account ${userId}? This cannot be undone.`);
+            const ok = await showConfirmModal(`Delete account ${acc.displayName || acc.username || acc.userId}? This cannot be undone.`);
             if (!ok) return;
-            await window.adminApi.fetch(`/api/v1/admin/economy/account/${userId}`, { method: 'DELETE' });
+            const response = await window.adminApi.fetch(`/api/v1/admin/economy/account/${acc.userId}`, { method: 'DELETE' });
+            if (response?.error) throw new Error(response.error);
+            if (response?.ok !== true) throw new Error('Invalid response from economy API');
             showToast('Account deleted');
             await loadEconomy();
-          } catch (e) { console.error(e); showToast('Failed to delete account'); }
+          } catch (e) { console.error(e); showToast(`Failed to delete account: ${e?.message || 'Unknown error'}`); }
         }
 
         // Modal helpers
@@ -1756,7 +1760,7 @@
               </thead>
               <tbody>
                 <tr v-for="acc in economyAccounts" :key="acc.userId">
-                  <td class="mono-id">{{ acc.userId }}</td>
+                  <td>{{ acc.displayName || acc.username || acc.userId || 'Unknown user' }}</td>
                   <td>
                     {{ (acc.balance && typeof acc.balance === 'object' && acc.balance.bank != null)
                         ? (String(acc.balance.bank) + ' / ' + String(acc.balance.wallet ?? 0))
@@ -1764,7 +1768,7 @@
                   </td>
                   <td class="economy-actions">
                     <button class="btn small" @click="editAccount(acc)">Edit</button>
-                    <button class="btn small danger" @click="deleteAccount(acc.userId)">Delete</button>
+                    <button class="btn small danger" @click="deleteAccount(acc)">Delete</button>
                   </td>
                   <td class="mono-id">{{ acc.updatedAt ? new Date(acc.updatedAt).toLocaleString() : '—' }}</td>
                 </tr>
@@ -1852,7 +1856,7 @@
       const cancel = document.getElementById('admin-edit-cancel');
       let pendingResolve = null;
       function show(opts) {
-        userEl.textContent = `User: ${opts.userId}`;
+        userEl.textContent = `User: ${opts.displayName}`;
         bankInput.value = String(opts.bank || 0);
         walletInput.value = String(opts.wallet || 0);
         modal.style.display = 'flex';

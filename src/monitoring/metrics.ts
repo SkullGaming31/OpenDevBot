@@ -63,7 +63,8 @@ register.registerMetric(webhookFailureAlerts as unknown as client.Counter<string
 // Health check helpers
 export async function getDbHealth(): Promise<boolean> {
 	try {
-		return getSqliteDatabase().open;
+		getSqliteDatabase();
+		return true;
 	} catch {
 		return false;
 	}
